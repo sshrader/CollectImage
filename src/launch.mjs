@@ -289,18 +289,30 @@ async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys, table
     const chunks = [];
     for (let i = 0; i < missing.length; i += LUT_CHUNK) chunks.push(missing.slice(i, i + LUT_CHUNK).map((k) => new PublicKey(k)));
     for (let i = 0; i < chunks.length; i++) {
-      const ixs = [];
-      if (!tableKey) {
-        const [createIx, addr] = AddressLookupTableProgram.createLookupTable({ authority: userKey, payer: userKey, recentSlot: await conn.getSlot('finalized') }); // a finalized slot is already in the network's recent-slot list; the latest one is not
-        ixs.push(createIx);
-        tableKey = addr;
-      }
-      ixs.push(AddressLookupTableProgram.extendLookupTable({ payer: userKey, authority: userKey, lookupTable: tableKey, addresses: chunks[i] }));
-      const t = new Transaction().add(...ixs);
-      t.feePayer = userKey;
-      t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
       const n = chunks.length > 1 ? ' ' + (i + 1) + '/' + chunks.length : '';
-      await signAndSend({ step, conn, cfg, wallet, tx: t, labels: { dry: 'Dry run (lookup table' + n + ')', sign: 'Approve lookup table' + n + ' in Phantom', send: 'Send lookup table' + n } });
+      // The create step names a recent slot, and a node that is a little behind can refuse it ("not a recent slot").
+      // Nothing is signed until the dry run passes, so on that error ask again with an older slot.
+      for (let attempt = 0; ; attempt++) {
+        const ixs = [];
+        const creating = !tableKey || (attempt > 0 && i === 0 && !table);
+        if (creating) {
+          const slot = Math.max(1, (await conn.getSlot('finalized')) - attempt * 24); // a finalized slot is already in the network's recent-slot list; the latest one is not
+          const [createIx, addr] = AddressLookupTableProgram.createLookupTable({ authority: userKey, payer: userKey, recentSlot: slot });
+          ixs.push(createIx);
+          tableKey = addr;
+        }
+        ixs.push(AddressLookupTableProgram.extendLookupTable({ payer: userKey, authority: userKey, lookupTable: tableKey, addresses: chunks[i] }));
+        const t = new Transaction().add(...ixs);
+        t.feePayer = userKey;
+        t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+        try {
+          await signAndSend({ step, conn, cfg, wallet, tx: t, labels: { dry: 'Dry run (lookup table' + n + ')', sign: 'Approve lookup table' + n + ' in Phantom', send: 'Send lookup table' + n } });
+          break;
+        } catch (e) {
+          if (!creating || attempt >= 3 || !/not a recent slot/i.test(String((e && e.message) || e))) throw e;
+          await wait(1000);
+        }
+      }
       // Remember the table as soon as it exists, so a declined or failed second step does not strand it. The next try fills in what is missing.
       saveTable(cfg, userKey, tableKey.toBase58());
       if (onTable) { try { await onTable(tableKey.toBase58()); } catch (e) { /* only a convenience */ } }
