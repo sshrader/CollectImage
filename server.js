@@ -363,8 +363,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/status') return status(res);
     if (p === '/api/health') return send(res, 200, { ok: true });
-    if (p === '/api/mascot.svg') return send(res, 200, art.render(0, 1, '', 'sparkpad-public-mascot', { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' });
-    if (p === '/assets/pond.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
+    if (p === '/api/mascot.svg') return send(res, 200, art.render(0, 1, '', 'cathouse-public-mascot', { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' });
+    if (p === '/assets/house.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
     if (p === '/launch') { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(LAUNCH)); }
     if (p === '/launch.js') {
       if (!fs.existsSync(LAUNCH_JS)) return send(res, 404, 'Not built yet. Run npm run build.');
