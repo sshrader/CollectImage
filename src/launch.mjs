@@ -268,14 +268,19 @@ function saveTable(cfg, userKey, addr) {
 async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys }) {
   return await phase(step, 'Lookup table', async (done) => {
     let table = null;
+    let why = 'no saved table in this browser';
     const saved = savedTable(cfg, userKey);
     if (saved) {
-      try {
-        table = (await conn.getAddressLookupTable(new PublicKey(saved))).value;
-        // Only trust a table this wallet controls, so a copied or altered saved value cannot swap in someone else's.
-        if (table && !(table.state.authority && table.state.authority.equals(userKey))) table = null;
-      } catch (e) { table = null; }
+      why = 'saved table could not be read';
+      // A node that is a moment behind can answer "not found" for a table that exists, so ask a few times.
+      for (let i = 0; i < 4 && !table; i++) {
+        try { table = (await conn.getAddressLookupTable(new PublicKey(saved), { commitment: 'confirmed' })).value; } catch (e) { table = null; }
+        if (!table && i < 3) await wait(800);
+      }
+      // Only trust a table this wallet controls, so a copied or altered saved value cannot swap in someone else's.
+      if (table && !(table.state.authority && table.state.authority.equals(userKey))) { table = null; why = 'saved table is not controlled by this wallet'; }
     }
+    if (!table) console.info('[launch] building a new lookup table:', why);
     const have = new Set(table ? table.state.addresses.map((x) => x.toBase58()) : []);
     const missing = keys.filter((k) => !have.has(k));
     if (table && !missing.length) { done('ok', 'Using your saved table ' + table.key.toBase58().slice(0, 6) + '…'); return { table, fresh: false }; }
@@ -309,7 +314,7 @@ async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys }) {
     }
     if (!fresh) throw new Error('The lookup table was created but is not readable yet. Try the launch again in a few seconds.');
     await wait(2500);
-    done('ok', 'Table ready with ' + fresh.state.addresses.length + ' addresses');
+    done('ok', 'Table ready with ' + fresh.state.addresses.length + ' addresses (new table: ' + why + ')');
     return { table: fresh, fresh: true };
   });
 }
