@@ -64,7 +64,9 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
     <div><b id="minhold">1</b>coin needed</div>
   </div>
   <div class="ca" id="caline" hidden>Coin address: <span id="ca"></span><button class="cp" id="cacopy" type="button">Copy CA</button></div>
+  <div class="ca" id="curve" hidden></div>
   <div class="row">
+    <a class="btn" id="buylink" href="#" target="_blank" rel="noopener" hidden>Buy on pump.fun</a>
     <button class="btn go" id="collect" type="button">Collect my frog</button>
     <span class="msg" id="msg"></span>
   </div>
@@ -83,10 +85,11 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 <p class="fine">Signing is free and sends no transaction. Your frog is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
 </div>
 
+<script src="/launch.js"></script>
 <script>
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var pubkey=null,svgText=null,mySlot=0,busy=false,st=null;
+  var pubkey=null,svgText=null,mySlot=0,busy=false,st=null,curveDone=false;
   function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
   function msg(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
   function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
@@ -111,6 +114,15 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' frogs is assigned to you. Only your wallet can open it.';
       if(j.mint){$('caline').hidden=false;$('ca').textContent=j.mint}
       if(!j.configured){$('collect').disabled=true;msg('This page is not set up yet.','err')}
+      if(j.mint&&j.cluster==='mainnet'){var bl=$('buylink');bl.href='https://pump.fun/coin/'+j.mint;bl.hidden=false}
+      if(j.mint&&window.SparkLaunch&&window.SparkLaunch.curveStats&&!curveDone){
+        curveDone=true;
+        window.SparkLaunch.curveStats(j.cluster,[j.mint]).then(function(r){
+          var s=r&&r[0];if(!s)return;
+          var c=$('curve');c.hidden=false;
+          c.textContent=s.complete?'Bonding curve complete: the coin has graduated.':'Bonding curve: '+s.soldPct.toFixed(1)+'% sold, market cap about '+s.mcapSol.toFixed(1)+' SOL.';
+        }).catch(function(){});
+      }
       drawGrid();
     }).catch(function(){msg('Could not load the page data. Reload and try again.','err')});
   }

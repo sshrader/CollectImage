@@ -49,6 +49,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   process.env.COIN_MINT = b58encode(crypto.randomBytes(32));
   process.env.SLOTS = '3';
   process.env.MIN_HOLD = '100';
+  process.env.ADMIN_TOKEN = 'a'.repeat(32);
 
   const server = require('../server.js');
   await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
@@ -115,6 +116,33 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   const junk = await post('/api/challenge', { wallet: 'nope' });
   check('bad wallet address rejected', junk.status === 400);
+
+  // launch tools
+  const PNGB = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const meta = (body, tok) => fetch(base + '/api/metadata', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
+  r = await meta({ name: 'Frog', symbol: 'FROG', image: PNGB }, 'wrong');
+  check('metadata needs the admin password', r.status === 401);
+  r = await meta({ name: 'Frog', symbol: 'FROG', description: 'ribbit', image: PNGB, twitter: '@Frog_Coin', website: 'frogs.xyz' }, 'a'.repeat(32));
+  const jm = await r.json();
+  const dm = jm.uri ? await (await fetch(base + new URL(jm.uri).pathname)).json() : {};
+  check('metadata saved with cleaned socials', r.status === 201 && dm.twitter === 'https://x.com/Frog_Coin' && dm.website === 'https://frogs.xyz/' && /\/images\/[a-f0-9]{16}\.png$/.test(dm.image || ''), JSON.stringify(jm));
+  const im = await fetch(base + new URL(dm.image).pathname);
+  check('coin image is served', im.status === 200 && im.headers.get('content-type') === 'image/png');
+  r = await meta({ name: 'Frog', symbol: 'FROG', website: 'javascript:alert(1)' }, 'a'.repeat(32));
+  check('bad website rejected', r.status === 400);
+  r = await meta({ name: 'Frog', symbol: 'FROG', image: 'data:image/png;base64,AAAA' }, 'a'.repeat(32));
+  check('fake image rejected', r.status === 400);
+  r = await post('/api/rpc/mainnet', { method: 'getSlot', params: [] });
+  check('rpc proxy forwards an allowed call', r.status === 200);
+  r = await post('/api/rpc/mainnet', { method: 'requestAirdrop', params: [] });
+  check('rpc proxy blocks other calls', r.status === 400);
+  r = await post('/api/rpc/mainnet', [{ method: 'getSlot' }]);
+  check('rpc proxy blocks batches', r.status === 400);
+  r = await fetch(base + '/api/mascot.svg');
+  const mascotSvg = await r.text();
+  check('public mascot has no caption', r.status === 200 && mascotSvg.startsWith('<svg') && !mascotSvg.includes('<text'));
+  r = await fetch(base + '/launch');
+  check('launch page is served', r.status === 200 && (await r.text()).includes('Launch the coin'));
 
   server.close(); fakeRpc.close();
   console.log(failed ? failed + ' failed' : 'all passed');

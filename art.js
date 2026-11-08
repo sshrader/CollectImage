@@ -225,7 +225,8 @@ function drawFrog(t, rnd) {
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // slot is 0-based. total is how many frogs are in the set. owner is the wallet that holds this one (may be empty).
-function render(slot, total, owner, secret) {
+function render(slot, total, owner, secret, opts) {
+  const bare = !!(opts && opts.bare);
   const t = traitsFor(slot, secret);
   const pal = SKINS[t.skin];
   const g = drawFrog(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()));
@@ -245,6 +246,7 @@ function render(slot, total, owner, secret) {
   const short = owner ? owner.slice(0, 4) + '…' + owner.slice(-4) : '';
   const hat = t.hat ? t.hat + ' ' : '';
   const traitLine = (pal.name + ' ' + t.species.toLowerCase() + ', ' + t.eyes + ' eyes' + (t.hat ? ', ' + t.hat : '')).toUpperCase();
+  if (bare) return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" shape-rendering="crispEdges" role="img" aria-label="Frog">' + rects + '</svg>';
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 38" width="1024" height="1216" shape-rendering="crispEdges" role="img" aria-label="' + esc(t.species + ' ' + num + ' of ' + total + ', ' + pal.name + ' ' + hat + 'with ' + t.eyes + ' eyes') + '">'
     + '<rect width="32" height="38" fill="#0b0913"/>' + rects
     + '<text x="16" y="34.3" text-anchor="middle" font-family="Courier New, monospace" font-weight="700" font-size="1.6" fill="' + pal.light + '" shape-rendering="auto">' + t.species + ' ' + num + ' / ' + total + '</text>'

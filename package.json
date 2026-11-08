@@ -2,10 +2,20 @@
   "name": "collectimage",
   "version": "0.1.0",
   "private": true,
-  "description": "Hold the coin, sign with Phantom, collect one of N images that only your wallet can open.",
+  "description": "Launch a coin on the pump.fun bonding curve, then let holders collect one of N pixel frogs that only their wallet can open.",
   "scripts": {
+    "build": "node build.mjs",
     "start": "node server.js",
     "test": "node test/collect.test.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@pump-fun/pump-sdk": "4.1.0",
+    "@solana/web3.js": "^1.98.4",
+    "bn.js": "^5.2.2",
+    "buffer": "^6.0.3",
+    "esbuild": "^0.25.0"
+  }
 }
