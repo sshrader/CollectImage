@@ -1,0 +1,11 @@
+{
+  "name": "collectimage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hold the coin, sign with Phantom, collect one of N images that only your wallet can open.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/collect.test.js"
+  },
+  "engines": { "node": ">=20" }
+}
