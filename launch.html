@@ -88,6 +88,7 @@ textarea{min-height:80px;resize:vertical}
   <div><label for="site">Open the coin when it is created <span class="rv">opens a new tab as soon as the launch confirms</span></label><select id="site"><option value="gmgn">GMGN</option><option value="pump">pump.fun</option><option value="solscan">Solscan</option><option value="dex">DexScreener</option><option value="none">Do not open anything</option></select></div>
   <div class="warn" id="warn" hidden><label><input type="checkbox" id="ok"> I understand this uses real SOL (the dev buy plus fees), cannot be undone, and the coin can lose all of its value. I will check the token amount quoted in the step log before approving in Phantom.</label></div>
   <div class="row"><button class="btn go" id="go" type="button">Launch on devnet</button><button class="btn" id="air" type="button">Get 1 devnet SOL</button></div>
+  <div class="row"><button class="btn" id="feechk" type="button">Check my creator fees</button><button class="btn" id="feego" type="button" disabled>Claim fees to my wallet</button></div>
   <div class="log" id="log"></div>
   <div class="result" id="result"></div>
 </div>
@@ -137,6 +138,32 @@ textarea{min-height:80px;resize:vertical}
     var r=new FileReader();r.onload=function(){imageData=r.result;$('prev').src=r.result;$('imginfo').textContent=Math.round(f.size/1024)+' KB'};r.readAsDataURL(f);
   });
   mascot();
+
+  // Creator fees: what this wallet has earned as a coin creator, on the network chosen above.
+  var feeAmt=0;
+  $('feechk').addEventListener('click',async function(){
+    if(running)return;
+    if(!window.SparkLaunch){toast('The launch code is missing.');return}
+    if(!pubkey)await connect();
+    if(!pubkey)return;
+    $('feego').disabled=true;
+    steps=[];drawLog();
+    var d=step('Creator fees');
+    try{
+      feeAmt=await window.SparkLaunch.creatorFees($('net').value,pubkey);
+      d(feeAmt>0?'ok':'warn',feeAmt.toFixed(6)+' SOL waiting for '+short(pubkey)+' on '+($('net').value==='mainnet'?'mainnet':'devnet'));
+      $('feego').disabled=!(feeAmt>0);
+    }catch(e){console.error(e);d('err','Could not read the fees. Try again.')}
+  });
+  $('feego').addEventListener('click',async function(){
+    if(running||!pubkey||!(feeAmt>0))return;
+    running=true;$('feego').disabled=true;steps=[];drawLog();
+    try{
+      await window.SparkLaunch.claimCreatorFees({cluster:$('net').value,wallet:phantom(),user:pubkey},step);
+      feeAmt=0;
+    }catch(e){console.error(e)}
+    running=false;
+  });
 
   var steps=[];
   function drawLog(){
