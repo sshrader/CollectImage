@@ -156,7 +156,8 @@ textarea{min-height:80px;resize:vertical}
     if(!window.SparkLaunch){toast('The launch code is missing. Run npm run build on the server.');return}
     if(!name||!sym){toast('Add a name and a ticker first.');return}
     if(!$('tok').value.trim()){toast('Enter the admin password.');return}
-    var bv=$('buy').value.trim()||'0',maxBuy=mode==='mainnet'?10:5;
+    var bv=$('buy').value.trim().replace(',','.')||'0',maxBuy=mode==='mainnet'?10:5;
+    if(/^\./.test(bv))bv='0'+bv;
     if(!/^\d{1,2}(\.\d{1,3})?$/.test(bv)||+bv>maxBuy){toast('Dev buy must be a number from 0 to '+maxBuy+' SOL.');return}
     if(mode==='mainnet'&&!$('ok').checked){toast('Tick the box to confirm you understand this uses real SOL.');return}
     running=true;$('go').disabled=true;
