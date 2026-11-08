@@ -183,7 +183,13 @@ textarea{min-height:80px;resize:vertical}
       n.textContent=(applied?'Done: the site now uses this coin. No Railway change needed.':'The site was not updated automatically ('+applyErr+'). Set COIN_MINT in Railway to this address.')+(out.buyError?' The dev buy did not go through, see the step log.':'');
       box.appendChild(n);
       if(+bv>0){var at=document.createElement('div');at.style.marginTop='8px';at.textContent=out.atomic?'Dev buy confirmed: the launch and your buy landed in the same transaction ('+out.signature.slice(0,8)+'...), so nobody could buy before you.':'WARNING: the buy was NOT in the same transaction as the launch. Others may have bought first.';box.appendChild(at)}
-      if(mode==='mainnet'){var a=document.createElement('a');a.href='https://pump.fun/coin/'+out.mint;a.target='_blank';a.rel='noopener';a.style.cssText='color:#ffc65c;display:inline-block;margin-top:8px';a.textContent='Open on pump.fun';box.appendChild(a)}
+      var lw=document.createElement('div');lw.style.cssText='margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+      var sel=document.createElement('select');sel.setAttribute('aria-label','Open the coin on');sel.style.cssText='font:inherit;padding:6px 8px';
+      var M=out.mint,links=mode==='mainnet'?[['GMGN','https://gmgn.ai/sol/token/'+M],['pump.fun','https://pump.fun/coin/'+M],['Solscan','https://solscan.io/token/'+M],['DexScreener','https://dexscreener.com/solana/'+M]]:[['Solana Explorer (devnet)','https://explorer.solana.com/address/'+M+'?cluster=devnet'],['Solscan (devnet)','https://solscan.io/token/'+M+'?cluster=devnet']];
+      links.forEach(function(l,k){var o=document.createElement('option');o.value=l[1];o.textContent=l[0];sel.appendChild(o)});
+      var go=document.createElement('button');go.type='button';go.className='cp';go.textContent='Open';go.onclick=function(){window.open(sel.value,'_blank','noopener')};
+      lw.appendChild(sel);lw.appendChild(go);box.appendChild(lw);
+      if(mode==='devnet'){var dn=document.createElement('div');dn.style.cssText='margin-top:6px;font-size:12px;opacity:.8';dn.textContent='GMGN and pump.fun only list mainnet coins.';box.appendChild(dn)}
       box.classList.add('on');
     }catch(e){console.error(e)}
     finally{running=false;$('go').disabled=false}
