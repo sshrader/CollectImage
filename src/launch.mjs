@@ -301,6 +301,9 @@ async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys, table
       t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
       const n = chunks.length > 1 ? ' ' + (i + 1) + '/' + chunks.length : '';
       await signAndSend({ step, conn, cfg, wallet, tx: t, labels: { dry: 'Dry run (lookup table' + n + ')', sign: 'Approve lookup table' + n + ' in Phantom', send: 'Send lookup table' + n } });
+      // Remember the table as soon as it exists, so a declined or failed second step does not strand it. The next try fills in what is missing.
+      saveTable(cfg, userKey, tableKey.toBase58());
+      if (onTable) { try { await onTable(tableKey.toBase58()); } catch (e) { /* only a convenience */ } }
     }
     saveTable(cfg, userKey, tableKey.toBase58());
     if (onTable) { try { await onTable(tableKey.toBase58()); } catch (e) { /* only a convenience */ } }
