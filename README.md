@@ -39,7 +39,7 @@ npm test
 | `CLUSTER` | `mainnet` (default) or `devnet`. |
 | `RPC_URL` | Your private RPC URL (for example Helius). Kept on the server. Falls back to the public endpoint, which is rate limited. |
 | `MIN_HOLD` | Smallest amount of the coin a wallet must hold. Default 1. |
-| `SLOTS` | How many images exist, 1 to 100. Default 10. |
+| `SLOTS` | How many images exist, 1 to 100. Default 40. |
 | `REQUIRE_HOLD_ON_DOWNLOAD` | `0` lets a wallet that already collected keep its image after selling. Default checks every time. |
 | `IMAGE_SECRET` | Optional. Decides how each image looks. If unset, one is created in the data folder. |
 | `ADMIN_TOKEN` | Password for the `/launch` tools. They stay off while it is unset. |

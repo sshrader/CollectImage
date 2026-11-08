@@ -23,7 +23,7 @@ const cfg = () => ({
   mint: (process.env.COIN_MINT || '').trim(),
   cluster: process.env.CLUSTER === 'devnet' ? 'devnet' : 'mainnet',
   rpc: (process.env.RPC_URL || '').trim(),
-  total: Math.min(100, Math.max(1, parseInt(process.env.SLOTS, 10) || 10)),
+  total: Math.min(100, Math.max(1, parseInt(process.env.SLOTS, 10) || 40)),
   minHold: Math.max(0, Number(process.env.MIN_HOLD) || 1),
   requireHold: process.env.REQUIRE_HOLD_ON_DOWNLOAD !== '0',
   coinName: (process.env.COIN_NAME || '').trim().slice(0, 40),
