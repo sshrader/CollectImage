@@ -175,7 +175,17 @@ async function signAndSend({ step, conn, cfg, wallet, tx, extraSigner, labels, d
   return await phase(step, labels.send, async (done) => {
     const latest = await conn.getLatestBlockhash('confirmed');
     const raw = signed.serialize();
-    const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: 'confirmed' });
+    // Public RPCs sit behind several nodes, and the one that checks the transaction can be a moment behind the one that
+    // issued its blockhash ("Blockhash not found"). Resending the same signed transaction is safe: it can only land once.
+    let sig = null;
+    for (let i = 0; i < 6 && !sig; i++) {
+      try {
+        sig = await conn.sendRawTransaction(raw, { skipPreflight: i >= 4, preflightCommitment: 'processed' });
+      } catch (e) {
+        if (i === 5 || !/blockhash not found/i.test(String((e && e.message) || e))) throw e;
+        await wait(1200);
+      }
+    }
     if (cfg.poll) {
       await pollConfirm(conn, sig, raw, latest.lastValidBlockHeight);
     } else {
