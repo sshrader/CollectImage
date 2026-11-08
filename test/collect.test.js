@@ -78,7 +78,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   balances[a.address] = 100;
   x = await collect(a);
-  check('holder gets an image', x.status === 200 && x.json.isNew && x.json.svg.startsWith('<svg') && x.json.svg.includes('SPARK 0'), JSON.stringify(x.json).slice(0, 120));
+  check('holder gets an image', x.status === 200 && x.json.isNew && x.json.svg.startsWith('<svg') && /(FROG|TOAD) 0/.test(x.json.svg), JSON.stringify(x.json).slice(0, 120));
   check('image shows the owner', x.json.svg.includes(a.address.slice(0, 4)));
   const slotA = x.json.slot;
   const svgA = x.json.svg;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Collect a Spark</title>
+<title>Collect a Frog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -54,8 +54,8 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
 </header>
 
-<h1>Hold the coin. <span>Collect your spark.</span></h1>
-<p class="lede" id="lede">Each spark is one of a small set of images. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
+<h1>Hold the coin. <span>Collect your frog.</span></h1>
+<p class="lede" id="lede">Each frog is one of a small set of pixel frogs and toads, and no two are the same. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
 
 <div class="panel">
   <div class="facts">
@@ -65,11 +65,11 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   </div>
   <div class="ca" id="caline" hidden>Coin address: <span id="ca"></span><button class="cp" id="cacopy" type="button">Copy CA</button></div>
   <div class="row">
-    <button class="btn go" id="collect" type="button">Collect my spark</button>
+    <button class="btn go" id="collect" type="button">Collect my frog</button>
     <span class="msg" id="msg"></span>
   </div>
   <div class="show" id="show">
-    <img id="pic" alt="Your spark">
+    <img id="pic" alt="Your frog">
     <div class="row">
       <button class="btn" id="dlpng" type="button">Download PNG</button>
       <button class="btn" id="dlsvg" type="button">Download SVG</button>
@@ -80,7 +80,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 <h2>The set</h2>
 <div class="grid" id="grid"></div>
 
-<p class="fine">Signing is free and sends no transaction. Your spark is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
+<p class="fine">Signing is free and sends no transaction. Your frog is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
 </div>
 
 <script>
@@ -108,7 +108,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
     return fetch('/api/status').then(function(r){return r.json()}).then(function(j){
       st=j;
       $('claimed').textContent=j.claimed;$('total').textContent=j.total;$('minhold').textContent=j.minHold;
-      if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' images is assigned to you. Only your wallet can open it.';
+      if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' frogs is assigned to you. Only your wallet can open it.';
       if(j.mint){$('caline').hidden=false;$('ca').textContent=j.mint}
       if(!j.configured){$('collect').disabled=true;msg('This page is not set up yet.','err')}
       drawGrid();
@@ -143,21 +143,21 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       svgText=res.svg;mySlot=res.slot;
       var url=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
       $('pic').src=url;$('show').classList.add('on');
-      msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your spark.','ok');
+      msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your frog.','ok');
       loadStatus();
     }catch(e){
       msg(e&&e.code===4001?'You declined the signature request.':(e&&e.message)||'Something went wrong.','err');
     }finally{busy=false;$('collect').disabled=!(st&&st.configured)}
   });
   function save(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove()}
-  $('dlsvg').addEventListener('click',function(){if(svgText)save(new Blob([svgText],{type:'image/svg+xml'}),'spark-'+mySlot+'.svg')});
+  $('dlsvg').addEventListener('click',function(){if(svgText)save(new Blob([svgText],{type:'image/svg+xml'}),'frog-'+mySlot+'.svg')});
   $('dlpng').addEventListener('click',function(){
     if(!svgText)return;
     var img=new Image();
     img.onload=function(){
-      var c=document.createElement('canvas');c.width=1024;c.height=1126;
-      c.getContext('2d').drawImage(img,0,0,1024,1126);
-      c.toBlob(function(b){if(b)save(b,'spark-'+mySlot+'.png')},'image/png');
+      var c=document.createElement('canvas');c.width=1024;c.height=1216;
+      var cx=c.getContext('2d');cx.imageSmoothingEnabled=false;cx.drawImage(img,0,0,1024,1216);
+      c.toBlob(function(b){if(b)save(b,'frog-'+mySlot+'.png')},'image/png');
     };
     img.src=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
   });
