@@ -35,7 +35,7 @@ npm test
 | Variable | Purpose |
 | --- | --- |
 | `COIN_MINT` | The coin's mint address. The page stays off until this is set. |
-| `COIN_NAME` | Optional name shown on the page. |
+| `COIN_NAME` | Name shown on the page, for example `The Pond`. |
 | `CLUSTER` | `mainnet` (default) or `devnet`. |
 | `RPC_URL` | Your private RPC URL (for example Helius). Kept on the server. Falls back to the public endpoint, which is rate limited. |
 | `MIN_HOLD` | Smallest amount of the coin a wallet must hold. Default 1. |

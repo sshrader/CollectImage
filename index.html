@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Collect a Frog</title>
+<title>The Pond</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(
 .wrap{max-width:980px;margin:0 auto;padding-block:28px 64px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:15px}
-.logo svg{width:26px;height:26px}
+.logo svg{width:28px;height:28px}
 .wallet{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:99px;padding:8px 16px;font-family:var(--mono);font-size:13px;cursor:pointer}
 .wallet.on{border-color:var(--good)}
 h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,56px);line-height:1.06;letter-spacing:-.02em;margin:44px 0 14px;text-wrap:balance}
@@ -52,11 +52,11 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 <body>
 <div class="wrap">
 <header>
-  <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc65c"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient></defs><g fill="url(#lg)"><path d="M12 .8L14.1 10.5H9.9Z"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(90 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(180 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(270 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(45 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(135 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(225 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="2.7" fill="#fff4dc"/></svg>Sparkpad Collect</div>
+  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>The Pond</div>
   <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
 </header>
 
-<h1>Hold the coin. <span>Collect your frog.</span></h1>
+<h1>Join the pond. <span>Collect your frog.</span></h1>
 <p class="lede" id="lede">Each frog is one of a small set of pixel frogs and toads, and no two are the same. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
 
 <div class="panel">
@@ -121,6 +121,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   function loadStatus(){
     return fetch('/api/status').then(function(r){return r.json()}).then(function(j){
       st=j;
+      if(j.silhouette&&!$('logoicon').firstChild)$('logoicon').appendChild(frogIcon(j.silhouette,'#5ee0a0'));
       $('claimed').textContent=j.claimed;$('total').textContent=j.total;$('minhold').textContent=j.minHold;
       if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' frogs is assigned to you. Only your wallet can open it.';
       if(j.mint){$('caline').hidden=false;$('ca').textContent=j.mint}
