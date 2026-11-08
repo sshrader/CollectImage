@@ -156,6 +156,13 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const st = await (await fetch(base + '/api/status')).json();
   check('launch page can set the coin, starting fresh', r.status === 200 && st.mint === newMint && st.claimed === 0, JSON.stringify(st).slice(0, 100));
 
+  r = await fetch(base + '/api/lut?wallet=' + a.address + '&cluster=devnet', { headers: { Authorization: 'Bearer wrong' } });
+  check('table memory needs the admin password', r.status === 401);
+  const tbl = b58encode(crypto.randomBytes(32));
+  r = await fetch(base + '/api/lut', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + 'a'.repeat(32) }, body: JSON.stringify({ wallet: a.address, cluster: 'devnet', table: tbl }) });
+  const got = await (await fetch(base + '/api/lut?wallet=' + a.address + '&cluster=devnet', { headers: { Authorization: 'Bearer ' + 'a'.repeat(32) } })).json();
+  check('lookup table is remembered on the server', r.status === 200 && got.table === tbl);
+
   server.close(); fakeRpc.close();
   console.log(failed ? failed + ' failed' : 'all passed');
   process.exit(failed ? 1 : 0);

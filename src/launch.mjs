@@ -265,11 +265,11 @@ function saveTable(cfg, userKey, addr) {
 }
 
 // Finds or builds the lookup table holding the shared addresses. Setting it up takes one or two wallet approvals, once.
-async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys }) {
+async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys, tableHint, onTable }) {
   return await phase(step, 'Lookup table', async (done) => {
     let table = null;
     let why = 'no saved table in this browser';
-    const saved = savedTable(cfg, userKey);
+    const saved = savedTable(cfg, userKey) || tableHint || null;
     if (saved) {
       why = 'saved table could not be read';
       // A node that is a moment behind can answer "not found" for a table that exists, so ask a few times.
@@ -303,6 +303,7 @@ async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys }) {
       await signAndSend({ step, conn, cfg, wallet, tx: t, labels: { dry: 'Dry run (lookup table' + n + ')', sign: 'Approve lookup table' + n + ' in Phantom', send: 'Send lookup table' + n } });
     }
     saveTable(cfg, userKey, tableKey.toBase58());
+    if (onTable) { try { await onTable(tableKey.toBase58()); } catch (e) { /* only a convenience */ } }
 
     // Wait until the network shows every address, then a little longer: a table is usable from the slot after it is filled.
     let fresh = null;
@@ -320,7 +321,7 @@ async function ensureLookupTable({ step, conn, cfg, wallet, userKey, keys }) {
 }
 
 // Create the coin and buy it in one transaction. Throws before anything is sent if it cannot be built.
-async function createAndBuy({ step, conn, cfg, wallet, userKey, mint, name, symbol, uri, lamports, devBuySol, priorityMicroLamports }) {
+async function createAndBuy({ step, conn, cfg, wallet, userKey, mint, name, symbol, uri, lamports, devBuySol, priorityMicroLamports, tableHint, onTable }) {
   const online = new OnlinePumpSdk(conn);
   const built = await phase(step, 'Build create + buy', async (done) => {
     const global = await online.fetchGlobal();
@@ -338,7 +339,7 @@ async function createAndBuy({ step, conn, cfg, wallet, userKey, mint, name, symb
     return { ixs, shared, amount };
   });
 
-  const { table, fresh } = await ensureLookupTable({ step, conn, cfg, wallet, userKey, keys: built.shared });
+  const { table, fresh } = await ensureLookupTable({ step, conn, cfg, wallet, userKey, keys: built.shared, tableHint, onTable });
 
   const tx = await phase(step, 'Pack into one transaction', async (done) => {
     const pre = [ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 })];
@@ -460,7 +461,7 @@ async function devBuy({ step, conn, cfg, wallet, userKey, mint, lamports, devBuy
 // shareholders is an optional list of { address, shareBps } for the creator fee split (basis points, total 10000).
 // atomic (default true): with a dev buy, create and buy go in ONE transaction so nobody can buy in between.
 // allowSplitFallback: if the one-transaction launch cannot be built, fall back to two transactions. Devnet only.
-export async function createCoin({ cluster, wallet, user, name, symbol, uri, devBuySol, shareholders, atomic, allowSplitFallback, priorityMicroLamports }, step) {
+export async function createCoin({ cluster, wallet, user, name, symbol, uri, devBuySol, shareholders, atomic, allowSplitFallback, priorityMicroLamports, tableHint, onTable }, step) {
   const cfg = config(cluster);
   const conn = new Connection(cfg.rpc, 'confirmed');
   const userKey = new PublicKey(user);
@@ -481,7 +482,7 @@ export async function createCoin({ cluster, wallet, user, name, symbol, uri, dev
 
   if (wantBuy && atomic !== false) {
     try {
-      result.signature = await createAndBuy({ step, conn, cfg, wallet, userKey, mint, name, symbol, uri, lamports, devBuySol, priorityMicroLamports: priorityMicroLamports != null ? priorityMicroLamports : (cfg.priority || 0) });
+      result.signature = await createAndBuy({ step, conn, cfg, wallet, userKey, mint, name, symbol, uri, lamports, devBuySol, priorityMicroLamports: priorityMicroLamports != null ? priorityMicroLamports : (cfg.priority || 0), tableHint, onTable });
       result.buySignature = result.signature;
       result.atomic = true;
     } catch (e) {

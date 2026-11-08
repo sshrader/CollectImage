@@ -227,6 +227,23 @@ async function setCoin(req, res) {
   send(res, 200, { ok: true, mint, cluster: c.cluster });
 }
 
+// The launch page remembers its lookup table here too, because some browsers will not keep it.
+// The page only uses a table that the connected wallet controls, so a wrong value here can do no harm.
+const LUT_FILE = path.join(DATA_DIR, 'tables.json');
+async function lutStore(req, res, u) {
+  if (!guardAdmin(req, res)) return;
+  let map = {}; try { map = JSON.parse(fs.readFileSync(LUT_FILE, 'utf8')); } catch (e) { /* none yet */ }
+  if (req.method === 'GET') {
+    const w = u.searchParams.get('wallet') || '', cl = u.searchParams.get('cluster') || '';
+    return send(res, 200, { table: B58_RE.test(w) ? map[cl + ':' + w] || null : null });
+  }
+  const b = await jsonBody(req, res, 1000); if (!b) return;
+  if (!B58_RE.test(text(b.wallet, 60)) || !B58_RE.test(text(b.table, 60)) || !/^(devnet|mainnet)$/.test(b.cluster)) return send(res, 400, { error: 'Bad value.' });
+  map[b.cluster + ':' + b.wallet] = b.table;
+  fs.writeFileSync(LUT_FILE + '.tmp', JSON.stringify(map)); fs.renameSync(LUT_FILE + '.tmp', LUT_FILE);
+  send(res, 200, { ok: true });
+}
+
 function adminOk(req) {
   const token = String(process.env.ADMIN_TOKEN || '').trim();
   if (!token) return false;
@@ -336,11 +353,12 @@ function serveStatic(res, file, type, extra) {
 const MIME = { '.html': 'text/html; charset=utf-8' };
 const server = http.createServer(async (req, res) => {
   try {
-    const p = new URL(req.url, 'http://x').pathname;
+    const uu = new URL(req.url, 'http://x'); const p = uu.pathname;
     if (req.method === 'POST' && p === '/api/challenge') return await challenge(req, res);
     if (req.method === 'POST' && p === '/api/collect') return await collect(req, res);
     if (req.method === 'POST' && p === '/api/metadata') return await createMetadata(req, res);
     if (req.method === 'POST' && p === '/api/coin') return await setCoin(req, res);
+    if (p === '/api/lut' && (req.method === 'GET' || req.method === 'POST')) return await lutStore(req, res, uu);
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/status') return status(res);

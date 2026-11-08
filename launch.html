@@ -170,7 +170,9 @@ textarea{min-height:80px;resize:vertical}
       var j=await r.json().catch(function(){return{}});
       if(!r.ok){s2('err',j.error||('server replied '+r.status));return}
       s2('ok',j.uri);
-      var out=await window.SparkLaunch.createCoin({cluster:mode,wallet:p,user:pubkey,name:name,symbol:sym,uri:j.uri,devBuySol:+bv,allowSplitFallback:mode==='devnet'},step);
+      var auth={'Authorization':'Bearer '+$('tok').value.trim()},hint=null;
+      try{var lr=await fetch('/api/lut?wallet='+encodeURIComponent(pubkey)+'&cluster='+mode,{headers:auth});if(lr.ok)hint=(await lr.json()).table}catch(e3){}
+      var out=await window.SparkLaunch.createCoin({cluster:mode,wallet:p,user:pubkey,name:name,symbol:sym,uri:j.uri,devBuySol:+bv,allowSplitFallback:mode==='devnet',tableHint:hint,onTable:function(t){return fetch('/api/lut',{method:'POST',headers:{'Content-Type':'application/json','Authorization':auth.Authorization},body:JSON.stringify({wallet:pubkey,cluster:mode,table:t})})}},step);
       var box=$('result');box.textContent='';
       var h=document.createElement('div');h.textContent='Coin created. Mint address:';box.appendChild(h);
       var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffc65c';m.textContent=out.mint;box.appendChild(m);
