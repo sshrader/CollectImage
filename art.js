@@ -137,14 +137,16 @@ function drawBackground(g, bg, rnd) {
   if (bg.decor === 'moon') { fill(g, ell(27, 5, 3.2, 3.2), '#f3f1e6'); fill(g, ell(28.4, 4.2, 2.6, 2.6), bg.sky[0]); }
 }
 
-function drawFrog(t, rnd) {
+function drawFrog(t, rnd, transparent) {
   const pal = SKINS[t.skin], bg = BGS[t.bg];
   const g = grid();
-  drawBackground(g, bg, rnd);
+  drawBackground(transparent ? grid() : g, bg, rnd); // the same random numbers are used either way
 
-  // lily pad
-  fill(g, ell(16, 29.6, 11, 1.9), '#3f9a3f'); fill(g, ell(16, 29.2, 9.5, 1.2), '#58c258');
-  put(g, 27, 29, bg.water);
+  if (!transparent) {
+    // lily pad
+    fill(g, ell(16, 29.6, 11, 1.9), '#3f9a3f'); fill(g, ell(16, 29.2, 9.5, 1.2), '#58c258');
+    put(g, 27, 29, bg.water);
+  }
 
   // hat goes in before the head so the eyes always stay in front of it
   if (t.hat) stamp(g, HAT_ART[t.hat], 16, HAT_ART[t.hat].bottom);
@@ -246,7 +248,7 @@ function render(slot, total, owner, secret, opts) {
   const bare = !!(opts && opts.bare);
   const t = traitsFor(slot, secret);
   const pal = SKINS[t.skin];
-  const g = drawFrog(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()));
+  const g = drawFrog(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()), !!(opts && opts.transparent));
   let rects = '';
   for (let y = 0; y < H; y++) {
     let x = 0;
