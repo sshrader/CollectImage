@@ -6,27 +6,27 @@
 <title>The Pond</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d0b17;--surface:#161228;--surface2:#1f1a38;--line:#2c2649;--fg:#ece8f7;--dim:#9d96bc;--ember:#ff6a3d;--gold:#ffc65c;--good:#5ee0a0;--bad:#ff7a7a;
 --display:'Unbounded','Arial Black',Impact,sans-serif;--sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(900px 500px at 78% -8%,rgba(255,106,61,.16),transparent 70%),var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
 padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:980px;margin:0 auto;padding-block:28px 64px}
+.wrap{max-width:980px;margin:0 auto;padding-block:28px 220px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:15px}
 .logo svg{width:28px;height:28px}
 .wallet{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:99px;padding:8px 16px;font-family:var(--mono);font-size:13px;cursor:pointer}
 .wallet.on{border-color:var(--good)}
-h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,56px);line-height:1.06;letter-spacing:-.02em;margin:44px 0 14px;text-wrap:balance}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,56px);line-height:1.06;letter-spacing:0;margin:44px 0 14px;text-wrap:balance}
 h1 span{color:var(--gold)}
 .lede{max-width:60ch;color:var(--dim);font-size:17px;margin:0 0 24px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;gap:16px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .btn{font:700 15px var(--sans);border-radius:99px;padding:12px 22px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
-.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#1a0d06;border:0}
+.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#07140c;border:0}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .facts{display:flex;gap:26px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--dim)}
 .facts b{display:block;font-family:var(--display);font-size:22px;color:var(--fg)}
@@ -47,9 +47,25 @@ h1 span{color:var(--gold)}
 .show img{width:min(360px,100%);height:auto;border-radius:14px;border:1px solid var(--line)}
 .fine{font-size:12px;color:var(--dim);max-width:70ch;margin-top:28px}
 h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
+
+/* pond theme */
+:root{--bg:#08130f;--surface:#0f221a;--surface2:#163226;--line:#24493a;--fg:#e9f6ec;--dim:#8fb5a0;--ember:#5ed06a;--gold:#ffe27a;--good:#5ee0a0;--bad:#ff7a7a;
+--display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif}
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a1f2e 0%,#0b2a2a 45%,#08130f 100%)}
+.sky .moon{position:absolute;top:28px;right:6vw;width:66px;height:66px;image-rendering:pixelated;opacity:.95}
+.sky i{position:absolute;width:4px;height:4px;background:#ffe27a;box-shadow:0 0 8px 2px rgba(255,226,122,.6);animation:fly 5s ease-in-out infinite}
+.sky b{position:absolute;width:3px;height:3px;background:#dff7e6;opacity:.7}
+@keyframes fly{0%,100%{opacity:.15;transform:translate(0,0)}50%{opacity:1;transform:translate(14px,-10px)}}
+.scene{position:fixed;left:0;right:0;bottom:0;height:min(36vh,320px);z-index:0;pointer-events:none}
+.scene img{width:100%;height:100%;object-fit:cover;object-position:50% 100%;image-rendering:pixelated;display:block}
+.wrap{position:relative;z-index:1}
+@media(prefers-reduced-motion:reduce){.sky i{animation:none;opacity:.7}}
 </style>
 </head>
 <body>
+<div class="sky" aria-hidden="true"><img class="moon" src="/assets/moon.svg" alt=""><b style="left:8%;top:9%"></b><b style="left:22%;top:20%"></b><b style="left:41%;top:7%"></b><b style="left:57%;top:16%"></b><b style="left:73%;top:6%"></b><b style="left:90%;top:24%"></b><b style="left:34%;top:30%"></b>
+<i style="left:12%;top:46%;animation-delay:0s"></i><i style="left:30%;top:58%;animation-delay:1.3s"></i><i style="left:52%;top:50%;animation-delay:2.1s"></i><i style="left:68%;top:62%;animation-delay:.7s"></i><i style="left:84%;top:52%;animation-delay:3.2s"></i><i style="left:6%;top:68%;animation-delay:2.6s"></i></div>
+<div class="scene" aria-hidden="true"><img src="/assets/pond.svg" alt=""></div>
 <div class="wrap">
 <header>
   <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>The Pond</div>
