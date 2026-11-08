@@ -139,8 +139,9 @@ function status(res) {
   const owners = {};
   for (const w of Object.keys(map)) owners[map[w]] = w;
   const slots = [];
-  for (let i = 0; i < c.total; i++) slots.push({ n: i + 1, owner: owners[i] ? owners[i].slice(0, 4) + '…' + owners[i].slice(-4) : null });
-  send(res, 200, { configured: !!c.mint, mint: c.mint || null, cluster: c.cluster, coinName: c.coinName || null, total: c.total, claimed: Object.keys(map).length, minHold: c.minHold, requireHold: c.requireHold, slots });
+  const secret = imageSecret();
+  for (let i = 0; i < c.total; i++) slots.push({ n: i + 1, owner: owners[i] ? owners[i].slice(0, 4) + '…' + owners[i].slice(-4) : null, tint: owners[i] ? art.SKINS[art.traitsFor(i, secret).skin].base : null });
+  send(res, 200, { silhouette: art.silhouette(), configured: !!c.mint, mint: c.mint || null, cluster: c.cluster, coinName: c.coinName || null, total: c.total, claimed: Object.keys(map).length, minHold: c.minHold, requireHold: c.requireHold, slots });
 }
 
 async function challenge(req, res) {

@@ -33,13 +33,15 @@ h1 span{color:var(--gold)}
 .ca{font-family:var(--mono);font-size:13px;color:var(--dim);overflow-wrap:anywhere}
 .cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer;margin-left:8px}
 .msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:28px}
-.slot{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:8px;justify-items:center;text-align:center;min-width:0}
-.slot svg{width:70%;max-width:90px;opacity:.35}
-.slot.taken svg{opacity:.85}
+.grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-top:28px}
+@media(max-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.slot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 6px;display:grid;gap:4px;justify-items:center;text-align:center;min-width:0}
+.slot svg,.slot img{width:100%;max-width:72px;height:auto;image-rendering:pixelated}
+.slot svg{opacity:.9}
+.slot.free svg{opacity:.5}
 .slot.mine{border-color:var(--gold)}
-.slot b{font-family:var(--display);font-size:13px}
-.slot small{font-family:var(--mono);font-size:11px;color:var(--dim);overflow-wrap:anywhere}
+.slot b{font-family:var(--display);font-size:11px}
+.slot small{font-family:var(--mono);font-size:10px;color:var(--dim);overflow-wrap:anywhere;line-height:1.2}
 .show{display:none;gap:16px;justify-items:center}
 .show.on{display:grid}
 .show img{width:min(360px,100%);height:auto;border-radius:14px;border:1px solid var(--line)}
@@ -95,15 +97,24 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
   var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#ffc65c"><path d="M12 .8L14.1 10.5H9.9Z"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(90 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(180 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(270 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(45 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(135 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(225 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(315 12 12)"/></g></svg>';
 
+  var myImg=null;
+  function frogIcon(runs,fill){
+    var NS='http://www.w3.org/2000/svg',s=document.createElementNS(NS,'svg');
+    s.setAttribute('viewBox','0 0 32 32');s.setAttribute('aria-hidden','true');s.setAttribute('shape-rendering','crispEdges');
+    runs.forEach(function(r){var e=document.createElementNS(NS,'rect');e.setAttribute('x',r[1]);e.setAttribute('y',r[0]);e.setAttribute('width',r[2]);e.setAttribute('height',1);e.setAttribute('fill',fill);s.appendChild(e)});
+    return s;
+  }
   function drawGrid(){
     var g=$('grid');g.textContent='';
     if(!st)return;
     st.slots.forEach(function(s){
+      var mine=mySlot===s.n&&myImg;
       var d=document.createElement('div');
-      d.className='slot'+(s.owner?' taken':'')+(mySlot===s.n?' mine':'');
-      d.innerHTML=SPARK;
+      d.className='slot'+(s.owner?' taken':' free')+(mySlot===s.n?' mine':'');
+      if(mine){var im=document.createElement('img');im.src=myImg;im.alt='Your frog';d.appendChild(im)}
+      else d.appendChild(frogIcon(st.silhouette||[],s.owner&&s.tint?s.tint:'#3a3358'));
       var b=document.createElement('b');b.textContent='#'+String(s.n).padStart(2,'0');
-      var sm=document.createElement('small');sm.textContent=mySlot===s.n?'Yours':(s.owner?'Collected by '+s.owner:'Not collected yet');
+      var sm=document.createElement('small');sm.textContent=mySlot===s.n?'Yours':(s.owner?s.owner:'Open');
       d.appendChild(b);d.appendChild(sm);g.appendChild(d);
     });
   }
@@ -136,7 +147,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
     if(pubkey){var p=phantom();Promise.resolve(p&&p.disconnect()).catch(function(){}).then(function(){pubkey=null;$('wlabel').textContent='Connect Phantom';$('wbtn').classList.remove('on');hideShow()})}
     else connect();
   });
-  function hideShow(){$('show').classList.remove('on');svgText=null;mySlot=0;drawGrid()}
+  function hideShow(){$('show').classList.remove('on');svgText=null;mySlot=0;myImg=null;drawGrid()}
   function api(path,body){
     return fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Request failed');return j})});
   }
@@ -154,7 +165,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       var res=await api('/api/collect',{wallet:pubkey,nonce:ch.nonce,signature:btoa(bin)});
       svgText=res.svg;mySlot=res.slot;
       var url=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
-      $('pic').src=url;$('show').classList.add('on');
+      myImg=url;$('pic').src=url;$('show').classList.add('on');
       msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your frog.','ok');
       loadStatus();
     }catch(e){

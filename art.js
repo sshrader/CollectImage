@@ -102,6 +102,23 @@ function stamp(g, art, cx, bottom) {
   art.rows.forEach((row, j) => { for (let i = 0; i < w; i++) { const ch = row[i]; if (ch !== '.') put(g, cx - ((w - 1) >> 1) + i, top + j, HAT_COLORS[ch]); } });
 }
 
+const SHAPES = [ell(16, 16.5, 10.5, 5.5), ell(16, 23, 8.5, 6.5), ell(10, 10, 4, 4), ell(22, 10, 4, 4), ell(7.5, 28, 4.5, 2.3), ell(24.5, 28, 4.5, 2.3), ell(6.5, 23, 3, 4), ell(25.5, 23, 3, 4)];
+
+// The plain frog outline as rows of pixels: [y, x, length]. Used for the locked tiles on the page.
+function silhouette() {
+  const runs = [];
+  for (let y = 0; y < H; y++) {
+    let x = 0;
+    while (x < W) {
+      if (!SHAPES.some((s) => s(x, y))) { x++; continue; }
+      let n = 1;
+      while (x + n < W && SHAPES.some((s) => s(x + n, y))) n++;
+      runs.push([y, x, n]); x += n;
+    }
+  }
+  return runs;
+}
+
 function drawBackground(g, bg, rnd) {
   for (let y = 0; y < H; y++) {
     const band = Math.min(3, Math.floor(y / 7));
@@ -133,7 +150,7 @@ function drawFrog(t, rnd) {
   if (t.hat) stamp(g, HAT_ART[t.hat], 16, HAT_ART[t.hat].bottom);
 
   // silhouette
-  const shapes = [ell(16, 16.5, 10.5, 5.5), ell(16, 23, 8.5, 6.5), ell(10, 10, 4, 4), ell(22, 10, 4, 4), ell(7.5, 28, 4.5, 2.3), ell(24.5, 28, 4.5, 2.3), ell(6.5, 23, 3, 4), ell(25.5, 23, 3, 4)];
+  const shapes = SHAPES;
   const mask = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => shapes.some((s) => s(x, y))));
   const inM = (x, y) => x >= 0 && x < W && y >= 0 && y < H && mask[y][x];
   const outline = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => mask[y][x] && (!inM(x - 1, y) || !inM(x + 1, y) || !inM(x, y - 1) || !inM(x, y + 1))));
@@ -255,4 +272,4 @@ function render(slot, total, owner, secret, opts) {
     + '</svg>';
 }
 
-module.exports = { render, traitsFor, SKINS };
+module.exports = { render, traitsFor, silhouette, SKINS };
