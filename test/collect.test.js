@@ -144,6 +144,18 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await fetch(base + '/launch');
   check('launch page is served', r.status === 200 && (await r.text()).includes('Launch the coin'));
 
+  const setCoin = (body, tok) => fetch(base + '/api/coin', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
+  const newMint = b58encode(crypto.randomBytes(32));
+  r = await setCoin({ mint: newMint }, 'wrong');
+  check('setting the coin needs the admin password', r.status === 401);
+  r = await setCoin({ mint: 'nope' }, 'a'.repeat(32));
+  check('bad coin address rejected', r.status === 400);
+  r = await setCoin({ mint: newMint, cluster: 'devnet' }, 'a'.repeat(32));
+  check('coin from another network rejected', r.status === 409);
+  r = await setCoin({ mint: newMint, cluster: 'mainnet' }, 'a'.repeat(32));
+  const st = await (await fetch(base + '/api/status')).json();
+  check('launch page can set the coin, starting fresh', r.status === 200 && st.mint === newMint && st.claimed === 0, JSON.stringify(st).slice(0, 100));
+
   server.close(); fakeRpc.close();
   console.log(failed ? failed + ' failed' : 'all passed');
   process.exit(failed ? 1 : 0);

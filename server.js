@@ -19,8 +19,12 @@ const ED25519_SPKI = Buffer.from('302a300506032b6570032100', 'hex');
 const CHALLENGE_TTL = 5 * 60 * 1000;
 
 // Settings are read on each request so they can be changed without code edits.
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+// The coin address chosen on the launch page is saved here, so it takes effect without a Railway change or redeploy.
+// It overrides COIN_MINT.
+const savedMint = () => { try { return String(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')).mint || '').trim(); } catch (e) { return ''; } };
 const cfg = () => ({
-  mint: (process.env.COIN_MINT || '').trim(),
+  mint: savedMint() || (process.env.COIN_MINT || '').trim(),
   cluster: process.env.CLUSTER === 'devnet' ? 'devnet' : 'mainnet',
   rpc: (process.env.RPC_URL || '').trim(),
   total: Math.min(100, Math.max(1, parseInt(process.env.SLOTS, 10) || 40)),
@@ -206,6 +210,23 @@ const RPC_METHODS = new Set(['getLatestBlockhash', 'getBlockHeight', 'getAccount
   'simulateTransaction', 'sendTransaction', 'getSignatureStatuses', 'getTransaction', 'getGenesisHash', 'getFeeForMessage',
   'getMinimumBalanceForRentExemption', 'getRecentPrioritizationFees', 'getTokenAccountBalance', 'getEpochInfo', 'getVersion']);
 
+// Lets the launch page point the site at the coin it just created. The network must match this server's CLUSTER.
+async function setCoin(req, res) {
+  if (!guardAdmin(req, res)) return;
+  const b = await jsonBody(req, res, 2000); if (!b) return;
+  const mint = text(b.mint, 60);
+  if (!B58_RE.test(mint) || b58decode(mint).length !== 32) return send(res, 400, { error: 'That is not a valid coin address.' });
+  const c = cfg();
+  if (b.cluster && b.cluster !== c.cluster) return send(res, 409, { error: 'This site is set to ' + c.cluster + ' (CLUSTER in Railway), but the coin was made on ' + b.cluster + '. Change CLUSTER and RPC_URL in Railway, then try again.' });
+  if (mint !== c.mint) {
+    // A different coin starts with a clean slate. The old claims are kept in a file next to the new ones.
+    const map = load();
+    if (Object.keys(map).length) fs.renameSync(FILE, path.join(DATA_DIR, 'assignments-' + Date.now() + '.json'));
+    fs.writeFileSync(SETTINGS_FILE + '.tmp', JSON.stringify({ mint })); fs.renameSync(SETTINGS_FILE + '.tmp', SETTINGS_FILE);
+  }
+  send(res, 200, { ok: true, mint, cluster: c.cluster });
+}
+
 function adminOk(req) {
   const token = String(process.env.ADMIN_TOKEN || '').trim();
   if (!token) return false;
@@ -319,6 +340,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/challenge') return await challenge(req, res);
     if (req.method === 'POST' && p === '/api/collect') return await collect(req, res);
     if (req.method === 'POST' && p === '/api/metadata') return await createMetadata(req, res);
+    if (req.method === 'POST' && p === '/api/coin') return await setCoin(req, res);
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/status') return status(res);

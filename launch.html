@@ -175,7 +175,9 @@ textarea{min-height:80px;resize:vertical}
       var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffc65c';m.textContent=out.mint;box.appendChild(m);
       var cp=document.createElement('button');cp.className='cp';cp.type='button';cp.textContent='Copy';cp.onclick=function(){if(navigator.clipboard)navigator.clipboard.writeText(out.mint);cp.textContent='Copied'};box.appendChild(cp);
       var n=document.createElement('div');n.style.marginTop='10px';
-      n.textContent='Next: in Railway set COIN_MINT to this address'+(mode==='devnet'?' and CLUSTER=devnet':'')+'.'+(out.buyError?' The dev buy did not go through, see the step log.':'');
+      var applied=false,applyErr='';
+      try{var ar=await fetch('/api/coin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+$('tok').value.trim()},body:JSON.stringify({mint:out.mint,cluster:mode})});var aj=await ar.json().catch(function(){return{}});applied=ar.ok;applyErr=aj.error||''}catch(e2){applyErr='could not reach the server'}
+      n.textContent=(applied?'Done: the site now uses this coin. No Railway change needed.':'The site was not updated automatically ('+applyErr+'). Set COIN_MINT in Railway to this address.')+(out.buyError?' The dev buy did not go through, see the step log.':'');
       box.appendChild(n);
       if(+bv>0){var at=document.createElement('div');at.style.marginTop='8px';at.textContent=out.atomic?'Dev buy confirmed: the launch and your buy landed in the same transaction ('+out.signature.slice(0,8)+'...), so nobody could buy before you.':'WARNING: the buy was NOT in the same transaction as the launch. Others may have bought first.';box.appendChild(at)}
       if(mode==='mainnet'){var a=document.createElement('a');a.href='https://pump.fun/coin/'+out.mint;a.target='_blank';a.rel='noopener';a.style.cssText='color:#ffc65c;display:inline-block;margin-top:8px';a.textContent='Open on pump.fun';box.appendChild(a)}
