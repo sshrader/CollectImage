@@ -85,6 +85,7 @@ textarea{min-height:80px;resize:vertical}
     <div><label for="net">Network</label><select id="net"><option value="devnet">Solana devnet, test</option><option value="mainnet">Solana MAINNET, real money</option></select></div>
     <div><label for="buy">Dev buy in SOL <span class="rv" id="buyhint">up to 5</span></label><input type="text" id="buy" value="1" inputmode="decimal"></div>
   </div>
+  <div><label for="site">Open the coin when it is created <span class="rv">opens a new tab as soon as the launch confirms</span></label><select id="site"><option value="gmgn">GMGN</option><option value="pump">pump.fun</option><option value="solscan">Solscan</option><option value="dex">DexScreener</option><option value="none">Do not open anything</option></select></div>
   <div class="warn" id="warn" hidden><label><input type="checkbox" id="ok"> I understand this uses real SOL (the dev buy plus fees), cannot be undone, and the coin can lose all of its value. I will check the token amount quoted in the step log before approving in Phantom.</label></div>
   <div class="row"><button class="btn go" id="go" type="button">Launch on devnet</button><button class="btn" id="air" type="button">Get 1 devnet SOL</button></div>
   <div class="log" id="log"></div>
@@ -153,6 +154,7 @@ textarea{min-height:80px;resize:vertical}
     if(running)return;
     var mode=$('net').value,name=$('nm').value.trim(),sym=$('tk').value.trim().toUpperCase();
     steps=[];drawLog();$('result').classList.remove('on');
+    var siteWin=null;
     if(!window.SparkLaunch){toast('The launch code is missing. Run npm run build on the server.');return}
     if(!name||!sym){toast('Add a name and a ticker first.');return}
     if(!$('tok').value.trim()){toast('Enter the admin password.');return}
@@ -160,6 +162,8 @@ textarea{min-height:80px;resize:vertical}
     if(/^\./.test(bv))bv='0'+bv;
     if(!/^\d{1,2}(\.\d{1,3})?$/.test(bv)||+bv>maxBuy){toast('Dev buy must be a number from 0 to '+maxBuy+' SOL.');return}
     if(mode==='mainnet'&&!$('ok').checked){toast('Tick the box to confirm you understand this uses real SOL.');return}
+    var site=$('site').value;
+    if(site!=='none'){try{siteWin=window.open('about:blank','_blank');if(siteWin){siteWin.opener=null;siteWin.document.title='Waiting for the coin...';siteWin.document.body.style.cssText='font:16px sans-serif;background:#0a1f2e;color:#e9f6ec;padding:24px';siteWin.document.body.textContent='Waiting for your coin to be created. This tab will open the coin automatically.'}}catch(e0){siteWin=null}}
     running=true;$('go').disabled=true;
     try{
       if(!pubkey){await connect();if(!pubkey)return}
@@ -168,11 +172,12 @@ textarea{min-height:80px;resize:vertical}
       var s2=step('Metadata');
       var r=await fetch('/api/metadata',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+$('tok').value.trim()},body:JSON.stringify({name:name,symbol:sym,description:$('ds').value.trim(),image:imageData,twitter:$('tw').value.trim(),website:$('ws').value.trim()})});
       var j=await r.json().catch(function(){return{}});
-      if(!r.ok){s2('err',j.error||('server replied '+r.status));return}
+      if(!r.ok){s2('err',j.error||('server replied '+r.status));try{if(siteWin)siteWin.close()}catch(e7){}return}
       s2('ok',j.uri);
       var auth={'Authorization':'Bearer '+$('tok').value.trim()},hint=null;
       try{var lr=await fetch('/api/lut?wallet='+encodeURIComponent(pubkey)+'&cluster='+mode,{headers:auth});if(lr.ok)hint=(await lr.json()).table}catch(e3){}
       var out=await window.SparkLaunch.createCoin({cluster:mode,wallet:p,user:pubkey,name:name,symbol:sym,uri:j.uri,devBuySol:+bv,allowSplitFallback:mode==='devnet',tableHint:hint,onTable:function(t){return fetch('/api/lut',{method:'POST',headers:{'Content-Type':'application/json','Authorization':auth.Authorization},body:JSON.stringify({wallet:pubkey,cluster:mode,table:t})})}},step);
+      if(siteWin){var T=out.mint,U={gmgn:'https://gmgn.ai/sol/token/'+T,pump:'https://pump.fun/coin/'+T,solscan:'https://solscan.io/token/'+T,dex:'https://dexscreener.com/solana/'+T};var dest=mode==='mainnet'?U[site]:(site==='solscan'?U.solscan+'?cluster=devnet':'https://explorer.solana.com/address/'+T+'?cluster=devnet');try{siteWin.location.href=dest}catch(e5){}}
       var box=$('result');box.textContent='';
       var h=document.createElement('div');h.textContent='Coin created. Mint address:';box.appendChild(h);
       var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffc65c';m.textContent=out.mint;box.appendChild(m);
@@ -191,7 +196,7 @@ textarea{min-height:80px;resize:vertical}
       lw.appendChild(sel);lw.appendChild(go);box.appendChild(lw);
       if(mode==='devnet'){var dn=document.createElement('div');dn.style.cssText='margin-top:6px;font-size:12px;opacity:.8';dn.textContent='GMGN and pump.fun only list mainnet coins.';box.appendChild(dn)}
       box.classList.add('on');
-    }catch(e){console.error(e)}
+    }catch(e){console.error(e);try{if(siteWin&&!siteWin.closed&&siteWin.location.href==='about:blank')siteWin.close()}catch(e6){}}
     finally{running=false;$('go').disabled=false}
   });
   $('air').addEventListener('click',async function(){
