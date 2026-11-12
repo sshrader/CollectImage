@@ -161,6 +161,16 @@ function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', 
 const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
 const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
 const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. Reserved for the Bay’s founder wallet.' };
+// The 3D views fetch an agent's voxels. They only depend on the image secret, so they are cached and gzipped.
+const voxCache = new Map();
+function sendVoxels(req, res, slot) {
+  const key = imageSecret() + ':' + slot;
+  let e = voxCache.get(key);
+  if (!e) { const raw = Buffer.from(JSON.stringify(art.agentVoxels(slot, imageSecret()))); e = { raw, gz: require('zlib').gzipSync(raw) }; voxCache.set(key, e); }
+  const gz = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
+  res.writeHead(200, Object.assign({ 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300', 'Content-Length': (gz ? e.gz : e.raw).length }, gz ? { 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' } : {}, { 'X-Content-Type-Options': 'nosniff' }));
+  res.end(gz ? e.gz : e.raw);
+}
 const shortAddr = (a) => a.slice(0, 4) + '…' + a.slice(-4);
 
 function bearsState(res) {
@@ -501,6 +511,8 @@ const server = http.createServer(async (req, res) => {
     { const m = /^\/api\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(p); if (m) return await coinInfo(res, m[1]); }
     if (/^\/coin\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(COIN_PAGE)); }
     if (p === '/admin') { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' }); return res.end(fs.readFileSync(path.join(__dirname, 'admin.html'))); }
+    if (p === '/intro3d.js' || p === '/vox.js') return serveStatic(res, path.join(__dirname, p.slice(1)), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
+    { const m = /^\/api\/agent\/(\d+)\/voxels\.json$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return sendVoxels(req, res, n - 1); } }
     if (p === '/cave.js') return serveStatic(res, path.join(__dirname, 'cave.js'), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
     if (p === '/api/health') return send(res, 200, { ok: true });
     if (p === '/api/founder.svg') { if (!cfg().founderWallet) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.founderSvg('', true), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); }

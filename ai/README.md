@@ -4,7 +4,7 @@ A pump.fun launchpad where every coin claims a pixel AI agent as its logo. Anyon
 
 This folder is a sibling of the Bear Den app at the repo root. It is a separate service: its own data volume, env vars and domain. On Railway, set this service's **Root Directory** to `ai`.
 
-- **`/`** is the whole app: a short mainframe intro (about 4 seconds, skippable: agents hauling data packets along a block chain while a terminal types), then the launchpad over a dim agent-bay background.
+- **`/`** is the whole app: a short mainframe intro (about 4.5 seconds, skippable), then the launchpad over a dim agent-bay background. The intro is a 3D scene (`intro3d.js`, plain WebGL2): voxel agents carry data packets down a lit highway through scanning gates, under falling code, with a terminal log typing in the corner. The agents' voxels come from `/api/agent/<n>/voxels.json`. Browsers without WebGL2, or too slow to run it, get a 2D version of the same idea instead. The background waits until the intro is done.
 - A launcher connects Phantom, picks an open agent (or asks for a random one), names the coin, and launches. The launch uses the official `@pump-fun/pump-sdk`, with the launcher's first buy in the same transaction.
 - **Agents:** 64 by 64 pixel robots drawn by code (`art.js`): chassis colour, glow colour, eyes, mouth, antenna, accessory, chest panel and background, plus a name and a role. No two agents in a set match. There are 4 to start (`SLOTS`); raising it adds agents and never changes the existing ones.
 - **Roles** (`SCOUT`, `ANALYST`, `SENTRY`, `COURIER`, `ARCHIVIST`, `NAVIGATOR`, `MECHANIC`, `SCRIBE`) decide what an agent's report leads with. They change the order of the report, not what it can do.
