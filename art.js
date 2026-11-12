@@ -281,10 +281,8 @@ function render(slot, total, owner, secret, opts) {
 const CRCT = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRCT[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
 function pngChunk(type, data) { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); }
-// The bear as a PNG, scaled up with hard pixel edges (8x gives 512 by 512). Used as the coin logo.
-function png(slot, secret, scale) {
-  const k = scale || 8, t = traitsFor(slot, secret);
-  const g = drawBear(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()));
+// A pixel grid as a PNG, scaled up with hard pixel edges (8x gives 512 by 512). Used for coin logos.
+function gridToPng(g, k) {
   const w = W * k, h = H * k, row = w * 3 + 1, raw = Buffer.alloc(row * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -297,5 +295,106 @@ function png(slot, secret, scale) {
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), pngChunk('IHDR', ihdr), pngChunk('IDAT', zlib.deflateSync(raw, { level: 9 })), pngChunk('IEND', Buffer.alloc(0))]);
 }
+function png(slot, secret, scale) {
+  const t = traitsFor(slot, secret);
+  return gridToPng(drawBear(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest())), scale || 8);
+}
 
-module.exports = { render, traitsFor, silhouette, SKINS, png };
+// ---- The Founder: one special bear that is not part of the numbered set. A giant, mean grizzly in a gold crown, with a coffee. ----
+const mix = (a, b, t) => { const p = parseInt(a.slice(1, 7), 16), q = parseInt(b.slice(1, 7), 16); return '#' + [16, 8, 0].map((sh) => Math.round(((p >> sh) & 255) * (1 - t) + ((q >> sh) & 255) * t).toString(16).padStart(2, '0')).join(''); };
+function drawFounder() {
+  const r = prng(crypto.createHash('sha256').update('bear-den-founder').digest());
+  const bg = grid(); drawBg(bg, 'cave', r);
+  // a warm gold glow behind him, as a checkerboard so it stays pixel art
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!bg[y][x]) continue;
+    const dx = (x - 32) / 31, dy = (y - 34) / 30, d = dx * dx + dy * dy;
+    if (d < 1 && (x + y) % 2 === 0) bg[y][x] = mix(bg[y][x], '#ffb347', 0.28 * (1 - d));
+  }
+  const L = grid();
+  const fur = { base: '#5b3a22', light: '#82593a', dark: '#3b2314', deep: '#24150b' };
+  const snout = '#b08a60', snoutDark = '#85653f', GOLD = '#ffc84a', GOLD_L = '#ffe99a', GOLD_D = '#c98a1e';
+  const claw = '#efe6d0';
+  // feet, hump, body
+  part(L, ell(19, 59, 8.6, 4), fur.base, fur); part(L, ell(45, 59, 8.6, 4), fur.base, fur);
+  px(L, [[13, 61], [15, 62], [17, 62], [41, 62], [43, 62], [45, 62]], claw);
+  part(L, ell(32, 33, 18, 10), fur.dark, { deep: fur.deep, dark: fur.deep, light: fur.base });   // the grizzly shoulder hump
+  part(L, ell(32, 46, 20.8, 16.8), fur.base, fur);
+  part(L, ell(32, 51, 12, 10), '#70492b', { deep: fur.dark, dark: fur.dark, light: null });
+  // arms: left hangs, right holds the mug
+  part(L, ell(11.5, 47, 6.6, 13.4), fur.base, fur); fill(L, ell(11.5, 58.2, 4.4, 2.6), fur.light);
+  px(L, [[9, 60], [11, 60], [13, 60]], claw);
+  part(L, ell(52.5, 47, 6.6, 12), fur.base, fur);
+  // grizzled silver tips on the fur
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if ((L[y][x] === fur.base || L[y][x] === fur.light) && r() < 0.06) L[y][x] = '#b9a487';
+  // ears, head, muzzle
+  part(L, ell(17, 13, 4.9, 4.9), fur.base, fur); part(L, ell(47, 13, 4.9, 4.9), fur.base, fur);
+  fill(L, ell(17.3, 13.9, 2.5, 2.5), '#8a5a40'); fill(L, ell(46.7, 13.9, 2.5, 2.5), '#8a5a40');
+  part(L, ell(32, 25, 16.8, 13.8), fur.base, fur);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if ((L[y][x] === fur.base) && y < 38 && r() < 0.05) L[y][x] = '#b9a487';
+  part(L, ell(32, 31, 9.6, 7.2), snout, { deep: snoutDark, dark: snoutDark, light: null });
+  // face: amber eyes under heavy brows, a scar, a big nose and a snarl with fangs
+  px(L, [[22, 22], [23, 22], [24, 22], [22, 23], [23, 23], [24, 23], [40, 22], [41, 22], [42, 22], [40, 23], [41, 23], [42, 23]], '#ffb21a');
+  px(L, [[23, 22], [23, 23], [41, 22], [41, 23]], INK);
+  px(L, [[18, 19], [19, 19], [20, 20], [21, 20], [22, 21], [23, 21], [24, 21], [25, 22], [46, 19], [45, 19], [44, 20], [43, 20], [42, 21], [41, 21], [40, 21], [39, 22],
+    [18, 20], [19, 20], [20, 21], [21, 21], [46, 20], [45, 20], [44, 21], [43, 21]], INK);
+  px(L, [[21, 15], [22, 16], [22, 17], [23, 18], [23, 19], [24, 24], [24, 25], [25, 26], [25, 27]], '#e0907c');   // scar across the left eye
+  px(L, [[29, 26], [30, 26], [31, 26], [32, 26], [33, 26], [34, 26], [35, 26], [29, 27], [30, 27], [31, 27], [32, 27], [33, 27], [34, 27], [35, 27], [30, 28], [31, 28], [32, 28], [33, 28], [34, 28]], INK);
+  px(L, [[30, 26], [31, 26]], '#6a5a52');
+  px(L, [[32, 29], [32, 30], [32, 31]], INK);
+  px(L, [[25, 36], [26, 35], [27, 34], [28, 34], [29, 33], [30, 33], [31, 33], [32, 33], [33, 33], [34, 33], [35, 33], [36, 34], [37, 34], [38, 35], [39, 36]], INK);
+  px(L, [[29, 34], [29, 35], [35, 34], [35, 35], [30, 34], [34, 34]], '#f4efe4');
+  px(L, [[29, 36], [35, 36]], '#f4efe4');
+  // the gold crown
+  const tri = (cx, baseY, h) => { for (let i = 0; i < h; i++) { const half = Math.floor(i * 2.4 / h), y = baseY - h + 1 + i; rect(L, cx - half, y, cx + half, y, GOLD); put(L, cx - half, y, GOLD_L); if (half) put(L, cx + half, y, GOLD_D); } };
+  tri(22, 11, 5); tri(27, 11, 7); tri(32, 11, 9); tri(37, 11, 7); tri(42, 11, 5);
+  rect(L, 20, 11, 44, 13, GOLD); rect(L, 20, 11, 44, 11, GOLD_L); rect(L, 20, 13, 44, 13, GOLD_D);
+  px(L, [[22, 6], [27, 4], [32, 2], [37, 4], [42, 6]], '#ffffff');
+  px(L, [[26, 12], [32, 12], [38, 12]].map(([x, y], i) => [x, y, ['#3b6be2', '#e23b3b', '#3b6be2'][i]]));
+  // the coffee, held in the right paw, with steam
+  rect(L, 44, 38, 54, 38, '#3a1f10'); rect(L, 44, 39, 54, 49, '#efe6d4'); rect(L, 44, 39, 46, 49, '#fffdf4'); rect(L, 52, 39, 54, 49, '#c9bda3'); rect(L, 44, 49, 54, 49, '#a89c84');
+  rect(L, 45, 38, 53, 38, '#5a3018');
+  px(L, [[55, 41], [56, 41], [57, 42], [57, 43], [57, 44], [57, 45], [56, 46], [55, 46]], '#efe6d4');
+  px(L, [[48, 43], [49, 43], [48, 44], [50, 42], [50, 43], [49, 45], [50, 45], [51, 45]], '#c4452f');
+  fill(L, ell(44.2, 44, 3, 4.6), fur.base); fill(L, ell(43.6, 43.4, 1.6, 2.4), fur.light);
+  px(L, [[41, 41], [41, 43], [41, 45]], claw);
+  px(L, [[47, 36], [46, 35], [47, 34], [48, 33], [47, 32], [51, 35], [50, 34], [51, 33], [52, 32], [51, 31]], '#d8d8e8');
+  // floor shadow, bear over the cave, dark outline
+  { const sh = ell(32, 62, 26, 2.4); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (sh(x, y) && bg[y][x]) bg[y][x] = darken(bg[y][x], 0.55); }
+  const out = bg.map((row) => row.slice());
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (L[y][x]) out[y][x] = L[y][x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (L[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < W && yy < H && L[yy][xx]; })) out[y][x] = INK;
+  }
+  return out;
+}
+function rectsOf(g) {
+  let rects = '';
+  for (let y = 0; y < H; y++) {
+    let x = 0;
+    while (x < W) {
+      const c = g[y][x];
+      if (!c) { x++; continue; }
+      let run = 1;
+      while (x + run < W && g[y][x + run] === c) run++;
+      rects += '<rect x="' + x + '" y="' + y + '" width="' + run + '" height="1" fill="' + c + '"/>';
+      x += run;
+    }
+  }
+  return rects;
+}
+const founderPng = (scale) => gridToPng(drawFounder(), scale || 8);
+function founderSvg(owner, bare) {
+  const rects = rectsOf(drawFounder());
+  if (bare) return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512" shape-rendering="crispEdges" role="img" aria-label="The Founder, a giant grizzly bear">' + rects + '</svg>';
+  const short = owner ? owner.slice(0, 4) + '…' + owner.slice(-4) : '';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 76" width="1024" height="1216" shape-rendering="crispEdges" role="img" aria-label="The Founder, a giant grizzly bear with a gold crown and a coffee">'
+    + '<rect width="64" height="76" fill="#120d0a"/>' + rects
+    + '<text x="32" y="68.6" text-anchor="middle" font-family="Courier New, monospace" font-weight="700" font-size="3.2" fill="#ffc84a" shape-rendering="auto">FOUNDER 1 / 1</text>'
+    + '<text x="32" y="71.8" text-anchor="middle" font-family="Courier New, monospace" font-size="1.9" fill="#ad9a82" shape-rendering="auto">GRIZZLY, GOLD CROWN, COFFEE</text>'
+    + (short ? '<text x="32" y="74.6" text-anchor="middle" font-family="Courier New, monospace" font-size="1.8" fill="#7d6c58" shape-rendering="auto">held by ' + short + '</text>' : '')
+    + '</svg>';
+}
+
+module.exports = { render, traitsFor, silhouette, SKINS, png, founderPng, founderSvg };

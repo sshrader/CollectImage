@@ -206,6 +206,42 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const after = await (await fetch(base + '/api/bears')).json();
   check('the owner can free a locked bear', r.status === 200 && after.bears.find((x) => x.n === SL).state === 'open');
 
+  // the Founder bear: one special bear that only FOUNDER_WALLET can launch
+  const f = newWallet();
+  check('the founder bear is hidden until a founder wallet is set', (await fetch(base + '/api/founder.svg')).status === 404 && (await (await fetch(base + '/api/bears')).json()).founder === null);
+  process.env.FOUNDER_WALLET = f.address;
+  let fs0 = await (await fetch(base + '/api/bears')).json();
+  check('the founder bear shows as reserved, without the full wallet', fs0.founder.state === 'reserved' && fs0.founder.short === f.address.slice(0, 4) + '…' + f.address.slice(-4) && !JSON.stringify(fs0).includes(f.address));
+  const fsvg = await fetch(base + '/api/founder.svg');
+  check('the founder bear image is served', fsvg.status === 200 && (await fsvg.text()).startsWith('<svg'));
+  r = await reserve(e, 'founder');
+  check('another wallet cannot take the founder bear', r.status === 403);
+  r = await reserve(f, 'founder');
+  check('the founder wallet can take the founder bear', r.status === 200 && r.json.slot === 'founder' && r.json.founder === true, JSON.stringify(r.json));
+  const ftok = r.json.token;
+  fs0 = await (await fetch(base + '/api/bears')).json();
+  check('the founder bear shows as held', fs0.founder.state === 'held');
+  r = await meta({ name: 'Bear Den', symbol: 'DEN', description: 'The Den coin' }, ftok);
+  const fj = await r.json();
+  const fdoc = await (await fetch(base + new URL(fj.uri).pathname)).json();
+  const fpng = Buffer.from(await (await fetch(base + new URL(fdoc.image).pathname)).arrayBuffer());
+  check('the founder logo is its own 512px PNG', r.status === 201 && fj.slot === 'founder' && fpng.subarray(1, 4).toString() === 'PNG' && fpng.readUInt32BE(16) === 512);
+  const fmint = b58encode(crypto.randomBytes(32)), fs4 = sigOf(); txs[fs4] = launchTx(f.address, fmint);
+  r = await post('/api/launched', { mint: fmint, signature: fs4 }, ftok);
+  const fl = await r.json();
+  check('the founder launch locks the founder bear', r.status === 200 && fl.slot === 'founder', JSON.stringify(fl));
+  fs0 = await (await fetch(base + '/api/bears')).json();
+  check('the founder bear shows its coin and is in recent launches', fs0.founder.state === 'launched' && fs0.founder.symbol === 'DEN' && fs0.founder.mint === fmint && fs0.recent.some((x) => x.bear === 'F' && x.mint === fmint));
+  check('the founder coin does not use up a numbered bear', fs0.bears.every((x) => x.mint !== fmint));
+  r = await reserve(f, 'founder');
+  check('the founder bear cannot be launched twice', r.status === 409);
+  cj = await (await fetch(base + '/api/coin/' + fmint)).json();
+  check('the founder coin page data is marked as the founder', cj.bear === 'F' && cj.founder === true && cj.name === 'Bear Den');
+  r = await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
+  fs0 = await (await fetch(base + '/api/bears')).json();
+  check('the owner can free the founder bear', r.status === 200 && fs0.founder.state === 'reserved');
+  delete process.env.FOUNDER_WALLET;
+
   // one more full pass on a second network keeps its own books
   process.env.CLUSTER = 'mainnet';
   const mainState = await (await fetch(base + '/api/bears')).json();

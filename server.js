@@ -32,6 +32,8 @@ const cfg = () => ({
   total: Math.min(100, Math.max(1, parseInt(process.env.SLOTS, 10) || 4)),
   platformWallet: B58_RE.test((process.env.PLATFORM_WALLET || '').trim()) ? process.env.PLATFORM_WALLET.trim() : '',
   maxBuy: process.env.CLUSTER === 'mainnet' ? 10 : 5,
+  // The one wallet that may launch the special Founder bear (not part of the numbered set).
+  founderWallet: B58_RE.test((process.env.FOUNDER_WALLET || '').trim()) ? process.env.FOUNDER_WALLET.trim() : '',
 });
 const rpcUrl = (c) => (/^https?:\/\//.test(c.rpc) ? c.rpc : c.cluster === 'devnet' ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com');
 
@@ -150,7 +152,9 @@ function loadBears(c) {
   return d;
 }
 function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', JSON.stringify(d)); fs.renameSync(f + '.tmp', f); }
-const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: Number(k), hold: d.holds[k] }; return null; };
+const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
+const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
+const shortAddr = (a) => a.slice(0, 4) + '…' + a.slice(-4);
 
 function bearsState(res) {
   const c = cfg(), d = loadBears(c);
@@ -159,11 +163,12 @@ function bearsState(res) {
     const L = d.launched[i], H = d.holds[i];
     bears.push({ n: i + 1, state: L ? 'launched' : H ? 'held' : 'open', symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null, dev: L ? L.wallet : null, split: L ? !!L.split : false });
   }
-  const recent = Object.keys(d.launched).map((k) => ({ bear: Number(k) + 1, name: d.launched[k].name, symbol: d.launched[k].symbol, mint: d.launched[k].mint, at: d.launched[k].at }))
+  const recent = Object.keys(d.launched).map((k) => ({ bear: k === 'F' ? 'F' : Number(k) + 1, name: d.launched[k].name, symbol: d.launched[k].symbol, mint: d.launched[k].mint, at: d.launched[k].at }))
     .sort((x, y) => y.at - x.at).slice(0, 8);
   send(res, 200, {
     cluster: c.cluster, total: c.total, maxBuy: c.maxBuy, silhouette: art.silhouette(), bears, recent,
     open: bears.filter((b) => b.state === 'open').length,
+    founder: c.founderWallet ? (() => { const L = d.launched.F, H = d.holds.F; return { state: L ? 'launched' : H ? 'held' : 'reserved', short: shortAddr(c.founderWallet), symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null }; })() : null,
     platform: c.platformWallet ? { wallet: c.platformWallet, bps: PLATFORM_BPS } : null,
   });
 }
@@ -190,20 +195,28 @@ async function reserve(req, res) {
   const d = loadBears(c);
   // A wallet keeps one held bear at a time, so asking again swaps it rather than hoarding.
   for (const k of Object.keys(d.holds)) if (d.holds[k].wallet === wallet) delete d.holds[k];
-  const free = [];
-  for (let i = 0; i < c.total; i++) if (!d.launched[i] && !d.holds[i]) free.push(i);
-  if (!free.length) { saveBears(c, d); return send(res, 409, { error: 'Every bear is taken or being launched right now. Check back in a few minutes.' }); }
   let slot;
-  if (body.slot === 'random' || body.slot == null) slot = free[crypto.randomInt(free.length)];
-  else {
-    slot = Number(body.slot) - 1;
-    if (!Number.isInteger(slot) || slot < 0 || slot >= c.total) return send(res, 400, { error: 'No such bear.' });
-    if (!free.includes(slot)) { saveBears(c, d); return send(res, 409, { error: 'That bear was just taken. Pick another.' }); }
+  if (body.slot === 'founder') {
+    // The Founder bear is not in the numbered set. Only FOUNDER_WALLET can take it, and only once per network.
+    if (!c.founderWallet || wallet !== c.founderWallet) { saveBears(c, d); return send(res, 403, { error: 'That bear is reserved for the Den founder.' }); }
+    if (d.launched.F) { saveBears(c, d); return send(res, 409, { error: 'The founder coin has already been launched.' }); }
+    if (d.holds.F) { saveBears(c, d); return send(res, 409, { error: 'The founder bear is being launched right now.' }); }
+    slot = 'F';
+  } else {
+    const free = [];
+    for (let i = 0; i < c.total; i++) if (!d.launched[i] && !d.holds[i]) free.push(i);
+    if (!free.length) { saveBears(c, d); return send(res, 409, { error: 'Every bear is taken or being launched right now. Check back in a few minutes.' }); }
+    if (body.slot === 'random' || body.slot == null) slot = free[crypto.randomInt(free.length)];
+    else {
+      slot = Number(body.slot) - 1;
+      if (!Number.isInteger(slot) || slot < 0 || slot >= c.total) return send(res, 400, { error: 'No such bear.' });
+      if (!free.includes(slot)) { saveBears(c, d); return send(res, 409, { error: 'That bear was just taken. Pick another.' }); }
+    }
   }
   const token = crypto.randomBytes(24).toString('hex');
   d.holds[slot] = { wallet, token, until: Date.now() + HOLD_TTL };
   saveBears(c, d);
-  send(res, 200, { token, slot: slot + 1, expires: d.holds[slot].until, cluster: c.cluster });
+  send(res, 200, { token, slot: bearLabel(slot), founder: slot === 'F', expires: d.holds[slot].until, cluster: c.cluster });
 }
 
 // The launcher's token (from reserve) is what lets them use the other launch calls. It names one wallet and one bear.
@@ -231,7 +244,7 @@ async function createMetadata(req, res) {
   if (website === null) return send(res, 400, { error: 'Website must be a link starting with https://.' });
   const id = crypto.randomBytes(8).toString('hex');
   const base = baseUrl(req);
-  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), art.png(a.slot, imageSecret(), 8));
+  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), a.slot === 'F' ? art.founderPng(8) : art.png(a.slot, imageSecret(), 8));
   const imageUrl = base + '/images/' + id + '.png';
   const doc = { name, symbol, description, image: imageUrl, external_url: base };
   if (twitter) doc.twitter = twitter;
@@ -240,7 +253,7 @@ async function createMetadata(req, res) {
   a.hold.pending = { name, symbol, uri: base + '/metadata/' + id + '.json' };
   a.hold.until = Date.now() + HOLD_TTL; // starting the launch refreshes the hold
   saveBears(a.c, a.d);
-  send(res, 201, { uri: a.hold.pending.uri, image: imageUrl, slot: a.slot + 1 });
+  send(res, 201, { uri: a.hold.pending.uri, image: imageUrl, slot: bearLabel(a.slot) });
 }
 
 // Step 3 (after the launch lands): the server checks the transaction on the chain, then locks the bear to the coin.
@@ -268,10 +281,10 @@ async function launched(req, res) {
   }
   const p = a.hold.pending || {};
   const d = loadBears(a.c); // re-read before writing
-  d.launched[a.slot] = { mint, signature: sig, wallet: a.hold.wallet, name: p.name || '', symbol: p.symbol || '', uri: p.uri || '', at: Date.now(), split: !!text(b.splitSignature, 120) };
+  d.launched[a.slot] = { mint, signature: sig, wallet: a.hold.wallet, name: p.name || '', symbol: p.symbol || '', uri: p.uri || '', at: Date.now(), split: !!text(b.splitSignature, 120), founder: a.slot === 'F' };
   delete d.holds[a.slot];
   saveBears(a.c, d);
-  send(res, 200, { ok: true, slot: a.slot + 1 });
+  send(res, 200, { ok: true, slot: bearLabel(a.slot) });
 }
 
 
@@ -279,7 +292,7 @@ async function launched(req, res) {
 const coinCache = new Map();
 function findLaunched(c, mint) {
   const d = loadBears(c);
-  for (const k of Object.keys(d.launched)) if (d.launched[k].mint === mint) return { slot: Number(k), rec: d.launched[k] };
+  for (const k of Object.keys(d.launched)) if (d.launched[k].mint === mint) return { slot: k === 'F' ? 'F' : Number(k), rec: d.launched[k] };
   return null;
 }
 async function coinInfo(res, mint) {
@@ -299,7 +312,7 @@ async function coinInfo(res, mint) {
   const mm = /\/metadata\/([a-f0-9]{16})\.json$/.exec(f.rec.uri || '');
   if (mm) { try { meta = JSON.parse(fs.readFileSync(path.join(META_DIR, mm[1] + '.json'), 'utf8')); } catch (e) { /* no metadata file */ } }
   send(res, 200, {
-    cluster: c.cluster, mint, bear: f.slot + 1, total: c.total, name: f.rec.name, symbol: f.rec.symbol, dev: f.rec.wallet,
+    cluster: c.cluster, mint, bear: f.slot === 'F' ? 'F' : f.slot + 1, founder: !!f.rec.founder, total: c.total, name: f.rec.name, symbol: f.rec.symbol, dev: f.rec.wallet,
     launchedAt: f.rec.at, signature: f.rec.signature, feeSplit: !!f.rec.split, platformBps: c.platformWallet ? PLATFORM_BPS : 0,
     description: meta.description || '', twitter: meta.twitter || '', website: meta.website || '', onchain,
   });
@@ -316,8 +329,8 @@ async function releaseHold(req, res) {
 async function adminRelease(req, res) {
   if (!guardAdmin(req, res)) return;
   const b = await jsonBody(req, res, 500); if (!b) return;
-  const c = cfg(), d = loadBears(c), i = Number(b.slot) - 1;
-  if (!Number.isInteger(i) || i < 0 || i >= c.total) return send(res, 400, { error: 'No such bear.' });
+  const c = cfg(), d = loadBears(c), i = b.slot === 'founder' ? 'F' : Number(b.slot) - 1;
+  if (i !== 'F' && (!Number.isInteger(i) || i < 0 || i >= c.total)) return send(res, 400, { error: 'No such bear.' });
   delete d.launched[i]; delete d.holds[i]; saveBears(c, d);
   send(res, 200, { ok: true });
 }
@@ -432,6 +445,7 @@ const server = http.createServer(async (req, res) => {
     if (/^\/coin\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(COIN_PAGE)); }
     if (p === '/cave.js') return serveStatic(res, path.join(__dirname, 'cave.js'), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
     if (p === '/api/health') return send(res, 200, { ok: true });
+    if (p === '/api/founder.svg') { if (!cfg().founderWallet) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.founderSvg('', true), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); }
     { const m = /^\/api\/preview\/(\d+)\.svg$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.render(n - 1, c.total, '', imageSecret(), { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); } }
     if (p === '/assets/cave.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
     if (p === '/launch.js') {

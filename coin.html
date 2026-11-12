@@ -125,10 +125,10 @@ td .mini>div{height:100%;background:var(--gold)}
     var main=j.cluster==='mainnet',oc=j.onchain||{},cv=oc.curve;
     document.title=j.name+' ($'+j.symbol+') · Bear Den';
     var n=$('net');n.textContent=main?'mainnet':'devnet · test';n.className='net'+(main?' main':'');
-    $('pic').src='/api/preview/'+j.bear+'.svg';$('pic').alt=j.name;
+    $('pic').src=j.bear==='F'?'/api/founder.svg':'/api/preview/'+j.bear+'.svg';$('pic').alt=j.name;
     $('name').textContent=j.name;$('tick').textContent='$'+j.symbol;
     var chips=$('chips');chips.textContent='';
-    chips.appendChild(el('span','chip','Bear #'+String(j.bear).padStart(2,'0')+' of '+j.total));
+    chips.appendChild(el('span','chip'+(j.founder?' good':''),j.founder?'The Founder · one of one':'Bear #'+String(j.bear).padStart(2,'0')+' of '+j.total));
     chips.appendChild(el('span','chip'+(cv&&cv.complete?' good':''),cv?(cv.complete?'Graduated':'On the bonding curve'):'Curve not read'));
     $('desc').textContent=j.description||'';
     var L=$('links');L.textContent='';
@@ -166,7 +166,7 @@ td .mini>div{height:100%;background:var(--gold)}
     row('Dev holding',function(dd){dd.textContent=oc.devHoldPct==null?'not read':pct(oc.devHoldPct)+' of supply'});
     row('Launched',function(dd){dd.textContent=new Date(j.launchedAt).toLocaleString()});
     row('Launch transaction',function(dd){var a=el('a',null,j.signature.slice(0,8)+'…');a.href='https://explorer.solana.com/tx/'+j.signature+(main?'':'?cluster=devnet');a.target='_blank';a.rel='noopener';dd.appendChild(a)});
-    row('Creator fee split',function(dd){dd.textContent=j.platformBps?(j.feeSplit?'Signed: '+(100-j.platformBps/100)+'% to the dev, '+(j.platformBps/100)+'% to the Den':'Not signed by the dev. All creator fees go to the dev.'):'All creator fees go to the dev'});
+    row('Creator fee split',function(dd){dd.textContent=j.founder?'Founder coin: all creator fees go to the founder wallet':j.platformBps?(j.feeSplit?'Signed: '+(100-j.platformBps/100)+'% to the dev, '+(j.platformBps/100)+'% to the Den':'Not signed by the dev. All creator fees go to the dev.'):'All creator fees go to the dev'});
     row('Mint',function(dd){dd.textContent=j.mint});
     $('page').hidden=false;
   }

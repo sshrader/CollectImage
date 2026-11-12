@@ -55,6 +55,13 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .bear.held{cursor:default}
 .bear.held img{filter:grayscale(.85) brightness(.55)}
 .facts{font:500 13px var(--mono);color:var(--dim)}
+.founder{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:18px;align-items:center;background:var(--surface);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(255,179,71,.12)}
+@media(max-width:560px){.founder{grid-template-columns:minmax(0,1fr);justify-items:start}.founder img{max-width:200px}}
+.founder img{width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:8px;display:block}
+.founder .tag{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.founder h3{font:800 22px var(--sans);margin:2px 0 4px;overflow-wrap:anywhere}
+.founder p{margin:0 0 10px;color:var(--dim);font-size:14px;max-width:54ch}
+.founder a.btn{text-decoration:none;display:inline-block}
 .recent{display:flex;gap:10px;flex-wrap:wrap}
 .recent a{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 14px 5px 5px;color:var(--fg);text-decoration:none;min-width:0}
 .recent a:hover{border-color:var(--gold)}
@@ -111,6 +118,9 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 <p class="lede">Every coin launched here takes one of the Den's pixel bears as its logo, and that bear is locked to the coin for good. Connect your wallet, pick a bear or let the Den choose, name your coin, and launch on pump.fun.</p>
 
 <div id="recent" hidden><h2>Recent launches</h2><div class="recent" id="recentlist"></div></div>
+
+<h2>The Founder</h2>
+<div class="founder" id="founder" hidden></div>
 
 <h2>The bears</h2>
 <div class="bears" id="bears"></div>
@@ -183,6 +193,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   /* ---------- the launchpad ---------- */
   var st=null,pubkey=null,pickSlot=null,running=false,steps=[];
   function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+  function prev(n){return n==='F'?'/api/founder.svg':'/api/preview/'+n+'.svg'}
+  function bearName(n){return n==='founder'||n==='F'?'the Founder bear':'Bear #'+String(n).padStart(2,'0')}
   function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
   function say(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
   function bearIcon(runs,fill){
@@ -211,9 +223,32 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     });
     $('count').textContent=open+' of '+st.total+' bears open';
     $('rand').disabled=!open;
-    if(pickSlot&&!st.bears.some(function(b){return b.n===pickSlot&&b.state==='open'}))pickSlot=null;
+    if(pickSlot&&pickSlot!=='founder'&&!st.bears.some(function(b){return b.n===pickSlot&&b.state==='open'}))pickSlot=null;
   }
-  function showPick(){$('pick').textContent=pickSlot?('Bear #'+String(pickSlot).padStart(2,'0')+' is yours if you launch now.'):'Random bear, chosen when you launch.'}
+  var feeNoteBase='';
+  function showPick(){
+    $('pick').textContent=pickSlot==='founder'?'The Founder bear, one of one.':pickSlot?('Bear #'+String(pickSlot).padStart(2,'0')+' is yours if you launch now.'):'Random bear, chosen when you launch.';
+    $('feenote').textContent=pickSlot==='founder'?'Founder launch: all creator fees go to your wallet.':feeNoteBase;
+  }
+  function drawFounder(){
+    var f=st&&st.founder,box=$('founder');
+    box.hidden=!f;[].slice.call(document.querySelectorAll('h2')).forEach(function(h){if(h.textContent==='The Founder')h.hidden=!f});
+    if(!f)return;box.textContent='';
+    var im=document.createElement('img');im.src='/api/founder.svg';im.alt='The Founder, a giant grizzly bear with a gold crown and a coffee';box.appendChild(im);
+    var d=document.createElement('div'),tg=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');
+    tg.className='tag';tg.textContent='One of one';d.appendChild(tg);
+    if(f.state==='launched'){
+      h.textContent=(f.name||'Founder coin')+' · $'+f.symbol;p.textContent='The Founder bear is locked to the Den’s own coin.';d.appendChild(h);d.appendChild(p);
+      if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(f.mint||'')){var a=document.createElement('a');a.className='btn go';a.href='/coin/'+f.mint;a.textContent='Open the coin page';d.appendChild(a)}
+    }else{
+      h.textContent='The Founder';
+      p.textContent=f.state==='held'?'The founder coin is being launched right now.':'A giant, mean grizzly in a gold crown, with a coffee. Not in the numbered set, and reserved for the Den’s founder wallet ('+f.short+').';
+      d.appendChild(h);d.appendChild(p);
+      if(f.state==='reserved'&&pubkey&&short(pubkey)===f.short){var b=document.createElement('button');b.type='button';b.className='btn go';b.textContent=pickSlot==='founder'?'Founder bear selected':'Launch the founder coin';
+        b.addEventListener('click',function(){pickSlot='founder';drawBears();drawFounder();showPick();say('Founder bear selected. Fill in the coin details below and launch.','ok');$('nm').scrollIntoView({behavior:'smooth',block:'center'})});d.appendChild(b)}
+    }
+    box.appendChild(d);
+  }
   function ago(at){var s=Math.max(0,Math.round((Date.now()-at)/1000));if(s<45)return 'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';return Math.round(s/86400)+' d ago'}
   function drawRecent(list){
     var box=$('recent'),l=$('recentlist');l.textContent='';
@@ -221,7 +256,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     list.forEach(function(r){
       if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(r.mint||''))return;
       var a=document.createElement('a');a.href='/coin/'+r.mint;
-      var im=document.createElement('img');im.src='/api/preview/'+r.bear+'.svg';im.alt='';a.appendChild(im);
+      var im=document.createElement('img');im.src=prev(r.bear);im.alt='';a.appendChild(im);
       var d=document.createElement('div'),b=document.createElement('b'),sm=document.createElement('small');
       b.textContent=r.name||('$'+r.symbol);sm.textContent='$'+r.symbol+' · '+ago(r.at);d.appendChild(b);d.appendChild(sm);a.appendChild(d);l.appendChild(a);
     });
@@ -236,8 +271,9 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       $('feenote').textContent='';
       if(j.platform){var pct=j.platform.bps/100;var nb=document.createElement('b');nb.textContent=(100-pct)+'% to you';$('feenote').appendChild(document.createTextNode('Creator fees from trading: '));$('feenote').appendChild(nb);$('feenote').appendChild(document.createTextNode(' and '+pct+'% to the Den. You approve the split in your wallet right after the launch.'))}
       else $('feenote').textContent='Creator fees from trading all go to your wallet.';
+      feeNoteBase=$('feenote').textContent;showPick();
       if(!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette||[],'#ffb347'));
-      drawBears();drawRecent(j.recent);
+      drawBears();drawFounder();drawRecent(j.recent);
     }).catch(function(){$('count').textContent='Could not load the bears. Refresh in a minute.'});
   }
   refresh();setInterval(function(){if(!running)refresh()},20000);
@@ -245,7 +281,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   function connect(){
     var p=phantom();
     if(!p){say('Phantom was not found in this browser.','err');return Promise.resolve()}
-    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on')}).catch(function(){say('The connection request was declined.','err')});
+    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on');drawFounder()}).catch(function(){say('The connection request was declined.','err')});
   }
   $('wbtn').addEventListener('click',connect);
   $('rand').addEventListener('click',function(){pickSlot=null;drawBears();showPick();say('The Den will choose a random open bear when you launch.','ok')});
@@ -348,8 +384,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       try{signed=await p.signMessage(new TextEncoder().encode(ch.json.message),'utf8')}catch(e){s1('err','The signature request was declined.');return}
       var rs=await post('/api/reserve',{wallet:pubkey,nonce:ch.json.nonce,signature:b64(signed.signature||signed),slot:pickSlot||'random'});
       if(!rs.ok){s1('err',rs.json.error||'server replied '+rs.status);refresh();return}
-      token=rs.json.token;pickSlot=rs.json.slot;showPick();
-      s1('ok','Bear #'+String(rs.json.slot).padStart(2,'0'));
+      token=rs.json.token;pickSlot=rs.json.slot;var isFounder=!!rs.json.founder;showPick();
+      s1('ok',bearName(rs.json.slot));
       var s2=step('Coin details');
       var md=await post('/api/metadata',{name:name,symbol:sym,description:$('ds').value.trim(),twitter:$('tw').value.trim(),website:$('ws').value.trim()},token);
       if(!md.ok){s2('err',md.json.error||'server replied '+md.status);return}
@@ -357,13 +393,13 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       var hint=null;
       try{var lr=await fetch('/api/lut',{headers:{Authorization:'Bearer '+token}});if(lr.ok)hint=(await lr.json()).table}catch(e3){}
       var sh=null;
-      if(st.platform&&st.platform.wallet!==pubkey)sh=[{address:pubkey,shareBps:10000-st.platform.bps},{address:st.platform.wallet,shareBps:st.platform.bps}];
+      if(!isFounder&&st.platform&&st.platform.wallet!==pubkey)sh=[{address:pubkey,shareBps:10000-st.platform.bps},{address:st.platform.wallet,shareBps:st.platform.bps}];
       var out=await window.SparkLaunch.createCoin({cluster:st.cluster,wallet:p,user:pubkey,name:name,symbol:sym,uri:md.json.uri,devBuySol:+bv,shareholders:sh,allowSplitFallback:st.cluster==='devnet',tableHint:hint,
         onTable:function(t){return fetch('/api/lut',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({table:t})}).catch(function(){})}},step);
       var s3=step('Lock the bear');
       var ln=null;
       for(var tries=0;tries<3;tries++){ln=await post('/api/launched',{mint:out.mint,signature:out.signature,splitSignature:out.splitSignature||''},token);if(ln.ok||ln.status===409)break;await new Promise(function(ok){setTimeout(ok,2500)})}
-      if(ln&&ln.ok)s3('ok','Bear #'+String(pickSlot).padStart(2,'0')+' is now locked to $'+sym);else s3('warn',(ln&&ln.json.error)||'Could not confirm. Your coin exists; contact the Den to lock its bear.');
+      if(ln&&ln.ok)s3('ok',bearName(pickSlot)+' is now locked to $'+sym);else s3('warn',(ln&&ln.json.error)||'Could not confirm. Your coin exists; contact the Den to lock its bear.');
       var box=$('result');box.textContent='';
       var h=document.createElement('div');h.textContent='Your coin is live. Mint address:';box.appendChild(h);
       var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffb347;font-family:var(--mono)';m.textContent=out.mint;box.appendChild(m);
