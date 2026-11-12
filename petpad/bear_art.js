@@ -1,31 +1,32 @@
 'use strict';
-// Pixel bears for the PetPad concept page. 32x32, every bear in a set is different.
+// Pixel bears for the PetPad concept page. 64x64 pixels, every bear in a set is different.
 const crypto = require('crypto');
-const W = 32, H = 32;
+const zlib = require('zlib');
+const W = 64, H = 64;
 
 const COATS = [
-  { key: 'brown', name: 'Brown', w: 24, base: '#7a4a2b', light: '#a8693f', dark: '#4d2d18', snout: '#d9b48a', ear: '#c98a6a' },
-  { key: 'black', name: 'Black', w: 18, base: '#44445a', light: '#66667e', dark: '#22222e', snout: '#8a7b6e', ear: '#6a5a58', moon: true },
-  { key: 'honey', name: 'Honey', w: 14, base: '#d9952b', light: '#f2bb55', dark: '#9a6014', snout: '#f5dca6', ear: '#f0b070' },
-  { key: 'cinnamon', name: 'Cinnamon', w: 12, base: '#a8522a', light: '#cf7a4a', dark: '#6e3217', snout: '#e8c19a', ear: '#e0956a' },
-  { key: 'glacier', name: 'Glacier', w: 10, base: '#8fa6bf', light: '#b6c8dc', dark: '#5d7490', snout: '#e3ecf5', ear: '#c7d6e6' },
-  { key: 'polar', name: 'Polar', w: 10, base: '#e9edf4', light: '#ffffff', dark: '#aab5c8', snout: '#ffffff', ear: '#d8c9cf', darkNose: true },
-  { key: 'panda', name: 'Panda', w: 7, base: '#f2f2f4', light: '#ffffff', dark: '#b4b4be', snout: '#ffffff', ear: '#4a4a55', panda: true },
-  { key: 'ember', name: 'Ember', w: 5, base: '#8c3b2a', light: '#b8583f', dark: '#5a2217', snout: '#e8b090', ear: '#d98a70' }
+  { key: 'brown', name: 'Brown', w: 24, base: '#7a4a2b', light: '#a06a42', dark: '#4d2d18', deep: '#35200f', snout: '#d9b48a', snoutDark: '#b8905f', ear: '#c98a6a' },
+  { key: 'black', name: 'Black', w: 18, base: '#44445a', light: '#6a6a84', dark: '#2a2a3a', deep: '#1a1a26', snout: '#9a8a7c', snoutDark: '#76685c', ear: '#7a6a68', moon: true },
+  { key: 'honey', name: 'Honey', w: 14, base: '#d9952b', light: '#f5c065', dark: '#a8681a', deep: '#74430f', snout: '#f7e0ae', snoutDark: '#dcb877', ear: '#f0b070' },
+  { key: 'cinnamon', name: 'Cinnamon', w: 12, base: '#a8522a', light: '#d4804f', dark: '#6e3217', deep: '#4a210e', snout: '#ebc7a0', snoutDark: '#c99c72', ear: '#e0956a' },
+  { key: 'glacier', name: 'Glacier', w: 10, base: '#8fa6bf', light: '#bccfe2', dark: '#5d7490', deep: '#445770', snout: '#e8f0f8', snoutDark: '#bccbdb', ear: '#c7d6e6' },
+  { key: 'polar', name: 'Polar', w: 10, base: '#e9edf4', light: '#ffffff', dark: '#aab5c8', deep: '#8895ac', snout: '#ffffff', snoutDark: '#d4dbe6', ear: '#dcc9d0', darkNose: true },
+  { key: 'panda', name: 'Panda', w: 7, base: '#f2f2f4', light: '#ffffff', dark: '#b4b4be', deep: '#8a8a98', snout: '#ffffff', snoutDark: '#d8d8e0', ear: '#4a4a55', panda: true },
+  { key: 'ember', name: 'Ember', w: 5, base: '#8c3b2a', light: '#bd5c42', dark: '#5a2217', deep: '#3d160e', snout: '#ecb494', snoutDark: '#c98e70', ear: '#d98a70' }
 ];
 const EYES = [['open', 30], ['sleepy', 26], ['zzz', 12], ['wink', 10], ['heart', 8], ['glare', 14]];
 const MOUTHS = [['smile', 40], ['flat', 30], ['open', 15], ['grumpy', 15]];
 const ACCS = [['none', 30], ['beanie', 14], ['nightcap', 12], ['scarf', 12], ['flowers', 6], ['honey pot', 10], ['mug', 8], ['fish', 8]];
 const BGS = [['cave', 24], ['snow night', 22], ['campfire', 16], ['starry', 18], ['dawn', 10], ['aurora', 10]];
+const INK = '#1a0f0a';
 
 function prng(buf) { let i = 0; return () => { const v = buf[i % buf.length] / 256; i += 1; return v; }; }
 function pickW(list, r) { const tot = list.reduce((a, x) => a + x[1], 0); let t = r * tot; for (const x of list) { t -= x[1]; if (t < 0) return x; } return list[list.length - 1]; }
 
 function traitsFor(slot, secret) {
   const seen = traitsFor.cache || (traitsFor.cache = {});
-  const keyBase = secret + ':';
   for (let n = 0; n < 200; n++) {
-    const h = crypto.createHash('sha256').update(keyBase + slot + ':' + n).digest();
+    const h = crypto.createHash('sha256').update(secret + ':' + slot + ':' + n).digest();
     const r = prng(h);
     const coat = pickW(COATS.map((c) => [c.key, c.w]), r());
     const eyes = pickW(EYES, r()), mouth = pickW(MOUTHS, r()), acc = pickW(ACCS, r()), bg = pickW(BGS, r());
@@ -34,9 +35,7 @@ function traitsFor(slot, secret) {
     const sig = secret + [t.coat, t.eyes, t.mouth, t.acc, t.bg, t.blush].join('|');
     if (seen[sig]) continue;
     seen[sig] = true;
-    // Rarity from how unlikely this mix is.
-    const p = (coat[1] / 100) * (eyes[1] / 100) * (mouth[1] / 100) * (acc[1] / 100 * 1.2) * (bg[1] / 100);
-    t.p = p;
+    t.p = (coat[1] / 100) * (eyes[1] / 100) * (mouth[1] / 100) * (acc[1] / 100 * 1.2) * (bg[1] / 100);
     return t;
   }
   throw new Error('no unique bear');
@@ -47,141 +46,180 @@ const put = (g, x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 &
 const ell = (cx, cy, rx, ry) => (x, y) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return dx * dx + dy * dy <= 1; };
 const fill = (g, shape, c) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y)) g[y][x] = c; };
 const px = (g, list, c) => list.forEach(([x, y, cc]) => put(g, x, y, cc || c));
+const rect = (g, x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(g, x, y, c); };
+const darken = (hex, k) => { const n = parseInt(hex.slice(1, 7), 16); return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join(''); };
+// Checkerboard blend between two shapes' colours, for a soft glow without gradients.
+const dither = (g, shape, a, b) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y)) g[y][x] = (x + y) % 2 ? a : b; };
 
 function drawBg(g, bg, r) {
   const rows = (c, y0, y1) => { for (let y = y0; y <= y1; y++) for (let x = 0; x < W; x++) g[y][x] = c; };
   const scatter = (n, c, y0, y1) => { for (let i = 0; i < n; i++) put(g, Math.floor(r() * W), y0 + Math.floor(r() * (y1 - y0 + 1)), c); };
+  const star = (x, y, c) => px(g, [[x, y], [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]], c);
+  const glow = (cx, cy, rx, ry, cols) => { cols.forEach((c, i) => { const k = 1 - i * 0.22; fill(g, ell(cx, cy, rx * k, ry * k), c); if (i > 0) dither(g, (x, y) => ell(cx, cy, rx * (k + 0.07), ry * (k + 0.07))(x, y) && !ell(cx, cy, rx * k, ry * k)(x, y), cols[i - 1], c); }); };
   if (bg === 'cave') {
-    rows('#140d0a', 0, 31); rows('#1c120c', 26, 31);
-    fill(g, ell(16, 21, 15, 13), '#2a1a10'); fill(g, ell(16, 22, 11, 10), '#3d2514'); fill(g, ell(16, 23, 8, 8), '#553320');
-    scatter(10, '#0e0907', 0, 20);
-    for (const x of [2, 6, 11, 21, 26, 29]) { const h = 2 + Math.floor(r() * 4); for (let i = 0; i < h; i++) put(g, x, i, '#0b0705'), put(g, x + 1, i, i < h - 1 ? '#0b0705' : null); }
-    rows('#120b08', 31, 31);
+    rows('#150e0a', 0, 63);
+    for (let i = 0; i < 26; i++) fill(g, ell(r() * W, r() * 44, 2 + r() * 4, 1.5 + r() * 3), r() < 0.5 ? '#1b110c' : '#110a07');
+    glow(32, 40, 30, 26, ['#2a1a10', '#3a2313', '#4d2e18', '#643b1e']);
+    for (const x of [3, 11, 19, 43, 51, 59]) { const hgt = 5 + Math.floor(r() * 9); for (let i = 0; i < hgt; i++) { const w = Math.max(1, Math.round((hgt - i) / 3)); rect(g, x - w, i, x + w - 1, i, i % 5 === 0 ? '#1c120c' : '#0d0806'); } }
+    rows('#1d130d', 55, 63); rows('#2a1a10', 55, 55); scatter(10, '#3a2616', 56, 63); scatter(6, '#0d0806', 57, 63);
   } else if (bg === 'snow night') {
-    rows('#121a38', 0, 31); rows('#18224a', 12, 22);
-    scatter(7, '#e8eefc', 0, 22);
-    rows('#dfe7f3', 27, 31); rows('#b8c6de', 27, 27); rows('#c8d4e8', 29, 29);
+    rows('#0f1630', 0, 63); rows('#131c3c', 14, 30); rows('#182350', 31, 44);
+    for (let i = 0; i < 9; i++) put(g, Math.floor(r() * W), Math.floor(r() * 34), '#f0f4ff');
+    for (let i = 0; i < 3; i++) star(4 + Math.floor(r() * 56), 3 + Math.floor(r() * 24), '#c9d6f4');
+    for (const [x, h] of [[3, 14], [10, 10], [50, 12], [58, 15], [56, 9]]) for (let i = 0; i < h; i++) rect(g, x - Math.floor(i / 3), 46 - h + i, x + Math.floor(i / 3), 46 - h + i, '#0a0f24');
+    rows('#dfe7f3', 54, 63); rows('#b9c8e0', 54, 54); rows('#c9d6ea', 58, 58); scatter(12, '#ffffff', 55, 63); scatter(6, '#aab9d4', 55, 63);
   } else if (bg === 'campfire') {
-    rows('#1a0f0c', 0, 31); rows('#241610', 26, 31);
-    fill(g, ell(16, 22, 15, 12), '#33200f'); fill(g, ell(16, 23, 10, 8), '#4f2c16');
-    px(g, [[3, 29], [4, 29], [5, 29], [6, 29]], '#4a2a14');
-    px(g, [[4, 28], [5, 28]], '#e8782a'); px(g, [[4, 27], [5, 27], [5, 26]], '#ffb347'); px(g, [[4, 26]], '#ffd98a');
-    scatter(3, '#ffb347', 14, 22);
+    rows('#1a0f0c', 0, 63); glow(32, 42, 30, 24, ['#2a170e', '#38200f', '#4a2a14', '#5e3519']);
+    rows('#241610', 54, 63); rows('#33201a', 54, 54); scatter(8, '#4a3020', 55, 63);
+    rect(g, 4, 59, 13, 61, '#4a2a14'); rect(g, 3, 60, 14, 61, '#35200f'); rect(g, 5, 59, 12, 59, '#6a3c1c');
+    fill(g, ell(8.5, 54, 4.5, 6), '#c4421a'); fill(g, ell(8.5, 55, 3.4, 4.6), '#e8782a'); fill(g, ell(8.5, 56, 2.2, 3.2), '#ffb347'); fill(g, ell(8.5, 57, 1.2, 1.8), '#ffe9a8');
+    px(g, [[7, 47], [9, 45], [5, 49], [12, 50], [10, 43]], '#ffb347');
   } else if (bg === 'starry') {
-    rows('#0b1128', 0, 31); rows('#111a3a', 14, 24); rows('#16204a', 25, 31);
-    scatter(8, '#f4f0dc', 0, 20);
-    fill(g, ell(26, 5, 2.6, 2.6), '#f6edcf'); fill(g, ell(27, 4.4, 2, 2), '#0b1128');
+    rows('#0a1026', 0, 63); rows('#0e1632', 12, 26); rows('#131d42', 27, 40); rows('#192654', 41, 53);
+    for (let i = 0; i < 14; i++) put(g, Math.floor(r() * W), Math.floor(r() * 44), '#f4f0dc');
+    for (let i = 0; i < 4; i++) star(4 + Math.floor(r() * 56), 3 + Math.floor(r() * 30), '#e8e4c8');
+    fill(g, ell(52, 11, 5.4, 5.4), '#f6edcf'); fill(g, ell(54.4, 9.6, 4.4, 4.4), '#0a1026'); fill(g, ell(48, 6, 0.6, 0.6), '#fff');
+    fill(g, ell(10, 70, 34, 18), '#1b2652'); fill(g, ell(54, 72, 34, 20), '#222e5c');
+    rows('#dfe7f3', 58, 63); rows('#b9c8e0', 58, 58);
   } else if (bg === 'dawn') {
-    rows('#2d3a2e', 0, 31); rows('#3a4a3a', 8, 18); rows('#55684f', 19, 25); rows('#2a2418', 27, 31);
-    fill(g, ell(25, 14, 3, 3), '#f2b782');
-    for (const x of [3, 4, 27, 28]) for (let y = 0; y < 27; y++) g[y][x] = '#0f1a10';
-    scatter(3, '#0f1a10', 0, 22);
+    rows('#26332a', 0, 63); rows('#33443a', 10, 24); rows('#4a5e48', 25, 40); rows('#6a7a56', 41, 52);
+    fill(g, ell(50, 34, 8, 8), '#f2b782'); fill(g, ell(50, 34, 6, 6), '#f8cf9f');
+    for (const x of [4, 9, 55, 59]) for (let y = 0; y < 54; y++) { g[y][x] = '#0d1810'; if (y % 6 === 0) put(g, x + 1, y, '#1c2c1c'); g[y][x + 1] = g[y][x + 1] || '#14221a'; }
+    scatter(6, '#0d1810', 0, 40);
+    rows('#2a2418', 54, 63); rows('#3d3422', 54, 54); scatter(14, '#4f6a3a', 55, 63); scatter(8, '#1c1810', 56, 63);
   } else {
-    rows('#0a0f1e', 0, 31);
-    for (let x = 0; x < W; x++) { const o = Math.round(Math.sin(x / 4) * 1.6); for (let y = 2; y < 6; y++) put(g, x, y + o, y < 4 ? '#1f6a56' : '#2a8f78'); for (let y = 6; y < 9; y++) put(g, x, y + o, '#1a5a66'); }
-    scatter(4, '#e8f0fa', 10, 22); rows('#d8e3f0', 28, 31); rows('#b6c6dc', 28, 28);
+    rows('#080d1c', 0, 63);
+    for (let x = 0; x < W; x++) { const o = Math.round(Math.sin(x / 6) * 3 + Math.sin(x / 2.3) * 0.8); for (let y = 3; y < 9; y++) put(g, x, y + o, y < 5 ? '#1c6a56' : '#2a9a7c'); for (let y = 9; y < 14; y++) put(g, x, y + o, y < 11 ? '#1a5a6a' : '#16445a'); for (let y = 14; y < 16; y++) put(g, x, y + o, '#102c44'); }
+    for (let i = 0; i < 6; i++) put(g, Math.floor(r() * W), 20 + Math.floor(r() * 24), '#e8f0fa');
+    for (const [x, h] of [[8, 16], [24, 12], [46, 18], [58, 11]]) for (let i = 0; i < h; i++) rect(g, x - i, 56 - h + i, x + i, 56 - h + i, '#0e1830');
+    rows('#d8e3f0', 56, 63); rows('#b6c6dc', 56, 56); rows('#c4d2e6', 60, 60); scatter(10, '#fff', 57, 63);
   }
+}
+
+// Draws one body part on its own layer with a light top-left rim and a dark bottom-right rim, then lays it over the bear.
+function part(L, shape, c, shades) {
+  const m = grid(); fill(m, shape, c);
+  const out = m.map((row) => row.slice());
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!m[y][x]) continue;
+    const dn = y + 1 < H && m[y + 1][x], rt = x + 1 < W && m[y][x + 1], up = y > 0 && m[y - 1][x], lf = x > 0 && m[y][x - 1];
+    const dn2 = y + 2 < H && m[y + 2][x], rt2 = x + 2 < W && m[y][x + 2];
+    if (shades) {
+      if (!dn || !rt) out[y][x] = shades.deep;
+      else if (!dn2 || !rt2) out[y][x] = shades.dark;
+      else if (!up || !lf) out[y][x] = shades.light;
+    }
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (out[y][x]) L[y][x] = out[y][x];
 }
 
 function drawBear(t, r) {
   const coat = COATS.find((c) => c.key === t.coat);
   const bg = grid(); drawBg(bg, t.bg, r);
-  const L = grid(); // bear layer
-  const B = coat.base, S = coat.snout, EARC = coat.ear, DARK = '#1a0f0a';
-  const part = (shape, c) => fill(L, shape, c);
-  const armC = coat.panda ? '#2c2c34' : B;
-  // feet, body, arms, ears, head
-  part(ell(11, 29, 3.3, 1.9), coat.panda ? '#2c2c34' : B); part(ell(21, 29, 3.3, 1.9), coat.panda ? '#2c2c34' : B);
-  part(ell(16, 22.5, 8.2, 7.3), B);
-  part(ell(16, 23.6, 4.8, 4.6), S);
-  if (coat.moon) { part(ell(16, 19.3, 3.2, 1.7), '#efe3c8'); part(ell(16, 18.2, 3.2, 1.7), B); }
-  part(ell(8.6, 22.8, 2.6, 5), armC); part(ell(23.4, 22.8, 2.6, 5), armC);
-  part(ell(9.5, 6.5, 3, 3), coat.panda ? '#2c2c34' : B); part(ell(22.5, 6.5, 3, 3), coat.panda ? '#2c2c34' : B);
-  part(ell(9.6, 6.8, 1.5, 1.5), EARC); part(ell(22.4, 6.8, 1.5, 1.5), EARC);
-  part(ell(16, 12.5, 7.8, 7), B);
-  if (coat.panda) { part(ell(12.2, 11.6, 2.2, 2.6), '#2c2c34'); part(ell(19.8, 11.6, 2.2, 2.6), '#2c2c34'); }
-  part(ell(16, 15.2, 3.7, 2.8), S);
-  // rim shading on fur pixels
-  const furs = new Set([B, '#2c2c34']);
-  const copy = L.map((row) => row.slice());
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const c = copy[y][x]; if (!c || !furs.has(c)) continue;
-    const dn = y + 1 < H ? copy[y + 1][x] : null, rt = x + 1 < W ? copy[y][x + 1] : null;
-    const up = y > 0 ? copy[y - 1][x] : null, lf = x > 0 ? copy[y][x - 1] : null;
-    if (c === B && (!dn || !rt)) L[y][x] = coat.dark;
-    else if (c === B && (!up || !lf) && (x + y) % 2 === 0) L[y][x] = coat.light;
-  }
+  const L = grid();
+  const furShade = { deep: coat.deep, dark: coat.dark, light: coat.light };
+  const blk = '#2c2c34', blkShade = { deep: '#14141a', dark: '#1f1f26', light: '#3e3e48' };
+  const P = coat.panda;
+  const snoutShade = { deep: coat.snoutDark, dark: coat.snoutDark, light: null };
+  // back to front: feet, body, arms, ears, head
+  part(L, ell(22, 58, 6.8, 3.9), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(42, 58, 6.8, 3.9), P ? blk : coat.base, P ? blkShade : furShade);
+  fill(L, ell(22, 58.6, 3.4, 1.8), coat.snoutDark); fill(L, ell(42, 58.6, 3.4, 1.8), coat.snoutDark);
+  part(L, ell(32, 45, 16.6, 14.8), coat.base, furShade);
+  part(L, ell(32, 47.4, 9.8, 9.4), coat.snout, snoutShade);
+  if (coat.moon) { part(L, ell(32, 38.8, 6.6, 3.6), '#efe3c8', null); fill(L, ell(32, 36.8, 6.6, 3.6), coat.base); }
+  part(L, ell(17.2, 45.8, 5.4, 10.2), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(46.8, 45.8, 5.4, 10.2), P ? blk : coat.base, P ? blkShade : furShade);
+  fill(L, ell(17.2, 54.4, 3.4, 2.2), coat.snoutDark); fill(L, ell(46.8, 54.4, 3.4, 2.2), coat.snoutDark);
+  px(L, [[16, 53], [18, 53], [45, 53], [47, 53]], P ? '#55555f' : coat.dark);
+  part(L, ell(19, 13, 6.2, 6.2), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(45, 13, 6.2, 6.2), P ? blk : coat.base, P ? blkShade : furShade);
+  part(L, ell(19.4, 13.8, 3.4, 3.4), coat.ear, { deep: coat.snoutDark, dark: coat.snoutDark, light: null }); part(L, ell(44.6, 13.8, 3.4, 3.4), coat.ear, { deep: coat.snoutDark, dark: coat.snoutDark, light: null });
+  part(L, ell(32, 25, 15.8, 14), coat.base, furShade);
+  if (P) { part(L, ell(24.4, 23.2, 4.4, 5.2), blk, blkShade); part(L, ell(39.6, 23.2, 4.4, 5.2), blk, blkShade); }
+  part(L, ell(32, 30.6, 7.6, 5.8), coat.snout, snoutShade);
+
   // face
-  const eyeC = '#1a0f0a';
-  const eyeL = [12, 11], eyeR = [19, 11];
-  const open = (e) => { const x = e[0] + (e[0] < 16 ? -1 : 0), y = e[1]; px(L, [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]], eyeC); put(L, x, y, '#fff'); };
-  const line = (e) => { put(L, e[0] - 1, e[1] + 1, eyeC); put(L, e[0], e[1] + 1, eyeC); put(L, e[0] + 1, e[1] + 1, eyeC); };
+  const eyeL = [24, 22], eyeR = [40, 22];
+  const open = (e) => { fill(L, ell(e[0] + 0.5, e[1] + 0.5, 2.1, 2.7), INK); px(L, [[e[0] - 1, e[1] - 1], [e[0], e[1] - 1], [e[0] - 1, e[1]]], '#fff'); put(L, e[0] + 1, e[1] + 2, '#7a6a68'); };
+  const closed = (e) => px(L, [[e[0] - 2, e[1] + 1], [e[0] - 1, e[1] + 2], [e[0], e[1] + 2], [e[0] + 1, e[1] + 2], [e[0] + 2, e[1] + 1]], INK);
+  const heart = (e) => { px(L, [[-2, -1], [-1, -1], [1, -1], [2, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]].map(([a, b]) => [e[0] + a, e[1] + b]), '#e8506a'); px(L, [[e[0] - 2, e[1] - 1], [e[0] - 1, e[1] - 1]], '#ff9aa8'); };
   if (t.eyes === 'open') { open(eyeL); open(eyeR); }
-  else if (t.eyes === 'sleepy' || t.eyes === 'zzz') { line(eyeL); line(eyeR); }
-  else if (t.eyes === 'wink') { line(eyeL); open(eyeR); }
-  else if (t.eyes === 'glare') { open(eyeL); open(eyeR); px(L, [[10, 9], [11, 10], [12, 10], [20, 9], [19, 10], [18, 10]], eyeC); L[9][10] = null; L[9][20] = null; }
-  else if (t.eyes === 'heart') { for (const e of [eyeL, eyeR]) px(L, [[e[0] - 1, e[1]], [e[0] + 1, e[1]], [e[0] - 1, e[1] + 1], [e[0], e[1] + 1], [e[0] + 1, e[1] + 1], [e[0], e[1] + 2]], '#e8506a'); }
-  const noseC = coat.darkNose ? '#2a2a33' : '#1a0f0a';
-  px(L, [[15, 14], [16, 14]], noseC); put(L, 15, 13, noseC); put(L, 16, 13, noseC);
-  if (t.mouth === 'smile') px(L, [[14, 16], [15, 17], [16, 17], [17, 16]], DARK);
-  else if (t.mouth === 'flat') px(L, [[15, 16], [16, 16]], DARK);
-  else if (t.mouth === 'open') { px(L, [[15, 16], [16, 16]], DARK); px(L, [[15, 17], [16, 17]], '#e8707a'); }
-  else px(L, [[14, 17], [15, 16], [16, 16], [17, 17]], DARK);
-  if (t.blush) px(L, [[10, 14], [21, 14]], '#e58a8a');
-  if (t.eyes === 'zzz') px(L, [[24, 3], [25, 3], [26, 3], [25, 4], [24, 5], [25, 5], [26, 5]], '#cfd8ee');
+  else if (t.eyes === 'sleepy' || t.eyes === 'zzz') { closed(eyeL); closed(eyeR); }
+  else if (t.eyes === 'wink') { closed(eyeL); open(eyeR); }
+  else if (t.eyes === 'glare') { open(eyeL); open(eyeR); px(L, [[21, 17], [22, 18], [23, 18], [24, 19], [27, 19], [43, 17], [42, 18], [41, 18], [40, 19], [37, 19]], INK); }
+  else if (t.eyes === 'heart') { heart(eyeL); heart(eyeR); }
+  const nose = coat.darkNose ? '#2a2a33' : INK;
+  px(L, [[30, 26], [31, 26], [32, 26], [33, 26], [29, 27], [30, 27], [31, 27], [32, 27], [33, 27], [34, 27], [30, 28], [31, 28], [32, 28], [33, 28]], nose);
+  px(L, [[30, 26], [31, 26]], coat.darkNose ? '#555566' : '#5a4036');
+  px(L, [[32, 29], [32, 30], [32, 31]], INK);
+  if (t.mouth === 'smile') px(L, [[31, 32], [30, 32], [29, 31], [28, 30], [33, 32], [34, 32], [35, 31], [36, 30]], INK);
+  else if (t.mouth === 'flat') px(L, [[29, 32], [30, 32], [31, 32], [33, 32], [34, 32], [35, 32]], INK);
+  else if (t.mouth === 'open') { fill(L, ell(32, 33.4, 3.6, 2.4), '#7a2030'); fill(L, ell(32, 34.4, 2.4, 1.2), '#e8707a'); px(L, [[29, 31], [30, 31], [34, 31], [35, 31], [31, 32], [33, 32]], INK); }
+  else px(L, [[29, 33], [30, 32], [31, 32], [33, 32], [34, 32], [35, 33]], INK);
+  if (t.blush) { fill(L, ell(19.5, 29.6, 2.6, 1.5), '#e58a8a'); fill(L, ell(44.5, 29.6, 2.6, 1.5), '#e58a8a'); }
+  if (t.eyes === 'zzz') { px(L, [[50, 5], [51, 5], [52, 5], [53, 5], [53, 6], [52, 7], [51, 8], [50, 9], [50, 10], [51, 10], [52, 10], [53, 10]], '#cfd8ee'); px(L, [[56, 1], [57, 1], [58, 1], [58, 2], [57, 3], [56, 4], [56, 5], [57, 5], [58, 5]], '#cfd8ee'); }
 
   // accessories
   const a = t.acc;
-  if (a === 'beanie') { fill(L, (x, y) => ell(16, 7.4, 5.8, 3.6)(x, y) && y <= 7, '#b8402f'); px(L, Array.from({ length: 12 }, (_, i) => [10 + i, 8]), '#e8d8b8'); px(L, [[15, 2], [16, 2], [15, 3], [16, 3]], '#f2e6d3'); px(L, [[15, 4], [16, 4]], '#b8402f'); }
-  if (a === 'nightcap') { px(L, Array.from({ length: 12 }, (_, i) => [10 + i, 7]), '#e8d8b8'); px(L, Array.from({ length: 10 }, (_, i) => [11 + i, 6]), '#3a5aa8'); px(L, Array.from({ length: 8 }, (_, i) => [12 + i, 5]), '#3a5aa8'); px(L, [[18, 4], [19, 4], [20, 4], [21, 4], [22, 3], [23, 3], [24, 3], [25, 4], [26, 5], [26, 6]], '#3a5aa8'); px(L, [[19, 5], [20, 5], [21, 5], [22, 4], [23, 4], [24, 4], [25, 5]], '#3a5aa8'); px(L, [[26, 7], [27, 7], [26, 8], [27, 8]], '#f2e6d3'); }
-  if (a === 'scarf') { for (let x = 11; x <= 21; x++) { put(L, x, 19, x % 2 ? '#c4452f' : '#f2e6d3'); put(L, x, 20, x % 2 ? '#f2e6d3' : '#c4452f'); } for (let y = 21; y <= 24; y++) { put(L, 20, y, y % 2 ? '#c4452f' : '#f2e6d3'); put(L, 21, y, y % 2 ? '#f2e6d3' : '#c4452f'); } }
-  if (a === 'flowers') { px(L, [[11, 6], [13, 5], [16, 4], [19, 5], [21, 6]], '#fff'); px(L, [[12, 6], [14, 5], [15, 4], [17, 4], [18, 5], [20, 6]], '#4f9a52'); px(L, [[13, 5]], '#e58aa8'); px(L, [[19, 5]], '#ffd54a'); px(L, [[11, 6]], '#e58aa8'); px(L, [[21, 6]], '#ffd54a'); }
-  if (a === 'honey pot') { fill(L, ell(16, 26, 4.6, 3.2), '#8a5a2b'); px(L, Array.from({ length: 8 }, (_, i) => [12 + i, 23]), '#f2bb55'); px(L, [[13, 24], [17, 24], [17, 25]], '#f2bb55'); px(L, Array.from({ length: 8 }, (_, i) => [12 + i, 22]), '#6e431e'); }
-  if (a === 'mug') { fill(L, (x, y) => x >= 19 && x <= 23 && y >= 23 && y <= 27, '#e8e0d0'); px(L, [[24, 24], [25, 24], [25, 25], [25, 26], [24, 26]], '#e8e0d0'); px(L, [[19, 23], [20, 23], [21, 23], [22, 23], [23, 23]], '#6b3a1c'); px(L, [[20, 21], [21, 20], [22, 21]], '#cfd6df'); }
-  if (a === 'fish') { fill(L, ell(15.5, 25.5, 4.2, 1.9), '#6fa6d4'); px(L, [[19, 24], [20, 23], [20, 27], [19, 26], [20, 25], [21, 24], [21, 26]], '#6fa6d4'); put(L, 13, 25, '#1a0f0a'); px(L, [[15, 25], [16, 25], [17, 25]], '#a9cdea'); }
+  if (a === 'beanie') {
+    part(L, (x, y) => ell(32, 15.4, 11.8, 7.8)(x, y) && y <= 15, '#b8402f', { deep: '#7a2418', dark: '#962f21', light: '#d4604a' });
+    for (let x = 22; x <= 42; x += 3) for (let y = 9; y <= 14; y++) put(L, x, y, '#962f21');
+    rect(L, 20, 16, 44, 18, '#e8d8b8'); for (let x = 20; x <= 44; x += 2) put(L, x, 17, '#cdb893'); rect(L, 20, 18, 44, 18, '#b8a27a');
+    fill(L, ell(32, 5.4, 3.6, 3.6), '#f2e6d3'); px(L, [[30, 4], [31, 3]], '#fff'); px(L, [[34, 7], [33, 8]], '#cdb893'); rect(L, 31, 8, 33, 9, '#b8402f');
+  }
+  if (a === 'nightcap') {
+    rect(L, 20, 15, 44, 17, '#e8d8b8'); for (let x = 20; x <= 44; x += 2) put(L, x, 16, '#cdb893'); rect(L, 20, 17, 44, 17, '#b8a27a');
+    const path = (t2) => [26 + t2 * 26, 14 - Math.sin(t2 * 2.2) * 9 + t2 * t2 * 14];
+    for (let i = 0; i <= 60; i++) { const t2 = i / 60, [cx, cy] = path(t2); fill(L, ell(cx, cy, 6.4 - 3.6 * t2, 6.2 - 3.4 * t2), i % 7 === 3 ? '#4a6ec4' : '#3a5aa8'); }
+    for (let i = 0; i <= 60; i += 6) { const [cx, cy] = path(i / 60); put(L, cx - 1, cy - 1, '#2a428a'); }
+    px(L, [[28, 10, '#ffd54a'], [34, 6, '#ffd54a'], [40, 9, '#ffd54a'], [44, 14, '#ffd54a']]);
+    const [ex, ey] = path(1); fill(L, ell(ex + 1, ey + 3, 3.6, 3.6), '#f2e6d3'); px(L, [[ex, ey + 1], [ex - 1, ey + 2]], '#fff');
+  }
+  if (a === 'scarf') {
+    fill(L, (x, y) => ell(32, 39.6, 13, 3.4)(x, y) && y >= 37 && y <= 42, '#c4452f');
+    for (let x = 18; x <= 46; x++) for (let y = 37; y <= 42; y++) if (L[y][x] && Math.floor(x / 3) % 2) L[y][x] = '#f2e6d3';
+    rect(L, 18, 42, 46, 42, '#8a2e1f');
+    for (let y = 43; y <= 53; y++) for (let x = 40; x <= 45; x++) L[y][x] = (Math.floor(y / 3) % 2) ? '#f2e6d3' : '#c4452f';
+    for (let x = 40; x <= 45; x += 2) { put(L, x, 54, '#c4452f'); put(L, x, 55, '#f2e6d3'); } rect(L, 45, 43, 45, 53, '#8a2e1f');
+  }
+  if (a === 'flowers') {
+    const fl = [[22, 13, '#e58aa8'], [27, 9, '#ffffff'], [32, 8, '#ffd54a'], [37, 9, '#e58aa8'], [42, 13, '#ffffff']];
+    px(L, [[24, 11], [25, 10], [29, 8], [30, 8], [34, 8], [35, 8], [39, 10], [40, 11]], '#4f9a52'); px(L, [[24, 12], [40, 12]], '#3a7a3e');
+    fl.forEach(([x, y, c]) => { px(L, [[x, y - 1], [x - 1, y], [x + 1, y], [x, y + 1]], c); put(L, x, y, c === '#ffd54a' ? '#e8782a' : '#ffd54a'); });
+  }
+  if (a === 'honey pot') {
+    part(L, ell(32, 53, 9.4, 6.6), '#8a5a2b', { deep: '#5a3a18', dark: '#6e4620', light: '#a87238' });
+    rect(L, 23, 47, 41, 48, '#f2bb55'); rect(L, 23, 47, 41, 47, '#ffd98a'); px(L, [[25, 49], [25, 50], [25, 51], [36, 49], [36, 50], [38, 49]], '#f2bb55');
+    rect(L, 24, 45, 40, 46, '#6e431e'); rect(L, 26, 52, 38, 53, '#e8d8b8'); px(L, [[29, 52], [31, 53], [33, 52], [35, 53]], '#8a5a2b');
+  }
+  if (a === 'mug') {
+    rect(L, 38, 46, 47, 55, '#e8e0d0'); rect(L, 38, 46, 47, 47, '#6b3a1c'); rect(L, 38, 55, 47, 55, '#b8ae9a'); rect(L, 46, 48, 47, 54, '#cfc6b2'); rect(L, 38, 48, 39, 54, '#fffdf4');
+    px(L, [[48, 49], [49, 49], [50, 50], [50, 51], [50, 52], [49, 53], [48, 53]], '#e8e0d0'); px(L, [[43, 50], [44, 50], [43, 51]], '#c4452f');
+    px(L, [[41, 44], [42, 43], [41, 42], [42, 41], [44, 44], [45, 43], [44, 42], [45, 41], [44, 40]], '#cfd6df');
+  }
+  if (a === 'fish') {
+    part(L, ell(31, 51, 8.6, 3.9), '#6fa6d4', { deep: '#3f6e96', dark: '#528cb8', light: '#9cc8ea' });
+    px(L, [[39, 49], [40, 47], [41, 47], [41, 48], [40, 49], [40, 50], [41, 51], [42, 52], [42, 54], [41, 54], [40, 53], [39, 52], [39, 51], [40, 52]], '#6fa6d4');
+    px(L, [[26, 50], [26, 53]], INK); put(L, 25, 50, INK); for (let x = 29; x <= 36; x += 3) { put(L, x, 50, '#a9cdea'); put(L, x + 1, 52, '#a9cdea'); }
+    px(L, [[30, 47], [31, 47], [32, 47], [31, 46]], '#528cb8'); fill(L, ell(26, 51, 1, 1), '#cfe4f4');
+  }
 
-  // floor shadow, then bear, then outline
-  { const sh = ell(16, 30.6, 10, 1.3); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (sh(x, y) && bg[y][x]) bg[y][x] = darken(bg[y][x], 0.55); }
+  // floor shadow, bear over background, dark outline
+  { const sh = ell(32, 61.4, 20, 2.6); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (sh(x, y) && bg[y][x]) bg[y][x] = darken(bg[y][x], 0.55); }
   const out = bg.map((row) => row.slice());
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (L[y][x]) out[y][x] = L[y][x];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     if (L[y][x]) continue;
-    const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < W && yy < H && L[yy][xx]; });
-    if (n) out[y][x] = DARK;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < W && yy < H && L[yy][xx]; })) out[y][x] = INK;
   }
   return out;
 }
-function darken(hex, k) {
-  const n = parseInt(hex.slice(1, 7), 16);
-  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k));
-  return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
-}
 
-function toSvg(grid, extra) {
-  let rects = '';
-  for (let y = 0; y < H; y++) {
-    let x = 0;
-    while (x < W) {
-      const c = grid[y][x];
-      if (!c) { x++; continue; }
-      let run = 1;
-      while (x + run < W && grid[y][x + run] === c) run++;
-      rects += '<rect x="' + x + '" y="' + y + '" width="' + run + '" height="1" fill="' + c + '"/>';
-      x += run;
-    }
-  }
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="256" height="256" shape-rendering="crispEdges">' + rects + '</svg>';
-}
-
-const zlib = require('zlib');
 const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRC[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
 function chunk(type, data) { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); }
-// 32x32 RGBA PNG, one real pixel per art pixel, so the page can scale it with nearest-neighbour and stay perfectly sharp.
+// One real pixel per art pixel, so the page can scale it with nearest-neighbour and stay perfectly sharp.
 function toPng(grid) {
   const raw = Buffer.alloc((W * 4 + 1) * H);
   for (let y = 0; y < H; y++) {
-    raw[y * (W * 4 + 1)] = 0;
     for (let x = 0; x < W; x++) {
       const c = grid[y][x], o = y * (W * 4 + 1) + 1 + x * 4;
       if (c) { const hex = c.length === 4 ? '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3] : c; const n = parseInt(hex.slice(1, 7), 16); raw[o] = (n >> 16) & 255; raw[o + 1] = (n >> 8) & 255; raw[o + 2] = n & 255; raw[o + 3] = 255; }
@@ -194,15 +232,12 @@ function toPng(grid) {
 function render(slot, secret) {
   const t = traitsFor(slot, secret);
   const h = crypto.createHash('sha256').update(String(t.seed)).digest();
-  const g = drawBear(t, prng(h));
-  return { traits: t, svg: toSvg(g), png: toPng(g) };
+  return { traits: t, png: toPng(drawBear(t, prng(h))) };
 }
 function silhouette() {
-  const L = grid();
-  const part = (shape) => fill(L, shape, '#3a2a1d');
-  part(ell(11, 29, 3.3, 1.9)); part(ell(21, 29, 3.3, 1.9)); part(ell(16, 22.5, 8.2, 7.3)); part(ell(8.6, 22.8, 2.6, 5)); part(ell(23.4, 22.8, 2.6, 5));
-  part(ell(9.5, 6.5, 3, 3)); part(ell(22.5, 6.5, 3, 3)); part(ell(16, 12.5, 7.8, 7));
-  return { svg: toSvg(L), png: toPng(L) };
+  const L = grid(), c = '#3a2a1d';
+  [ell(22, 58, 6.8, 3.9), ell(42, 58, 6.8, 3.9), ell(32, 45, 16.6, 14.8), ell(17.2, 45.8, 5.4, 10.2), ell(46.8, 45.8, 5.4, 10.2), ell(19, 13, 6.2, 6.2), ell(45, 13, 6.2, 6.2), ell(32, 25, 15.8, 14)].forEach((s) => fill(L, s, c));
+  return { png: toPng(L) };
 }
-const label = (t) => { const c = COATS.find((x) => x.key === t.coat); return c.name + ' bear'; };
+const label = (t) => COATS.find((x) => x.key === t.coat).name + ' bear';
 module.exports = { render, silhouette, traitsFor, COATS, label };
