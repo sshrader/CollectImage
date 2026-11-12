@@ -372,7 +372,9 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var bv=$('buy').value.trim().replace(',','.')||'0';if(/^\./.test(bv))bv='0'+bv;
     if(!/^\d{1,2}(\.\d{1,3})?$/.test(bv)||+bv>st.maxBuy){say('Your first buy must be a number from 0 to '+st.maxBuy+' SOL.','err');return}
     running=true;$('go').disabled=true;
-    var token=null;
+    var token=null,gm=null;
+    // Founder coin on mainnet: open a tab now (while the click still counts), point it at GMGN once the coin exists.
+    if(pickSlot==='founder'&&st.cluster==='mainnet'){try{gm=window.open('about:blank','_blank')}catch(e){gm=null}}
     try{
       if(!pubkey){await connect();if(!pubkey)return}
       var p=phantom();
@@ -418,9 +420,16 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
           if(rr.ok){s4('ok','locked');rl.remove();refresh()}else{s4('warn',rr.json.error||'Still could not confirm. Your coin is live; the Den owner can attach it to its bear.');rl.disabled=false}};
         box.appendChild(rl);
       }
+      if(isFounder&&st.cluster==='mainnet'){
+        var gu='https://gmgn.ai/sol/token/'+M,opened=false;
+        try{if(gm&&!gm.closed){gm.location.href=gu;opened=true}}catch(e5){}
+        var ga=document.createElement('a');ga.href=gu;ga.target='_blank';ga.rel='noopener';ga.textContent=opened?'GMGN (opened in a new tab)':'Open on GMGN';ga.style.cssText='margin-left:12px;color:#ffb347';box.appendChild(ga);
+        gm=null;
+      }
       box.classList.add('on');pickSlot=null;showPick();refresh();
     }catch(e){console.error(e)}
     finally{
+      if(gm){try{gm.close()}catch(e6){}}
       if(token&&!$('result').classList.contains('on')){post('/api/release',{},token).then(refresh)}
       running=false;$('go').disabled=false;
     }
