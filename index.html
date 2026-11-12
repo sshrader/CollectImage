@@ -8,207 +8,366 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d0b17;--surface:#161228;--surface2:#1f1a38;--line:#2c2649;--fg:#ece8f7;--dim:#9d96bc;--ember:#ff6a3d;--gold:#ffc65c;--good:#5ee0a0;--bad:#ff7a7a;
---display:'Unbounded','Arial Black',Impact,sans-serif;--sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+:root{--bg:#0e0a08;--surface:rgba(26,18,13,.9);--surface2:#241810;--line:#4d3826;--fg:#f4e8d4;--dim:#b9a68c;--ember:#e8782a;--gold:#ffb347;--good:#9be29b;--bad:#ff8a7a;
+--display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
 padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:980px;margin:0 auto;padding-block:28px 220px}
+/* the dim cave behind the page */
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;image-rendering:pixelated;opacity:.8;pointer-events:none}
+.veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(14,10,8,.55) 0%,rgba(14,10,8,.25) 45%,rgba(14,10,8,.05) 100%)}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding-block:28px 160px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:15px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:20px}
 .logo svg{width:28px;height:28px}
+.net{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
+.net.main{color:var(--bad);border-color:var(--bad)}
 .wallet{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:99px;padding:8px 16px;font-family:var(--mono);font-size:13px;cursor:pointer}
 .wallet.on{border-color:var(--good)}
-h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,56px);line-height:1.06;letter-spacing:0;margin:44px 0 14px;text-wrap:balance}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,6.4vw,60px);line-height:1.05;margin:44px 0 14px;text-wrap:balance;text-shadow:0 2px 0 #000}
 h1 span{color:var(--gold)}
-.lede{max-width:60ch;color:var(--dim);font-size:17px;margin:0 0 24px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;gap:16px}
+h2{font-family:var(--display);font-size:22px;margin:40px 0 12px}
+.lede{max-width:60ch;color:var(--dim);font-size:17px;margin:0 0 24px;text-shadow:0 1px 0 #000}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:16px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .btn{font:700 15px var(--sans);border-radius:99px;padding:12px 22px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
 .btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#1a0f08;border:0}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.facts{display:flex;gap:26px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--dim)}
-.facts b{display:block;font-family:var(--display);font-size:22px;color:var(--fg)}
-.ca{font-family:var(--mono);font-size:13px;color:var(--dim);overflow-wrap:anywhere}
-.cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer;margin-left:8px}
+label{display:block;font:600 13px var(--sans);color:var(--dim);margin-bottom:4px}
+label .rv{font-weight:400;opacity:.8;margin-left:6px}
+input[type=text],textarea,select{width:100%;font:500 15px var(--sans);color:var(--fg);background:#150e0a;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:72px;resize:vertical}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+.bears{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:760px){.bears{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bear{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:6px;justify-items:center;text-align:center;min-width:0;font:inherit;color:inherit;cursor:pointer}
+.bear img{width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:6px;display:block}
+.bear b{font-family:var(--display);font-size:15px}
+.bear small{font:500 12px var(--mono);color:var(--dim);overflow-wrap:anywhere}
+.bear.open:hover{border-color:var(--gold)}
+.bear.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,179,71,.25)}
+.bear.locked{cursor:default}
+.bear.locked img,.bear.held img{filter:grayscale(.85) brightness(.55)}
+.bear.locked small a{color:var(--gold)}
+.facts{font:500 13px var(--mono);color:var(--dim)}
 .msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
-.grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-top:28px}
-@media(max-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.slot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 6px;display:grid;gap:4px;justify-items:center;text-align:center;min-width:0}
-.slot svg,.slot img{width:100%;max-width:72px;height:auto;image-rendering:pixelated}
-.slot svg{opacity:.9}
-.slot img{border-radius:6px}
-.slot.free svg{opacity:.5}
-.slot.mine{border-color:var(--gold)}
-.slot b{font-family:var(--display);font-size:11px}
-.slot small{font-family:var(--mono);font-size:10px;color:var(--dim);overflow-wrap:anywhere;line-height:1.2}
-.show{display:none;gap:16px;justify-items:center}
-.show.on{display:grid}
-.show img{width:min(360px,100%);height:auto;border-radius:14px;border:1px solid var(--line)}
-.fine{font-size:12px;color:var(--dim);max-width:70ch;margin-top:28px}
-h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
+.log{font:500 13px var(--mono);display:grid;gap:4px;overflow-wrap:anywhere}
+.log .ok{color:var(--good)}.log .err{color:var(--bad)}.log .warn{color:var(--gold)}
+.log a{color:var(--gold)}
+.result{display:none;border:1px solid var(--good);border-radius:10px;padding:14px;font-size:14px;overflow-wrap:anywhere}
+.result.on{display:block}
+.cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer}
+.fine{font-size:12px;color:var(--dim);max-width:72ch;margin-top:28px}
+.note{font-size:13px;color:var(--dim)}
+.note b{color:var(--fg)}
+footer{margin-top:28px;font-size:12px;color:var(--dim)}
+footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
 
-/* hibernation cave theme */
-:root{--bg:#120d0a;--surface:#1a120d;--surface2:#241810;--line:#4d3826;--fg:#f4e8d4;--dim:#ad9a82;--ember:#e8782a;--gold:#ffb347;--good:#9be29b;--bad:#ff7a7a;
---display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif}
-.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a0f22 0%,#1a1a3a 40%,#2a1810 78%,#120d0a 100%)}
-.sky .moon{position:absolute;top:28px;right:6vw;width:66px;height:66px;image-rendering:pixelated;opacity:.95}
-.sky i{position:absolute;width:4px;height:4px;background:#ffb347;box-shadow:0 0 8px 2px rgba(255,150,60,.55);animation:fly 5s ease-in-out infinite}
-.sky b{position:absolute;width:3px;height:3px;background:#dff7e6;opacity:.7}
-@keyframes fly{0%,100%{opacity:.15;transform:translate(0,0)}50%{opacity:1;transform:translate(14px,-10px)}}
-.scene{position:fixed;left:0;right:0;bottom:0;height:min(36vh,320px);z-index:0;pointer-events:none}
-.scene img{width:100%;height:100%;object-fit:cover;object-position:50% 100%;image-rendering:pixelated;display:block}
-.wrap{position:relative;z-index:1}
-@media(prefers-reduced-motion:reduce){.sky i{animation:none;opacity:.7}}
+/* the intro: bears asleep round the fire, then the page */
+#splash{position:fixed;inset:0;z-index:50;background:#0b0806;display:flex;align-items:flex-start;justify-content:center;transition:opacity 1.1s ease;cursor:pointer}
+#splash.out{opacity:0;pointer-events:none}
+#splash canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#splash .cap{position:relative;text-align:center;padding:max(7vh,28px) 16px 0;color:var(--fg);text-shadow:0 2px 0 #000;animation:rise 2.4s ease both}
+#splash .cap h2{font-family:var(--display);font-size:clamp(34px,9vw,72px);margin:0 0 6px;letter-spacing:.02em}
+#splash .cap p{margin:0 0 14px;color:var(--dim);font-size:16px}
+#splash .cap button{font:700 14px var(--sans);border-radius:99px;padding:10px 20px;border:1px solid var(--line);background:rgba(26,18,13,.85);color:var(--fg);cursor:pointer}
+@keyframes rise{0%{opacity:0;transform:translateY(10px)}35%{opacity:0}100%{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#splash{display:none}#splash .cap{animation:none}}
 </style>
 </head>
 <body>
-<div class="sky" aria-hidden="true"><img class="moon" src="/assets/moon.svg" alt=""><b style="left:8%;top:9%"></b><b style="left:22%;top:20%"></b><b style="left:41%;top:7%"></b><b style="left:57%;top:16%"></b><b style="left:73%;top:6%"></b><b style="left:90%;top:24%"></b><b style="left:34%;top:30%"></b>
-<i style="left:12%;top:46%;animation-delay:0s"></i><i style="left:30%;top:58%;animation-delay:1.3s"></i><i style="left:52%;top:50%;animation-delay:2.1s"></i><i style="left:68%;top:62%;animation-delay:.7s"></i><i style="left:84%;top:52%;animation-delay:3.2s"></i><i style="left:6%;top:68%;animation-delay:2.6s"></i></div>
-<div class="scene" aria-hidden="true"><img src="/assets/cave.svg" alt=""></div>
-<div class="wrap">
-<header>
-  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>Bear Den</div>
-  <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
-</header>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
 
-<h1>Sleep through the dip. <span>Collect your bear.</span></h1>
-<p class="lede" id="lede">Each bear is one of a small set of pixel bears, and no two are the same. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
-
-<div class="panel">
-  <div class="facts">
-    <div><b id="claimed">0</b>collected</div>
-    <div><b id="total">40</b>in the set</div>
-    <div><b id="minhold">1</b>coin needed</div>
-  </div>
-  <div class="ca" id="caline" hidden>Coin address: <span id="ca"></span><button class="cp" id="cacopy" type="button">Copy CA</button></div>
-  <div class="ca" id="curve" hidden></div>
-  <div class="row">
-    <a class="btn" id="buylink" href="#" target="_blank" rel="noopener" hidden>Buy on pump.fun</a>
-    <button class="btn go" id="collect" type="button">Collect my bear</button>
-    <span class="msg" id="msg"></span>
-  </div>
-  <div class="show" id="show">
-    <img id="pic" alt="Your bear">
-    <div class="row">
-      <button class="btn" id="dlpng" type="button">Download PNG</button>
-      <button class="btn" id="dlsvg" type="button">Download SVG</button>
-    </div>
+<div id="splash" role="dialog" aria-label="Bear Den intro">
+  <canvas id="sc" aria-hidden="true"></canvas>
+  <div class="cap">
+    <h2>Bear Den</h2>
+    <p>Shh. The bears are sleeping through the dip.</p>
+    <button id="enter" type="button">Enter the den</button>
   </div>
 </div>
 
-<h2>The set</h2>
-<div class="grid" id="grid"></div>
+<div class="wrap">
+<header>
+  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>Bear Den<span class="net" id="net">devnet</span></div>
+  <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
+</header>
 
-<p class="fine">Signing is free and sends no transaction. Your bear is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
+<h1>Launch a coin. <span>Keep a bear.</span></h1>
+<p class="lede">Every coin launched here takes one of the Den's pixel bears as its logo, and that bear is locked to the coin for good. Connect your wallet, pick a bear or let the Den choose, name your coin, and launch on pump.fun.</p>
+
+<h2>The bears</h2>
+<div class="bears" id="bears"></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="rand" type="button">Random bear</button><span class="facts" id="count"></span></div>
+
+<h2>Launch</h2>
+<div class="panel">
+  <div class="two">
+    <div><label for="nm">Name</label><input type="text" id="nm" maxlength="32" placeholder="Coin name" autocomplete="off"></div>
+    <div><label for="tk">Ticker</label><input type="text" id="tk" maxlength="10" placeholder="TICKER" autocomplete="off"></div>
+  </div>
+  <div><label for="ds">Description <span class="rv">optional</span></label><textarea id="ds" maxlength="280" placeholder="What is this coin about?"></textarea></div>
+  <div class="two">
+    <div><label for="tw">Twitter / X <span class="rv">optional</span></label><input type="text" id="tw" placeholder="@yourcoin or a post link" maxlength="120"></div>
+    <div><label for="ws">Website <span class="rv">optional</span></label><input type="text" id="ws" placeholder="https://yourcoin.xyz" maxlength="120"></div>
+  </div>
+  <div class="two">
+    <div><label for="buy">Your first buy in SOL <span class="rv" id="buyhint">0 to 5</span></label><input type="text" id="buy" value="0.1" inputmode="decimal"></div>
+    <div><label>Logo</label><div class="note" id="pick">Random bear, chosen when you launch.</div></div>
+  </div>
+  <div class="note" id="feenote"></div>
+  <div class="row"><button class="btn go" id="go" type="button">Launch</button><button class="btn" id="air" type="button" hidden>Get 1 devnet SOL</button><span class="msg" id="msg"></span></div>
+  <div class="log" id="log"></div>
+  <div class="result" id="result"></div>
+</div>
+
+<p class="fine">Launching creates a real coin on Solana's <span id="fnet">devnet</span>. You sign every transaction in your own wallet and pay its fees; the Den never holds your SOL. Your first buy goes in the same transaction as the launch, so nobody can buy before you. A coin can lose all of its value, and its bear has no promised value. The Den does not vouch for any coin launched here. Nothing here is financial advice.</p>
+<footer>Pixel bears drawn by code. <button type="button" id="replay">Replay the intro</button></footer>
 </div>
 
 <script src="/launch.js"></script>
 <script>
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var pubkey=null,svgText=null,mySlot=0,busy=false,st=null,curveDone=false;
-  function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
-  function msg(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
-  function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
-  var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#ffc65c"><path d="M12 .8L14.1 10.5H9.9Z"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(90 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(180 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(270 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(45 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(135 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(225 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(315 12 12)"/></g></svg>';
 
-  var myImg=null;
+  /* ---------- the cave: one scene, drawn small and scaled up, lit by the fire ---------- */
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function rng(seed){var a=seed>>>0;return function(){a=(a+0x6d2b79f5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+  function hex(c){var n=parseInt(c.slice(1),16);return[n>>16&255,n>>8&255,n&255]}
+  var COATS=[{b:'#7a4a2b',l:'#a06a42',d:'#4d2d18',s:'#d9b48a'},{b:'#d9952b',l:'#f5c065',d:'#a8681a',s:'#f7e0ae'},{b:'#44445a',l:'#6a6a84',d:'#2a2a3a',s:'#9a8a7c'},{b:'#e9edf4',l:'#ffffff',d:'#aab5c8',s:'#ffffff'}];
+
+  function Cave(canvas,opts){
+    var scale=0,w=0,h=0,ctx=canvas.getContext('2d'),base=null,fall=null,sp=[],fx=0,fy=0,fw=0,fh=0,t0=0,raf=0,last=0,self=this;
+    function pix(c,x,y,col){c.fillStyle=col;c.fillRect(x|0,y|0,1,1)}
+    function ell(c,cx,cy,rx,ry,col){c.fillStyle=col;for(var y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++){var dy=(y+.5-cy)/ry;if(dy*dy>1)continue;var dx=Math.sqrt(1-dy*dy)*rx;c.fillRect(Math.round(cx-dx),y,Math.max(1,Math.round(dx*2)),1)}}
+    function size(){
+      var vw=canvas.clientWidth||window.innerWidth,vh=canvas.clientHeight||window.innerHeight;
+      scale=vw>900?4:3;w=Math.max(80,Math.ceil(vw/scale));h=Math.max(80,Math.ceil(vh/scale));
+      canvas.width=w;canvas.height=h;
+      fx=Math.round(w*.5);fy=Math.round(h*(opts.bears?.80:.88));fw=Math.max(6,Math.round(Math.min(w,h*1.5)*.05));fh=Math.round(fw*2.7);
+      // static layer: cave wall, ceiling teeth, floor
+      var oc=document.createElement('canvas');oc.width=w;oc.height=h;var c=oc.getContext('2d'),r=rng(11);
+      var floorY=Math.round(h*(opts.bears?.66:.74));
+      for(var y=0;y<h;y++){for(var x=0;x<w;x++){var n=r(),shade=y<floorY?(.55+.25*Math.sin(x/9+y/13)+.2*n):(.8+.2*n);var base0=y<floorY?[74,52,38]:[96,70,48];c.fillStyle='rgb('+(base0[0]*shade|0)+','+(base0[1]*shade|0)+','+(base0[2]*shade|0)+')';c.fillRect(x,y,1,1)}}
+      for(var i=0;i<w*h/260;i++){var rx=r()*w,ry=r()*floorY,rr=1+r()*4;ell(c,rx,ry,rr*1.5,rr,r()<.5?'#2c1e15':'#4e3626')}
+      // ceiling and side walls close in
+      for(var x2=0;x2<w;x2++){var ceil=Math.round(h*.1+Math.sin(x2/7)*2+r()*3);for(var y2=0;y2<ceil;y2++)pix(c,x2,y2,'#140d09')}
+      for(var s=0;s<w/9;s++){var sx=Math.round(r()*w),len=4+Math.round(r()*h*.12);for(var k=0;k<len;k++){var half=Math.max(0,Math.round((len-k)/4));for(var q=-half;q<=half;q++)pix(c,sx+q,h*.1+k,'#1c130d')}}
+      for(var y3=0;y3<h;y3++){var edge=Math.round(Math.pow(Math.abs(y3/h-.35),2)*0+w*.07*(1+Math.sin(y3/6)*.3));for(var x3=0;x3<edge;x3++){pix(c,x3,y3,'#120b08');pix(c,w-1-x3,y3,'#120b08')}}
+      // floor edge
+      for(var x4=0;x4<w;x4++)pix(c,x4,floorY,'#3a281b');
+      for(var p=0;p<w/6;p++)pix(c,r()*w,floorY+2+r()*(h-floorY-2),r()<.5?'#2a1c12':'#7a5a3c');
+      // logs under the fire
+      c.fillStyle='#3a2210';c.fillRect(fx-fw-2,fy-1,fw*2+4,3);c.fillStyle='#5a3418';c.fillRect(fx-fw-1,fy-2,fw*2+2,1);
+      ell(c,fx-fw,fy,2,2,'#2a1a0c');ell(c,fx+fw,fy,2,2,'#2a1a0c');
+      base=oc;
+      // how far the firelight reaches
+      fall=new Float32Array(w*h);var sig=Math.max(w,h)*.5;
+      for(var yy=0;yy<h;yy++)for(var xx=0;xx<w;xx++){var dx=(xx-fx)/(sig*1.1),dy=(yy-(fy-fh*.5))/(sig*.85);fall[yy*w+xx]=Math.exp(-(dx*dx+dy*dy)*2.2)}
+    }
+    function bear(c,i,t){
+      var co=COATS[i],left=i<2,dir=left?1:-1,bw=Math.max(18,Math.min(46,Math.round(w*.12)));
+      var pos=[[.27,.73],[.36,.87],[.64,.87],[.73,.73]][i],cx=Math.round(w*pos[0]),cy=Math.round(h*pos[1]);
+      var br=Math.sin(t*1.5+i*1.7)*.5;
+      var rx=bw*.5,ry=bw*.3+br;
+      var ol='#140b06';
+      ell(c,cx,cy+1,rx+1,ry+1,ol);ell(c,cx+dir*rx*.78,cy-ry*.1,bw*.27,bw*.25,ol);
+      ell(c,cx,cy,rx,ry,co.b);ell(c,cx,cy+ry*.35,rx*.95,ry*.55,co.d);ell(c,cx-dir*rx*.1,cy-ry*.45,rx*.7,ry*.4,co.l);
+      var hx=cx+dir*rx*.78,hy=cy-ry*.1,hr=bw*.25;
+      ell(c,hx-dir*hr*.2,hy-hr*.95,hr*.42,hr*.42,ol);ell(c,hx+dir*hr*.55,hy-hr*.95,hr*.42,hr*.42,ol);
+      ell(c,hx,hy,hr,hr*.95,co.b);ell(c,hx-dir*hr*.2,hy-hr*.9,hr*.32,hr*.32,co.b);ell(c,hx+dir*hr*.55,hy-hr*.9,hr*.32,hr*.32,co.b);
+      ell(c,hx+dir*hr*.45,hy+hr*.28,hr*.55,hr*.42,co.s);
+      pix(c,hx+dir*hr*.95,hy+hr*.12,'#140b06');                 // nose
+      var ex=Math.round(hx+dir*hr*.3),ey=Math.round(hy-hr*.18);pix(c,ex,ey,'#140b06');pix(c,ex+dir,ey,'#140b06'); // closed eye
+      ell(c,cx-dir*rx*.9,cy+ry*.55,bw*.12,bw*.1,co.d);                                                              // back paw
+      // a z or two drifting up
+      for(var z=0;z<2;z++){var ph=((t*.35+i*.27+z*.5)%1),zx=Math.round(hx+dir*hr*.3+ph*dir*6+z*dir*2),zy=Math.round(hy-hr*1.6-ph*14),sz=z?4:5;
+        var a=1-ph;if(a<.15)continue;c.fillStyle=a>.55?'#dfe8ff':'#8ea0c8';
+        c.fillRect(zx,zy,sz,1);for(var zd=1;zd<sz-1;zd++)c.fillRect(zx+sz-1-zd,zy+zd,1,1);c.fillRect(zx,zy+sz-1,sz,1)}
+    }
+    function frame(ts){
+      if(!ctx)return;
+      var t=(ts-t0)/1000;
+      if(!frame.buf||frame.buf.width!==w||frame.buf.height!==h){frame.buf=document.createElement('canvas');frame.buf.width=w;frame.buf.height=h}
+      var bc=frame.buf.getContext('2d');bc.drawImage(base,0,0);
+      if(opts.bears)for(var i=0;i<4;i++)bear(bc,i,t);
+      var img=bc.getImageData(0,0,w,h),d=img.data;
+      var fl=.86+.1*Math.sin(t*9.3)+.06*Math.sin(t*23.1+1.3)+(Math.random()-.5)*.1,amb=opts.ambient;
+      for(var p=0,n=w*h;p<n;p++){var g=fall[p]*fl*opts.glow,o=p*4;
+        d[o]=Math.min(255,d[o]*(amb*.9+g*1.15));d[o+1]=Math.min(255,d[o+1]*(amb*.95+g*.72));d[o+2]=Math.min(255,d[o+2]*(amb*1.25+g*.38))}
+      ctx.putImageData(img,0,0);
+      // flames and sparks, drawn at full brightness
+      for(var x=-fw;x<=fw;x++){
+        var ax=Math.abs(x)/fw,sway=Math.sin(t*6+x*.7)*1.2,hgt=Math.max(1,Math.round(fh*Math.pow(1-ax,1.1)*(.7+.3*Math.abs(Math.sin(t*11+x*1.3))*(.6+Math.random()*.4))));
+        for(var y=0;y<hgt;y++){var u=y/hgt,col=u<.22&&ax<.5?'#fff4b8':u<.5?'#ffcf4a':u<.78?'#ff8a2a':'#d9401a';ctx.fillStyle=col;ctx.fillRect(Math.round(fx+x+sway*u),fy-y-1,1,1)}}
+      if(sp.length<18&&Math.random()<.5)sp.push({x:fx+(Math.random()-.5)*fw,y:fy-fh*.6,vx:(Math.random()-.5)*.25,vy:-.25-Math.random()*.4,l:1});
+      for(var k=sp.length-1;k>=0;k--){var q=sp[k];q.x+=q.vx+Math.sin(t*5+k)*.08;q.y+=q.vy;q.l-=.012;if(q.l<=0){sp.splice(k,1);continue}ctx.fillStyle=q.l>.6?'#ffe08a':q.l>.3?'#ff9a2e':'#b8451c';ctx.fillRect(q.x|0,q.y|0,1,1)}
+    }
+    function loop(ts){raf=requestAnimationFrame(loop);if(ts-last<(opts.fps?1000/opts.fps:33))return;last=ts;frame(ts)}
+    this.start=function(){size();t0=performance.now();if(reduce){frame(t0+1500);return}
+      window.addEventListener('resize',self.resize);raf=requestAnimationFrame(loop)};
+    this.stop=function(){cancelAnimationFrame(raf);raf=0;window.removeEventListener('resize',self.resize)};
+    this.resize=function(){size()};
+  }
+
+  var bgCave=new Cave($('bg'),{bears:false,ambient:.22,glow:1.0,fps:14});
+  bgCave.start();
+
+  /* ---------- intro, once per visit ---------- */
+  var sp=$('splash'),splashCave=null,seen=false;
+  try{seen=sessionStorage.getItem('bd.intro')==='1'}catch(e){}
+  function endIntro(){
+    if(sp.classList.contains('out'))return;
+    sp.classList.add('out');try{sessionStorage.setItem('bd.intro','1')}catch(e){}
+    setTimeout(function(){if(splashCave){splashCave.stop();splashCave=null}sp.style.display='none'},1200);
+  }
+  function startIntro(){
+    sp.style.display='';sp.classList.remove('out');
+    var cap=sp.querySelector('.cap');cap.style.animation='none';void cap.offsetWidth;cap.style.animation='';
+    splashCave=new Cave($('sc'),{bears:true,ambient:.2,glow:1.15,fps:24});splashCave.start();
+    clearTimeout(startIntro.t);startIntro.t=setTimeout(endIntro,9000);
+  }
+  sp.addEventListener('click',endIntro);
+  $('enter').addEventListener('click',function(e){e.stopPropagation();endIntro()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'||e.key==='Enter')endIntro()});
+  $('replay').addEventListener('click',function(){if(!reduce)startIntro()});
+  if(seen||reduce){sp.style.display='none'}else startIntro();
+
+  /* ---------- the launchpad ---------- */
+  var st=null,pubkey=null,pickSlot=null,running=false,steps=[];
+  function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+  function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
+  function say(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
   function bearIcon(runs,fill){
     var NS='http://www.w3.org/2000/svg',s=document.createElementNS(NS,'svg');
     s.setAttribute('viewBox','0 0 64 64');s.setAttribute('aria-hidden','true');s.setAttribute('shape-rendering','crispEdges');
     runs.forEach(function(r){var e=document.createElementNS(NS,'rect');e.setAttribute('x',r[1]);e.setAttribute('y',r[0]);e.setAttribute('width',r[2]);e.setAttribute('height',1);e.setAttribute('fill',fill);s.appendChild(e)});
     return s;
   }
-  function drawGrid(){
-    var g=$('grid');g.textContent='';
-    if(!st)return;
-    st.slots.forEach(function(s){
-      var mine=mySlot===s.n&&myImg;
-      var d=document.createElement('div');
-      d.className='slot'+(s.owner?' taken':' free')+(mySlot===s.n?' mine':'');
-      if(mine){var im=document.createElement('img');im.src=myImg;im.alt='Your bear';d.appendChild(im)}
-      else if(st.showAll){var pv=document.createElement('img');pv.src='/api/preview/'+s.n+'.svg';pv.alt='Bear '+s.n;pv.loading='lazy';d.appendChild(pv)}
-      else d.appendChild(bearIcon(st.silhouette||[],s.owner&&s.tint?s.tint:'#3a2a1d'));
-      var b=document.createElement('b');b.textContent='#'+String(s.n).padStart(2,'0');
-      var sm=document.createElement('small');sm.textContent=mySlot===s.n?'Yours':(s.owner?s.owner:'Open');
-      d.appendChild(b);d.appendChild(sm);g.appendChild(d);
+  function drawBears(){
+    var g=$('bears');g.textContent='';if(!st)return;
+    var open=0;
+    st.bears.forEach(function(b){
+      var el=document.createElement(b.state==='open'?'button':'div');
+      if(b.state==='open'){el.type='button';open++;el.addEventListener('click',function(){pickSlot=pickSlot===b.n?null:b.n;drawBears();showPick()})}
+      el.className='bear '+b.state+(pickSlot===b.n?' sel':'');
+      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.svg';im.alt='Bear '+b.n;im.loading='lazy';el.appendChild(im);
+      var t=document.createElement('b');t.textContent='#'+String(b.n).padStart(2,'0');el.appendChild(t);
+      var sm=document.createElement('small');
+      if(b.state==='launched'){
+        var sym=document.createTextNode('Locked to $'+b.symbol+' ');sm.appendChild(sym);
+        var href=st.cluster==='mainnet'?'https://pump.fun/coin/'+b.mint:'https://explorer.solana.com/address/'+b.mint+'?cluster=devnet';
+        if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(b.mint||'')){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener';a.textContent='view';sm.appendChild(a)}
+      }else sm.textContent=b.state==='held'?'Being launched…':(pickSlot===b.n?'Selected':'Open');
+      el.appendChild(sm);g.appendChild(el);
     });
+    $('count').textContent=open+' of '+st.total+' bears open';
+    $('rand').disabled=!open;
+    if(pickSlot&&!st.bears.some(function(b){return b.n===pickSlot&&b.state==='open'}))pickSlot=null;
   }
-  function loadStatus(){
-    return fetch('/api/status').then(function(r){return r.json()}).then(function(j){
+  function showPick(){$('pick').textContent=pickSlot?('Bear #'+String(pickSlot).padStart(2,'0')+' is yours if you launch now.'):'Random bear, chosen when you launch.'}
+  function refresh(){
+    return fetch('/api/bears').then(function(r){return r.json()}).then(function(j){
       st=j;
-      if(j.silhouette&&!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette,'#ffd27a'));
-      $('claimed').textContent=j.claimed;$('total').textContent=j.total;$('minhold').textContent=j.minHold;
-      if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' bears is assigned to you. Only your wallet can open it.';
-      if(j.mint){$('caline').hidden=false;$('ca').textContent=j.mint}
-      if(!j.configured){$('collect').disabled=true;msg('This page is not set up yet.','err')}
-      if(j.mint&&j.cluster==='mainnet'){var bl=$('buylink');bl.href='https://pump.fun/coin/'+j.mint;bl.hidden=false}
-      if(j.mint&&window.SparkLaunch&&window.SparkLaunch.curveStats&&!curveDone){
-        curveDone=true;
-        window.SparkLaunch.curveStats(j.cluster,[j.mint]).then(function(r){
-          var s=r&&r[0];if(!s)return;
-          var c=$('curve');c.hidden=false;
-          c.textContent=s.complete?'Bonding curve complete: the coin has graduated.':'Bonding curve: '+s.soldPct.toFixed(1)+'% sold, market cap about '+s.mcapSol.toFixed(1)+' SOL.';
-        }).catch(function(){});
-      }
-      drawGrid();
-    }).catch(function(){msg('Could not load the page data. Reload and try again.','err')});
+      var n=$('net');n.textContent=j.cluster==='mainnet'?'mainnet':'devnet · test';n.className='net'+(j.cluster==='mainnet'?' main':'');
+      $('fnet').textContent=j.cluster==='mainnet'?'mainnet, with real SOL':'devnet, which is free test money';
+      $('buyhint').textContent='0 to '+j.maxBuy;$('air').hidden=j.cluster==='mainnet';
+      $('feenote').textContent='';
+      if(j.platform){var pct=j.platform.bps/100;var nb=document.createElement('b');nb.textContent=(100-pct)+'% to you';$('feenote').appendChild(document.createTextNode('Creator fees from trading: '));$('feenote').appendChild(nb);$('feenote').appendChild(document.createTextNode(' and '+pct+'% to the Den. You approve the split in your wallet right after the launch.'))}
+      else $('feenote').textContent='Creator fees from trading all go to your wallet.';
+      if(!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette||[],'#ffb347'));
+      drawBears();
+    }).catch(function(){$('count').textContent='Could not load the bears. Refresh in a minute.'});
   }
+  refresh();setInterval(function(){if(!running)refresh()},20000);
+
   function connect(){
     var p=phantom();
-    if(!p){msg('Phantom was not found in this browser. Install it from phantom.app, then reload.','err');return Promise.resolve()}
-    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on')})
-      .catch(function(){msg('The connection request was declined.','err')});
+    if(!p){say('Phantom was not found in this browser.','err');return Promise.resolve()}
+    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on')}).catch(function(){say('The connection request was declined.','err')});
   }
-  $('wbtn').addEventListener('click',function(){
-    if(pubkey){var p=phantom();Promise.resolve(p&&p.disconnect()).catch(function(){}).then(function(){pubkey=null;$('wlabel').textContent='Connect Phantom';$('wbtn').classList.remove('on');hideShow()})}
-    else connect();
+  $('wbtn').addEventListener('click',connect);
+  $('rand').addEventListener('click',function(){pickSlot=null;drawBears();showPick();say('The Den will choose a random open bear when you launch.','ok')});
+
+  function drawLog(){
+    var l=$('log');l.textContent='';
+    steps.forEach(function(s){
+      var d=document.createElement('div');d.className=s.st==='ok'?'ok':s.st==='err'?'err':s.st==='warn'?'warn':'';
+      d.appendChild(document.createTextNode(s.t+(s.d?': '+s.d:(s.st==='run'?'…':''))));
+      if(s.href&&/^https:\/\//.test(s.href)){var a=document.createElement('a');a.href=s.href;a.target='_blank';a.rel='noopener';a.textContent=' view';d.appendChild(a)}
+      l.appendChild(d);
+    });
+  }
+  function step(t){var s={t:t,d:'',st:'run'};steps.push(s);drawLog();return function(stt,d,href){s.st=stt;s.d=d||'';s.href=href||'';drawLog()}}
+  function post(path,body,token){return fetch(path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},token?{Authorization:'Bearer '+token}:{}),body:JSON.stringify(body||{})}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok,status:r.status,json:j}})})}
+  function b64(u8){var s='';for(var i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s)}
+
+  $('air').addEventListener('click',async function(){
+    if(!window.SparkLaunch||!window.SparkLaunch.airdrop)return;
+    if(!pubkey)await connect();if(!pubkey)return;
+    var s=step('Faucet');
+    try{await window.SparkLaunch.airdrop('devnet',pubkey,1);s('ok','1 devnet SOL requested')}catch(e){s('err','The faucet did not answer. Try https://faucet.solana.com')}
   });
-  function hideShow(){$('show').classList.remove('on');svgText=null;mySlot=0;myImg=null;drawGrid()}
-  function api(path,body){
-    return fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Request failed');return j})});
-  }
-  $('collect').addEventListener('click',async function(){
-    if(busy)return;busy=true;$('collect').disabled=true;msg('');
+
+  $('go').addEventListener('click',async function(){
+    if(running||!st)return;
+    steps=[];drawLog();say('');$('result').classList.remove('on');
+    var name=$('nm').value.trim(),sym=$('tk').value.trim().toUpperCase().replace(/^\$/,'');
+    if(!window.SparkLaunch){say('The launch code is missing. Run npm run build on the server.','err');return}
+    if(!name||!sym){say('Add a name and a ticker first.','err');return}
+    if(!/^[A-Za-z0-9._-]{1,10}$/.test(sym)){say('The ticker can use letters and digits, up to 10.','err');return}
+    var bv=$('buy').value.trim().replace(',','.')||'0';if(/^\./.test(bv))bv='0'+bv;
+    if(!/^\d{1,2}(\.\d{1,3})?$/.test(bv)||+bv>st.maxBuy){say('Your first buy must be a number from 0 to '+st.maxBuy+' SOL.','err');return}
+    running=true;$('go').disabled=true;
+    var token=null;
     try{
       if(!pubkey){await connect();if(!pubkey)return}
       var p=phantom();
-      msg('Phantom will ask you to sign a message. It is free.');
-      var ch=await api('/api/challenge',{wallet:pubkey});
-      var signed=await p.signMessage(new TextEncoder().encode(ch.message),'utf8');
-      var bytes=signed.signature||signed;
-      var bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
-      msg('Checking your wallet on the chain…');
-      var res=await api('/api/collect',{wallet:pubkey,nonce:ch.nonce,signature:btoa(bin)});
-      svgText=res.svg;mySlot=res.slot;
-      var url=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
-      myImg=url;$('pic').src=url;$('show').classList.add('on');
-      msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your bear.','ok');
-      loadStatus();
-    }catch(e){
-      msg(e&&e.code===4001?'You declined the signature request.':(e&&e.message)||'Something went wrong.','err');
-    }finally{busy=false;$('collect').disabled=!(st&&st.configured)}
+      step('Wallet')('ok',short(pubkey));
+      var s1=step('Sign in and pick the bear');
+      var ch=await post('/api/challenge',{wallet:pubkey});
+      if(!ch.ok){s1('err',ch.json.error||'server replied '+ch.status);return}
+      var signed;
+      try{signed=await p.signMessage(new TextEncoder().encode(ch.json.message),'utf8')}catch(e){s1('err','The signature request was declined.');return}
+      var rs=await post('/api/reserve',{wallet:pubkey,nonce:ch.json.nonce,signature:b64(signed.signature||signed),slot:pickSlot||'random'});
+      if(!rs.ok){s1('err',rs.json.error||'server replied '+rs.status);refresh();return}
+      token=rs.json.token;pickSlot=rs.json.slot;showPick();
+      s1('ok','Bear #'+String(rs.json.slot).padStart(2,'0'));
+      var s2=step('Coin details');
+      var md=await post('/api/metadata',{name:name,symbol:sym,description:$('ds').value.trim(),twitter:$('tw').value.trim(),website:$('ws').value.trim()},token);
+      if(!md.ok){s2('err',md.json.error||'server replied '+md.status);return}
+      s2('ok','logo and metadata saved');
+      var hint=null;
+      try{var lr=await fetch('/api/lut',{headers:{Authorization:'Bearer '+token}});if(lr.ok)hint=(await lr.json()).table}catch(e3){}
+      var sh=null;
+      if(st.platform&&st.platform.wallet!==pubkey)sh=[{address:pubkey,shareBps:10000-st.platform.bps},{address:st.platform.wallet,shareBps:st.platform.bps}];
+      var out=await window.SparkLaunch.createCoin({cluster:st.cluster,wallet:p,user:pubkey,name:name,symbol:sym,uri:md.json.uri,devBuySol:+bv,shareholders:sh,allowSplitFallback:st.cluster==='devnet',tableHint:hint,
+        onTable:function(t){return fetch('/api/lut',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({table:t})}).catch(function(){})}},step);
+      var s3=step('Lock the bear');
+      var ln=null;
+      for(var tries=0;tries<3;tries++){ln=await post('/api/launched',{mint:out.mint,signature:out.signature,splitSignature:out.splitSignature||''},token);if(ln.ok||ln.status===409)break;await new Promise(function(ok){setTimeout(ok,2500)})}
+      if(ln&&ln.ok)s3('ok','Bear #'+String(pickSlot).padStart(2,'0')+' is now locked to $'+sym);else s3('warn',(ln&&ln.json.error)||'Could not confirm. Your coin exists; contact the Den to lock its bear.');
+      var box=$('result');box.textContent='';
+      var h=document.createElement('div');h.textContent='Your coin is live. Mint address:';box.appendChild(h);
+      var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffb347;font-family:var(--mono)';m.textContent=out.mint;box.appendChild(m);
+      var cp=document.createElement('button');cp.className='cp';cp.type='button';cp.textContent='Copy';cp.onclick=function(){try{navigator.clipboard.writeText(out.mint).then(function(){cp.textContent='Copied'},function(){cp.textContent='Select and copy'})}catch(e){cp.textContent='Select and copy'}};box.appendChild(cp);
+      var M=out.mint,link=st.cluster==='mainnet'?'https://pump.fun/coin/'+M:'https://explorer.solana.com/address/'+M+'?cluster=devnet';
+      var a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener';a.textContent=st.cluster==='mainnet'?'Open on pump.fun':'Open on Solana Explorer (devnet)';a.style.cssText='margin-left:12px;color:#ffb347';box.appendChild(a);
+      var n=document.createElement('div');n.style.marginTop='10px';
+      var parts=[];
+      if(sh)parts.push(out.splitError?'The fee split did NOT go through ('+out.splitError+'), so creator fees currently go only to you. The Den expects its 5%, so please set the split from pump.fun.':'Creator fee split confirmed: '+(100-st.platform.bps)+'% you, '+(st.platform.bps/100)+'% the Den.');
+      if(+bv>0)parts.push(out.atomic?'Your first buy landed in the same transaction as the launch.':'WARNING: the launch and your buy were separate transactions, so someone could have bought in between.'+(out.buyError?' The buy did not go through, see the log.':''));
+      n.textContent=parts.join(' ');box.appendChild(n);
+      box.classList.add('on');pickSlot=null;showPick();refresh();
+    }catch(e){console.error(e)}
+    finally{
+      if(token&&!$('result').classList.contains('on')){post('/api/release',{},token).then(refresh)}
+      running=false;$('go').disabled=false;
+    }
   });
-  function save(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove()}
-  $('dlsvg').addEventListener('click',function(){if(svgText)save(new Blob([svgText],{type:'image/svg+xml'}),'bear-'+mySlot+'.svg')});
-  $('dlpng').addEventListener('click',function(){
-    if(!svgText)return;
-    var img=new Image();
-    img.onload=function(){
-      var c=document.createElement('canvas');c.width=1024;c.height=1216;
-      var cx=c.getContext('2d');cx.imageSmoothingEnabled=false;cx.drawImage(img,0,0,1024,1216);
-      c.toBlob(function(b){if(b)save(b,'bear-'+mySlot+'.png')},'image/png');
-    };
-    img.src=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
-  });
-  $('cacopy').addEventListener('click',function(){
-    var t=$('ca').textContent,b=$('cacopy');
-    function done(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy CA'},1500)}
-    if(navigator.clipboard)navigator.clipboard.writeText(t).then(done,function(){});
-  });
-  loadStatus();
 })();
 </script>
 </body>

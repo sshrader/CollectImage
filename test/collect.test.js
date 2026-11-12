@@ -28,143 +28,171 @@ let failed = 0;
 function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label + (ok ? '' : ' ' + (extra || ''))); if (!ok) failed++; }
 
 (async () => {
-  process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'collect-'));
+  process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'bearden-'));
   process.env.IMAGE_SECRET = 'test-secret';
+  process.env.LAUNCH_RETRY_MS = '5';
+  process.env.ADMIN_TOKEN = 'a'.repeat(32);
+  const PUMP = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 
-  // A fake chain: balances by wallet.
-  const balances = {};
+  // A fake chain: transactions by signature.
+  const txs = {};
   const fakeRpc = http.createServer((req, res) => {
     let b = ''; req.on('data', (c) => (b += c));
     req.on('end', () => {
       const j = JSON.parse(b);
-      const owner = j.params[0];
-      const amt = balances[owner] || 0;
-      const value = amt > 0 ? [{ account: { data: { parsed: { info: { tokenAmount: { uiAmountString: String(amt) } } } } } }] : [];
+      let result = null;
+      if (j.method === 'getTransaction') result = txs[j.params[0]] || null;
+      else if (j.method === 'getSlot') result = 123;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ jsonrpc: '2.0', id: 1, result: { value } }));
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: j.id || 1, result }));
     });
   });
   await new Promise((ok) => fakeRpc.listen(0, '127.0.0.1', ok));
   process.env.RPC_URL = 'http://127.0.0.1:' + fakeRpc.address().port;
-  process.env.COIN_MINT = b58encode(crypto.randomBytes(32));
-  process.env.SLOTS = '3';
-  process.env.MIN_HOLD = '100';
-  process.env.ADMIN_TOKEN = 'a'.repeat(32);
 
   const server = require('../server.js');
   await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
   const base = 'http://127.0.0.1:' + server.address().port;
-  const post = (p, body) => fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const post = (p, body, tok) => fetch(base + p, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}), body: JSON.stringify(body) });
 
-  async function collect(w, opts) {
+  async function reserve(w, slot, opts) {
     opts = opts || {};
     const ch = await (await post('/api/challenge', { wallet: w.address })).json();
     const sig = opts.badSig ? crypto.randomBytes(64).toString('base64') : w.sign(ch.message);
-    const body = { wallet: w.address, nonce: ch.nonce, signature: sig };
-    const r = await post('/api/collect', body);
+    const body = { wallet: w.address, nonce: ch.nonce, signature: sig, slot };
+    const r = await post('/api/reserve', body);
     return { status: r.status, json: await r.json(), body };
   }
+  const sigOf = () => b58encode(crypto.randomBytes(64));
+  const launchTx = (wallet, mint, err) => ({ meta: { err: err || null }, transaction: { message: { header: { numRequiredSignatures: 2 }, accountKeys: [wallet, mint, PUMP, '11111111111111111111111111111111'] } } });
 
-  let r = await (await fetch(base + '/api/status')).json();
-  check('status shows set up and empty', r.configured && r.total === 3 && r.claimed === 0 && r.slots.length === 3);
+  let r = await (await fetch(base + '/api/bears')).json();
+  check('starts on devnet with 4 open bears', r.cluster === 'devnet' && r.total === 4 && r.open === 4 && r.bears.length === 4 && r.bears.every((b) => b.state === 'open'), JSON.stringify(r).slice(0, 200));
+  check('no platform split until a wallet is set', r.platform === null);
+  const platformWallet = newWallet().address;
+  process.env.PLATFORM_WALLET = platformWallet;
+  r = await (await fetch(base + '/api/bears')).json();
+  check('platform wallet and 5% are shown when set', r.platform && r.platform.wallet === platformWallet && r.platform.bps === 500);
+  r = await fetch(base + '/api/preview/1.svg');
+  const sv = await r.text();
+  check('every bear can be previewed', r.status === 200 && sv.startsWith('<svg') && !sv.includes('<text'));
+  check('preview out of range is a 404', (await fetch(base + '/api/preview/5.svg')).status === 404);
+  check('the old admin launch page is gone', (await fetch(base + '/launch')).status === 404);
+  const home = await fetch(base + '/');
+  check('home page is Bear Den', home.status === 200 && (await home.text()).includes('Bear Den'));
 
+  const a = newWallet(), b = newWallet(), c = newWallet(), d = newWallet(), e = newWallet();
 
-  const a = newWallet(), b = newWallet(), c = newWallet(), d = newWallet();
-
-  let x = await collect(a);
-  check('wallet with no coin is refused', x.status === 403, JSON.stringify(x.json));
-
-  balances[a.address] = 50;
-  x = await collect(a);
-  check('wallet under the minimum is refused', x.status === 403);
-
-  balances[a.address] = 100;
-  x = await collect(a);
-  check('holder gets an image', x.status === 200 && x.json.isNew && x.json.svg.startsWith('<svg') && /BEAR 0/.test(x.json.svg), JSON.stringify(x.json).slice(0, 120));
-  check('image shows the owner', x.json.svg.includes(a.address.slice(0, 4)));
-  const slotA = x.json.slot;
-  const svgA = x.json.svg;
-
-  x = await collect(a);
-  check('same wallet gets the same image again', x.status === 200 && !x.json.isNew && x.json.slot === slotA && x.json.svg === svgA);
-
-  const bad = await collect(b, { badSig: true });
+  const bad = await reserve(a, 'random', { badSig: true });
   check('wrong signature is refused', bad.status === 401);
-  const replay = await post('/api/collect', bad.body);
+  const replay = await post('/api/reserve', bad.body);
   check('a used sign-in cannot be replayed', replay.status === 401);
-
-  const other = await collect(b); // b has no coin yet
-  balances[b.address] = 1000; balances[c.address] = 1000; balances[d.address] = 1000;
-  const xb = await collect(b), xc = await collect(c);
-  check('other holders get different images', xb.status === 200 && xc.status === 200 && new Set([slotA, xb.json.slot, xc.json.slot]).size === 3);
-  check('images differ', xb.json.svg !== svgA && xc.json.svg !== xb.json.svg);
-
-  x = await collect(d);
-  check('sold out after all images are taken', x.status === 409, JSON.stringify(x.json));
-
-  r = await (await fetch(base + '/api/status')).json();
-  check('status counts claims and hides full addresses', r.claimed === 3 && r.slots.every((s) => s.owner && s.owner.length < 12));
-
-  balances[a.address] = 0;
-  x = await collect(a);
-  check('owner who sold loses access', x.status === 403);
-
-  // someone else can't use a's challenge
   const chA = await (await post('/api/challenge', { wallet: a.address })).json();
-  balances[a.address] = 500;
-  const steal = await post('/api/collect', { wallet: b.address, nonce: chA.nonce, signature: b.sign(chA.message) });
+  const steal = await post('/api/reserve', { wallet: b.address, nonce: chA.nonce, signature: b.sign(chA.message), slot: 'random' });
   check('a sign-in only works for the wallet it was issued to', steal.status === 401);
+  check('bad wallet address rejected', (await post('/api/challenge', { wallet: 'nope' })).status === 400);
 
-  const junk = await post('/api/challenge', { wallet: 'nope' });
-  check('bad wallet address rejected', junk.status === 400);
+  let xa = await reserve(a, 2);
+  check('a wallet can pick an open bear', xa.status === 200 && xa.json.slot === 2 && xa.json.token.length >= 32, JSON.stringify(xa.json));
+  let xb = await reserve(b, 2);
+  check('a held bear cannot be taken by someone else', xb.status === 409);
+  xb = await reserve(b, 'random');
+  check('random picks a different open bear', xb.status === 200 && xb.json.slot !== 2);
+  check('bad bear number rejected', (await reserve(c, 9)).status === 400);
+  const SL = [1, 2, 3, 4].find((n) => n !== 2 && n !== xb.json.slot); // a free bear that is neither a's first pick nor b's
+  const xa2 = await reserve(a, SL);
+  check('asking again swaps the held bear', xa2.status === 200 && xa2.json.slot === SL);
+  r = await (await fetch(base + '/api/bears')).json();
+  check('a wallet holds only one bear', r.bears.filter((x) => x.state === 'held').length === 2, JSON.stringify(r.bears.map((x) => x.state)));
+  const xc = await reserve(c, 'random'), xd = await reserve(d, 'random');
+  check('four wallets fill four bears', xc.status === 200 && xd.status === 200 && new Set([xa2.json.slot, xb.json.slot, xc.json.slot, xd.json.slot]).size === 4);
+  const xe = await reserve(e, 'random');
+  check('nothing left to hold when every bear is taken', xe.status === 409);
 
-  // launch tools
-  const PNGB = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-  const meta = (body, tok) => fetch(base + '/api/metadata', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
-  r = await meta({ name: 'Bear', symbol: 'BEAR', image: PNGB }, 'wrong');
-  check('metadata needs the admin password', r.status === 401);
-  r = await meta({ name: 'Bear', symbol: 'BEAR', description: 'grr', image: PNGB, twitter: '@Bear_Coin', website: 'bears.xyz' }, 'a'.repeat(32));
+  // coin details: needs the hold token, and the logo is always the held bear
+  const meta = (body, tok) => post('/api/metadata', body, tok);
+  r = await meta({ name: 'Honey', symbol: 'HONEY' }, 'nope'.repeat(10));
+  check('coin details need a live bear hold', r.status === 401);
+  r = await meta({ name: 'Honey', symbol: 'HONEY', description: 'grr', twitter: '@Honey_Coin', website: 'honey.xyz' }, xa2.json.token);
   const jm = await r.json();
   const dm = jm.uri ? await (await fetch(base + new URL(jm.uri).pathname)).json() : {};
-  check('metadata saved with cleaned socials', r.status === 201 && dm.twitter === 'https://x.com/Bear_Coin' && dm.website === 'https://bears.xyz/' && /\/images\/[a-f0-9]{16}\.png$/.test(dm.image || ''), JSON.stringify(jm));
+  check('metadata saved with cleaned socials', r.status === 201 && dm.name === 'Honey' && dm.twitter === 'https://x.com/Honey_Coin' && dm.website === 'https://honey.xyz/' && /\/images\/[a-f0-9]{16}\.png$/.test(dm.image || ''), JSON.stringify(jm));
   const im = await fetch(base + new URL(dm.image).pathname);
-  check('coin image is served', im.status === 200 && im.headers.get('content-type') === 'image/png');
-  r = await meta({ name: 'Bear', symbol: 'BEAR', website: 'javascript:alert(1)' }, 'a'.repeat(32));
+  const png = Buffer.from(await im.arrayBuffer());
+  check('coin image is the bear as a 512px PNG', im.status === 200 && im.headers.get('content-type') === 'image/png' && png.subarray(1, 4).toString() === 'PNG' && png.readUInt32BE(16) === 512 && png.readUInt32BE(20) === 512);
+  r = await meta({ name: 'Honey', symbol: 'HONEY', image: 'data:image/png;base64,AAAA' }, xa2.json.token);
+  check('an uploaded image is ignored, the bear is always the logo', r.status === 201);
+  r = await meta({ name: 'Honey', symbol: 'HONEY', website: 'javascript:alert(1)' }, xa2.json.token);
   check('bad website rejected', r.status === 400);
-  r = await meta({ name: 'Bear', symbol: 'BEAR', image: 'data:image/png;base64,AAAA' }, 'a'.repeat(32));
-  check('fake image rejected', r.status === 400);
+  r = await meta({ name: 'Honey', symbol: 'bad ticker!' }, xa2.json.token);
+  check('bad ticker rejected', r.status === 400);
+  r = await meta({ name: 'Nazi Bear', symbol: 'HONEY' }, xa2.json.token);
+  check('blocked words rejected', r.status === 400);
+  r = await meta({ name: '', symbol: 'HONEY' }, xa2.json.token);
+  check('name is required', r.status === 400);
+
+  // locking after the launch is checked on the chain
+  const mint = b58encode(crypto.randomBytes(32));
+  r = await post('/api/launched', { mint: 'nope', signature: sigOf() }, xa2.json.token);
+  check('bad coin address rejected', r.status === 400);
+  r = await post('/api/launched', { mint, signature: sigOf() }, xa2.json.token);
+  check('a launch that is not on the chain is refused', r.status === 422);
+  const s1 = sigOf(); txs[s1] = launchTx(b.address, mint);
+  r = await post('/api/launched', { mint, signature: s1 }, xa2.json.token);
+  check("someone else's launch cannot lock my bear", r.status === 422);
+  const s2 = sigOf(); txs[s2] = launchTx(a.address, mint, { InstructionError: 1 });
+  r = await post('/api/launched', { mint, signature: s2 }, xa2.json.token);
+  check('a failed transaction is refused', r.status === 422);
+  const s3 = sigOf(); txs[s3] = { meta: { err: null }, transaction: { message: { header: { numRequiredSignatures: 2 }, accountKeys: [a.address, mint, '11111111111111111111111111111111'] } } };
+  r = await post('/api/launched', { mint, signature: s3 }, xa2.json.token);
+  check('a transaction that is not a pump.fun launch is refused', r.status === 422);
+  const s4 = sigOf(); txs[s4] = launchTx(a.address, mint);
+  r = await post('/api/launched', { mint, signature: s4, splitSignature: sigOf() }, xa2.json.token); r = { status: r.status, json: await r.json() };
+  check('a real launch locks the bear', r.status === 200 && r.json.ok && r.json.slot === SL, r.status + ' ' + JSON.stringify(r.json));
+  r = await (await fetch(base + '/api/bears')).json();
+  const locked = r.bears.find((x) => x.n === SL);
+  check('the bear shows its coin', locked.state === 'launched' && locked.symbol === 'HONEY' && locked.mint === mint);
+  r = await post('/api/launched', { mint, signature: s4 }, xa2.json.token);
+  check('the used hold cannot lock again', r.status === 401);
+  const again = await reserve(e, SL);
+  check('a locked bear cannot be picked', again.status === 409);
+
+  // giving a bear back
+  r = await post('/api/release', {}, xb.json.token);
+  check('a launcher can give their bear back', r.status === 200);
+  r = await (await fetch(base + '/api/bears')).json();
+  check('the released bear is open again', r.bears.find((x) => x.n === xb.json.slot).state === 'open' && r.open === 1);
+  r = await post('/api/release', {}, xb.json.token);
+  check('a released hold is dead', r.status === 401);
+
+  // the lookup table is remembered per wallet and needs the hold token
+  r = await fetch(base + '/api/lut');
+  check('lookup table needs a bear hold', r.status === 401);
+  const table = b58encode(crypto.randomBytes(32));
+  r = await post('/api/lut', { table }, xc.json.token);
+  const got = await (await fetch(base + '/api/lut', { headers: { Authorization: 'Bearer ' + xc.json.token } })).json();
+  check('lookup table is remembered on the server', r.status === 200 && got.table === table);
+
+  // owner tools
+  r = await post('/api/admin/release', { slot: SL }, 'wrong');
+  check('freeing a bear needs the admin password', r.status === 401);
+  r = await post('/api/admin/release', { slot: SL }, 'a'.repeat(32));
+  const after = await (await fetch(base + '/api/bears')).json();
+  check('the owner can free a locked bear', r.status === 200 && after.bears.find((x) => x.n === SL).state === 'open');
+
+  // one more full pass on a second network keeps its own books
+  process.env.CLUSTER = 'mainnet';
+  const mainState = await (await fetch(base + '/api/bears')).json();
+  check('mainnet keeps separate bears from devnet', mainState.cluster === 'mainnet' && mainState.open === 4 && mainState.maxBuy === 10);
   r = await post('/api/rpc/mainnet', { method: 'getSlot', params: [] });
   check('rpc proxy forwards an allowed call', r.status === 200);
   r = await post('/api/rpc/mainnet', { method: 'requestAirdrop', params: [] });
   check('rpc proxy blocks other calls', r.status === 400);
   r = await post('/api/rpc/mainnet', [{ method: 'getSlot' }]);
   check('rpc proxy blocks batches', r.status === 400);
-  r = await fetch(base + '/api/mascot.svg');
-  const mascotSvg = await r.text();
-  check('public mascot has no caption', r.status === 200 && mascotSvg.startsWith('<svg') && !mascotSvg.includes('<text'));
-  r = await fetch(base + '/launch');
-  check('launch page is served', r.status === 200 && (await r.text()).includes('Launch the coin'));
-
-  const setCoin = (body, tok) => fetch(base + '/api/coin', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
-  const newMint = b58encode(crypto.randomBytes(32));
-  r = await setCoin({ mint: newMint }, 'wrong');
-  check('setting the coin needs the admin password', r.status === 401);
-  r = await setCoin({ mint: 'nope' }, 'a'.repeat(32));
-  check('bad coin address rejected', r.status === 400);
-  r = await setCoin({ mint: newMint, cluster: 'devnet' }, 'a'.repeat(32));
-  check('coin from another network rejected', r.status === 409);
-  r = await setCoin({ mint: newMint, cluster: 'mainnet' }, 'a'.repeat(32));
-  const st = await (await fetch(base + '/api/status')).json();
-  check('launch page can set the coin, starting fresh', r.status === 200 && st.mint === newMint && st.claimed === 0, JSON.stringify(st).slice(0, 100));
-
-  r = await fetch(base + '/api/lut?wallet=' + a.address + '&cluster=devnet', { headers: { Authorization: 'Bearer wrong' } });
-  check('table memory needs the admin password', r.status === 401);
-  const tbl = b58encode(crypto.randomBytes(32));
-  r = await fetch(base + '/api/lut', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + 'a'.repeat(32) }, body: JSON.stringify({ wallet: a.address, cluster: 'devnet', table: tbl }) });
-  const got = await (await fetch(base + '/api/lut?wallet=' + a.address + '&cluster=devnet', { headers: { Authorization: 'Bearer ' + 'a'.repeat(32) } })).json();
-  check('lookup table is remembered on the server', r.status === 200 && got.table === tbl);
+  delete process.env.CLUSTER;
 
   server.close(); fakeRpc.close();
   console.log(failed ? failed + ' failed' : 'all passed');
   process.exit(failed ? 1 : 0);
-})();
+})().catch((e) => { console.error(e); process.exit(1); });
