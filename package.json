@@ -2,7 +2,7 @@
   "name": "collectimage",
   "version": "0.1.0",
   "private": true,
-  "description": "Launch a coin on the pump.fun bonding curve, then let holders collect one of N pixel cats that only their wallet can open.",
+  "description": "Launch a coin on the pump.fun bonding curve, then let holders collect one of N pixel bears that only their wallet can open.",
   "scripts": {
     "build": "node build.mjs",
     "start": "node server.js",

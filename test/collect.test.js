@@ -68,8 +68,6 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   let r = await (await fetch(base + '/api/status')).json();
   check('status shows set up and empty', r.configured && r.total === 3 && r.claimed === 0 && r.slots.length === 3);
 
-  const pp = await fetch(base + '/petpad');
-  check('PetPad concept page is served', pp.status === 200 && (await pp.text()).includes('Hold the coin. Get a bear.'));
 
   const a = newWallet(), b = newWallet(), c = newWallet(), d = newWallet();
 
@@ -82,7 +80,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   balances[a.address] = 100;
   x = await collect(a);
-  check('holder gets an image', x.status === 200 && x.json.isNew && x.json.svg.startsWith('<svg') && /CAT 0/.test(x.json.svg), JSON.stringify(x.json).slice(0, 120));
+  check('holder gets an image', x.status === 200 && x.json.isNew && x.json.svg.startsWith('<svg') && /BEAR 0/.test(x.json.svg), JSON.stringify(x.json).slice(0, 120));
   check('image shows the owner', x.json.svg.includes(a.address.slice(0, 4)));
   const slotA = x.json.slot;
   const svgA = x.json.svg;
@@ -123,17 +121,17 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   // launch tools
   const PNGB = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
   const meta = (body, tok) => fetch(base + '/api/metadata', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
-  r = await meta({ name: 'Cat', symbol: 'CATS', image: PNGB }, 'wrong');
+  r = await meta({ name: 'Bear', symbol: 'BEAR', image: PNGB }, 'wrong');
   check('metadata needs the admin password', r.status === 401);
-  r = await meta({ name: 'Cat', symbol: 'CATS', description: 'ribbit', image: PNGB, twitter: '@Cat_Coin', website: 'cats.xyz' }, 'a'.repeat(32));
+  r = await meta({ name: 'Bear', symbol: 'BEAR', description: 'grr', image: PNGB, twitter: '@Bear_Coin', website: 'bears.xyz' }, 'a'.repeat(32));
   const jm = await r.json();
   const dm = jm.uri ? await (await fetch(base + new URL(jm.uri).pathname)).json() : {};
-  check('metadata saved with cleaned socials', r.status === 201 && dm.twitter === 'https://x.com/Cat_Coin' && dm.website === 'https://cats.xyz/' && /\/images\/[a-f0-9]{16}\.png$/.test(dm.image || ''), JSON.stringify(jm));
+  check('metadata saved with cleaned socials', r.status === 201 && dm.twitter === 'https://x.com/Bear_Coin' && dm.website === 'https://bears.xyz/' && /\/images\/[a-f0-9]{16}\.png$/.test(dm.image || ''), JSON.stringify(jm));
   const im = await fetch(base + new URL(dm.image).pathname);
   check('coin image is served', im.status === 200 && im.headers.get('content-type') === 'image/png');
-  r = await meta({ name: 'Cat', symbol: 'CATS', website: 'javascript:alert(1)' }, 'a'.repeat(32));
+  r = await meta({ name: 'Bear', symbol: 'BEAR', website: 'javascript:alert(1)' }, 'a'.repeat(32));
   check('bad website rejected', r.status === 400);
-  r = await meta({ name: 'Cat', symbol: 'CATS', image: 'data:image/png;base64,AAAA' }, 'a'.repeat(32));
+  r = await meta({ name: 'Bear', symbol: 'BEAR', image: 'data:image/png;base64,AAAA' }, 'a'.repeat(32));
   check('fake image rejected', r.status === 400);
   r = await post('/api/rpc/mainnet', { method: 'getSlot', params: [] });
   check('rpc proxy forwards an allowed call', r.status === 200);

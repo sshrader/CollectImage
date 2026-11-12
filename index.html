@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CatHouse</title>
+<title>Bear Den</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@ h1 span{color:var(--gold)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;gap:16px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .btn{font:700 15px var(--sans);border-radius:99px;padding:12px 22px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
-.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#07140c;border:0}
+.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#1a0f08;border:0}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .facts{display:flex;gap:26px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--dim)}
 .facts b{display:block;font-family:var(--display);font-size:22px;color:var(--fg)}
@@ -48,12 +48,12 @@ h1 span{color:var(--gold)}
 .fine{font-size:12px;color:var(--dim);max-width:70ch;margin-top:28px}
 h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 
-/* cozy night house theme */
-:root{--bg:#0b1020;--surface:#131a30;--surface2:#1c2542;--line:#2e3b68;--fg:#f4efe9;--dim:#a8b3d6;--ember:#ff9a4a;--gold:#ffd27a;--good:#7ee0a8;--bad:#ff7a7a;
+/* hibernation cave theme */
+:root{--bg:#120d0a;--surface:#1a120d;--surface2:#241810;--line:#4d3826;--fg:#f4e8d4;--dim:#ad9a82;--ember:#e8782a;--gold:#ffb347;--good:#9be29b;--bad:#ff7a7a;
 --display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif}
-.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a1226 0%,#16224a 45%,#0b1020 100%)}
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a0f22 0%,#1a1a3a 40%,#2a1810 78%,#120d0a 100%)}
 .sky .moon{position:absolute;top:28px;right:6vw;width:66px;height:66px;image-rendering:pixelated;opacity:.95}
-.sky i{position:absolute;width:4px;height:4px;background:#ffe27a;box-shadow:0 0 8px 2px rgba(255,226,122,.6);animation:fly 5s ease-in-out infinite}
+.sky i{position:absolute;width:4px;height:4px;background:#ffb347;box-shadow:0 0 8px 2px rgba(255,150,60,.55);animation:fly 5s ease-in-out infinite}
 .sky b{position:absolute;width:3px;height:3px;background:#dff7e6;opacity:.7}
 @keyframes fly{0%,100%{opacity:.15;transform:translate(0,0)}50%{opacity:1;transform:translate(14px,-10px)}}
 .scene{position:fixed;left:0;right:0;bottom:0;height:min(36vh,320px);z-index:0;pointer-events:none}
@@ -65,15 +65,15 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 <body>
 <div class="sky" aria-hidden="true"><img class="moon" src="/assets/moon.svg" alt=""><b style="left:8%;top:9%"></b><b style="left:22%;top:20%"></b><b style="left:41%;top:7%"></b><b style="left:57%;top:16%"></b><b style="left:73%;top:6%"></b><b style="left:90%;top:24%"></b><b style="left:34%;top:30%"></b>
 <i style="left:12%;top:46%;animation-delay:0s"></i><i style="left:30%;top:58%;animation-delay:1.3s"></i><i style="left:52%;top:50%;animation-delay:2.1s"></i><i style="left:68%;top:62%;animation-delay:.7s"></i><i style="left:84%;top:52%;animation-delay:3.2s"></i><i style="left:6%;top:68%;animation-delay:2.6s"></i></div>
-<div class="scene" aria-hidden="true"><img src="/assets/house.svg" alt=""></div>
+<div class="scene" aria-hidden="true"><img src="/assets/cave.svg" alt=""></div>
 <div class="wrap">
 <header>
-  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>CatHouse</div>
+  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>Bear Den</div>
   <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
 </header>
 
-<h1>Welcome home. <span>Collect your cat.</span></h1>
-<p class="lede" id="lede">Each cat is one of a small set of pixel cats, and no two are the same. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
+<h1>Sleep through the dip. <span>Collect your bear.</span></h1>
+<p class="lede" id="lede">Each bear is one of a small set of pixel bears, and no two are the same. Hold the coin, sign a free message with your wallet, and one image is assigned to you. Only your wallet can open it.</p>
 
 <div class="panel">
   <div class="facts">
@@ -85,11 +85,11 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   <div class="ca" id="curve" hidden></div>
   <div class="row">
     <a class="btn" id="buylink" href="#" target="_blank" rel="noopener" hidden>Buy on pump.fun</a>
-    <button class="btn go" id="collect" type="button">Collect my cat</button>
+    <button class="btn go" id="collect" type="button">Collect my bear</button>
     <span class="msg" id="msg"></span>
   </div>
   <div class="show" id="show">
-    <img id="pic" alt="Your cat">
+    <img id="pic" alt="Your bear">
     <div class="row">
       <button class="btn" id="dlpng" type="button">Download PNG</button>
       <button class="btn" id="dlsvg" type="button">Download SVG</button>
@@ -100,7 +100,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
 <h2>The set</h2>
 <div class="grid" id="grid"></div>
 
-<p class="fine">Signing is free and sends no transaction. Your cat is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
+<p class="fine">Signing is free and sends no transaction. Your bear is a digital image served by this site to the wallet it is assigned to; once downloaded it can be copied, so this controls who gets the file, not what they do with it. The image has no promised value, and the coin can lose all of its value. Nothing here is financial advice. If you sell the coin, this page stops showing your image.</p>
 </div>
 
 <script src="/launch.js"></script>
@@ -114,9 +114,9 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="#ffc65c"><path d="M12 .8L14.1 10.5H9.9Z"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(90 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(180 12 12)"/><path d="M12 .8L14.1 10.5H9.9Z" transform="rotate(270 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(45 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(135 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(225 12 12)"/><path d="M12 4L13.7 10.7H10.3Z" transform="rotate(315 12 12)"/></g></svg>';
 
   var myImg=null;
-  function catIcon(runs,fill){
+  function bearIcon(runs,fill){
     var NS='http://www.w3.org/2000/svg',s=document.createElementNS(NS,'svg');
-    s.setAttribute('viewBox','0 0 32 32');s.setAttribute('aria-hidden','true');s.setAttribute('shape-rendering','crispEdges');
+    s.setAttribute('viewBox','0 0 64 64');s.setAttribute('aria-hidden','true');s.setAttribute('shape-rendering','crispEdges');
     runs.forEach(function(r){var e=document.createElementNS(NS,'rect');e.setAttribute('x',r[1]);e.setAttribute('y',r[0]);e.setAttribute('width',r[2]);e.setAttribute('height',1);e.setAttribute('fill',fill);s.appendChild(e)});
     return s;
   }
@@ -127,8 +127,8 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       var mine=mySlot===s.n&&myImg;
       var d=document.createElement('div');
       d.className='slot'+(s.owner?' taken':' free')+(mySlot===s.n?' mine':'');
-      if(mine){var im=document.createElement('img');im.src=myImg;im.alt='Your cat';d.appendChild(im)}
-      else d.appendChild(catIcon(st.silhouette||[],s.owner&&s.tint?s.tint:'#3a3358'));
+      if(mine){var im=document.createElement('img');im.src=myImg;im.alt='Your bear';d.appendChild(im)}
+      else d.appendChild(bearIcon(st.silhouette||[],s.owner&&s.tint?s.tint:'#3a2a1d'));
       var b=document.createElement('b');b.textContent='#'+String(s.n).padStart(2,'0');
       var sm=document.createElement('small');sm.textContent=mySlot===s.n?'Yours':(s.owner?s.owner:'Open');
       d.appendChild(b);d.appendChild(sm);g.appendChild(d);
@@ -137,9 +137,9 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
   function loadStatus(){
     return fetch('/api/status').then(function(r){return r.json()}).then(function(j){
       st=j;
-      if(j.silhouette&&!$('logoicon').firstChild)$('logoicon').appendChild(catIcon(j.silhouette,'#ffd27a'));
+      if(j.silhouette&&!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette,'#ffd27a'));
       $('claimed').textContent=j.claimed;$('total').textContent=j.total;$('minhold').textContent=j.minHold;
-      if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' cats is assigned to you. Only your wallet can open it.';
+      if(j.coinName)$('lede').textContent='Hold '+j.coinName+', sign a free message with your wallet, and one of '+j.total+' bears is assigned to you. Only your wallet can open it.';
       if(j.mint){$('caline').hidden=false;$('ca').textContent=j.mint}
       if(!j.configured){$('collect').disabled=true;msg('This page is not set up yet.','err')}
       if(j.mint&&j.cluster==='mainnet'){var bl=$('buylink');bl.href='https://pump.fun/coin/'+j.mint;bl.hidden=false}
@@ -183,21 +183,21 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       svgText=res.svg;mySlot=res.slot;
       var url=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
       myImg=url;$('pic').src=url;$('show').classList.add('on');
-      msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your cat.','ok');
+      msg(res.isNew?'Collected. This one is yours.':'Welcome back. Here is your bear.','ok');
       loadStatus();
     }catch(e){
       msg(e&&e.code===4001?'You declined the signature request.':(e&&e.message)||'Something went wrong.','err');
     }finally{busy=false;$('collect').disabled=!(st&&st.configured)}
   });
   function save(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove()}
-  $('dlsvg').addEventListener('click',function(){if(svgText)save(new Blob([svgText],{type:'image/svg+xml'}),'cat-'+mySlot+'.svg')});
+  $('dlsvg').addEventListener('click',function(){if(svgText)save(new Blob([svgText],{type:'image/svg+xml'}),'bear-'+mySlot+'.svg')});
   $('dlpng').addEventListener('click',function(){
     if(!svgText)return;
     var img=new Image();
     img.onload=function(){
       var c=document.createElement('canvas');c.width=1024;c.height=1216;
       var cx=c.getContext('2d');cx.imageSmoothingEnabled=false;cx.drawImage(img,0,0,1024,1216);
-      c.toBlob(function(b){if(b)save(b,'cat-'+mySlot+'.png')},'image/png');
+      c.toBlob(function(b){if(b)save(b,'bear-'+mySlot+'.png')},'image/png');
     };
     img.src=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));
   });

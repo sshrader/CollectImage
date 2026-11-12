@@ -1,56 +1,25 @@
 'use strict';
-// Pixel cats on a 32 by 32 grid. Each slot gets its own combination of traits, picked from a server secret,
+// Pixel bears on a 64 by 64 grid. Each slot gets its own combination of traits, picked from a server secret,
 // and no two slots in a set share the same combination. The art stays on the server until a holder claims it.
 const crypto = require('crypto');
+const W = 64, H = 64;
 
-const W = 32, H = 32;
-
-const SKINS = [
-  { name: 'Ginger', base: '#e8892b', light: '#ffb866', dark: '#b05a10', line: '#40210a', belly: '#fff0d0' },
-  { name: 'Black', base: '#34364a', light: '#5a5f7e', dark: '#1c1d2b', line: '#06060c', belly: '#6a6f8e' },
-  { name: 'Snow', base: '#f2f0ec', light: '#ffffff', dark: '#bdb8b0', line: '#3a362f', belly: '#ffffff' },
-  { name: 'Grey', base: '#8d93a3', light: '#b9bfcf', dark: '#5c6272', line: '#1d2029', belly: '#d6dae4' },
-  { name: 'Cream', base: '#f0d9a8', light: '#fff0cf', dark: '#c2a468', line: '#4a3a18', belly: '#fff8e6' },
-  { name: 'Brown', base: '#8b5e3c', light: '#b98558', dark: '#5a3a22', line: '#22140a', belly: '#d8b48a' },
-  { name: 'Chocolate', base: '#5b3a2a', light: '#8a5f48', dark: '#3a2318', line: '#150c07', belly: '#a88268' },
-  { name: 'Blue', base: '#6f86a8', light: '#9fb6d6', dark: '#465c7a', line: '#141e2e', belly: '#c9d7ea' },
-  { name: 'Lilac', base: '#b8a3c8', light: '#dccbea', dark: '#85709a', line: '#2e2338', belly: '#efe6f6' },
-  { name: 'Cinnamon', base: '#c0703a', light: '#e49a64', dark: '#8a4a22', line: '#3a1c08', belly: '#f0cba8' },
-  { name: 'Silver', base: '#c4c9d4', light: '#eef1f7', dark: '#8e94a2', line: '#2a2e38', belly: '#ffffff' },
-  { name: 'Golden', base: '#e8b84a', light: '#ffe08a', dark: '#a87c18', line: '#44300a', belly: '#fff1c4' },
-  { name: 'Charcoal', base: '#4a4f5c', light: '#757b8c', dark: '#2c2f3a', line: '#0b0c12', belly: '#8d93a6' },
-  { name: 'Rose', base: '#f0a8b4', light: '#ffd0d8', dark: '#c27484', line: '#4a2028', belly: '#ffe6ea' },
+const COATS = [
+  { key: 'brown', name: 'Brown', w: 24, base: '#7a4a2b', light: '#a06a42', dark: '#4d2d18', deep: '#35200f', snout: '#d9b48a', snoutDark: '#b8905f', ear: '#c98a6a' },
+  { key: 'black', name: 'Black', w: 18, base: '#44445a', light: '#6a6a84', dark: '#2a2a3a', deep: '#1a1a26', snout: '#9a8a7c', snoutDark: '#76685c', ear: '#7a6a68', moon: true },
+  { key: 'honey', name: 'Honey', w: 14, base: '#d9952b', light: '#f5c065', dark: '#a8681a', deep: '#74430f', snout: '#f7e0ae', snoutDark: '#dcb877', ear: '#f0b070' },
+  { key: 'cinnamon', name: 'Cinnamon', w: 12, base: '#a8522a', light: '#d4804f', dark: '#6e3217', deep: '#4a210e', snout: '#ebc7a0', snoutDark: '#c99c72', ear: '#e0956a' },
+  { key: 'glacier', name: 'Glacier', w: 10, base: '#8fa6bf', light: '#bccfe2', dark: '#5d7490', deep: '#445770', snout: '#e8f0f8', snoutDark: '#bccbdb', ear: '#c7d6e6' },
+  { key: 'polar', name: 'Polar', w: 10, base: '#e9edf4', light: '#ffffff', dark: '#aab5c8', deep: '#8895ac', snout: '#ffffff', snoutDark: '#d4dbe6', ear: '#dcc9d0', darkNose: true },
+  { key: 'panda', name: 'Panda', w: 7, base: '#f2f2f4', light: '#ffffff', dark: '#b4b4be', deep: '#8a8a98', snout: '#ffffff', snoutDark: '#d8d8e0', ear: '#4a4a55', panda: true },
+  { key: 'ember', name: 'Ember', w: 5, base: '#8c3b2a', light: '#bd5c42', dark: '#5a2217', deep: '#3d160e', snout: '#ecb494', snoutDark: '#c98e70', ear: '#d98a70' }
 ];
+const EYES = [['open', 30], ['sleepy', 26], ['zzz', 12], ['wink', 10], ['heart', 8], ['glare', 14]];
+const MOUTHS = [['smile', 40], ['flat', 30], ['open', 15], ['grumpy', 15]];
+const ACCS = [['none', 30], ['beanie', 14], ['nightcap', 12], ['scarf', 12], ['flowers', 6], ['honey pot', 10], ['mug', 8], ['fish', 8]];
+const BGS = [['cave', 24], ['snow night', 22], ['campfire', 16], ['starry', 18], ['dawn', 10], ['aurora', 10]];
+const INK = '#1a0f0a';
 
-// Rooms and rooftops. sky is the wall or sky from top to bottom, floor is the sill or rug the cat sits on.
-const BGS = [
-  { name: 'Night window', sky: ['#0b1426', '#12203c', '#1a2c52', '#243a68'], floor: '#4a3322', grain: '#6a4a32', decor: 'stars', cushion: ['#b5446a', '#e0709a'] },
-  { name: 'Sunset roof', sky: ['#5a2a5e', '#a8396a', '#e2634a', '#ffa050'], floor: '#3a2230', grain: '#5a3a4a', decor: 'sun', cushion: ['#3a6ab0', '#6a9ae0'] },
-  { name: 'Moonlit', sky: ['#070914', '#0c1226', '#111a36', '#18244a'], floor: '#1c2440', grain: '#2c3a66', decor: 'moon', cushion: ['#8a5ad0', '#b88af0'] },
-  { name: 'Warm lamp', sky: ['#3a1f14', '#55301c', '#7a4526', '#a0602f'], floor: '#4a2a18', grain: '#6c4126', decor: 'lights', cushion: ['#2f8a6a', '#58c29a'] },
-  { name: 'Attic', sky: ['#3a3248', '#4e4560', '#645a78', '#7c7290'], floor: '#503a2a', grain: '#6e5238', decor: 'none', cushion: ['#c2603a', '#f08a5a'] },
-  { name: 'Candy room', sky: ['#3a2a6e', '#5a3a9a', '#8a4ac2', '#c25ee0'], floor: '#2c2a6a', grain: '#4a48a0', decor: 'stars', cushion: ['#e0a02a', '#ffd25a'] },
-  { name: 'Snowy night', sky: ['#1a2a3e', '#2a4058', '#41607c', '#6a8aa6'], floor: '#d8e2ec', grain: '#b0c0d2', decor: 'snow', cushion: ['#c2403a', '#f06a5a'] },
-  { name: 'Garden', sky: ['#0f3a3a', '#1a5a52', '#2a7a6a', '#4aa88a'], floor: '#2a5a3a', grain: '#3f8052', decor: 'fireflies', cushion: ['#a03a8a', '#d062b8'] },
-];
-
-const EYES = ['amber', 'green', 'blue', 'odd', 'big', 'sleepy', 'angry', 'laser', 'heart', 'shades', 'wink'];
-const MOUTHS = ['smile', 'open', 'tongue', 'grumpy', 'tiny', 'fang'];
-const PATTERNS = ['none', 'tabby', 'tuxedo', 'calico', 'points', 'spots', 'socks', 'bicolor'];
-const HATS = [null, 'crown', 'tophat', 'party', 'wizard', 'beanie', 'flower', 'bow', 'halo'];
-const ACCS = [null, 'bowtie', 'collar', 'scarf', 'chain'];
-
-const HAT_ART = {
-  crown: { bottom: 8, rows: ['g.g.g.g', 'ggggggg', 'gdgrgdg'] },
-  tophat: { bottom: 8, rows: ['..kkkkk..', '..kkkkk..', '..rrrrr..', 'kkkkkkkkk'] },
-  party: { bottom: 8, rows: ['..w..', '..p..', '.pyp.', 'pypyp'] },
-  wizard: { bottom: 8, rows: ['....v....', '...vvv...', '...vsv...', '..vvvvv..', '..vvsvv..', '.vvvvvvv.', 'vvvvvvvvv'] },
-  beanie: { bottom: 8, rows: ['...w...', '.bbbbb.', 'bbbbbbb', 'wwwwwww'] },
-  flower: { bottom: 8, rows: ['..p..', '.pyp.', '..p..', '..g..'] },
-  bow: { bottom: 7, rows: ['rr...rr', 'rrrkrrr', 'rr...rr'] },
-  halo: { bottom: 3, rows: ['.yyyyyyy.', 'y.......y'] },
-};
-const HAT_COLORS = { g: '#ffc65c', d: '#c98a1e', r: '#e23b3b', b: '#3b6be2', k: '#15121f', w: '#ffffff', y: '#ffe76a', p: '#ff7aa8', v: '#6a3dff', s: '#ffe76a' };
 
 function prng(seedBytes) {
   let a = seedBytes.readUInt32LE(0) ^ seedBytes.readUInt32LE(4);
@@ -61,30 +30,25 @@ function prng(seedBytes) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length)];
+function pickW(list, r) { const tot = list.reduce((a, x) => a + x[1], 0); let t = r * tot; for (const x of list) { t -= x[1]; if (t < 0) return x; } return list[list.length - 1]; }
 
-// The traits for every slot are made in order, skipping any combination already used, so all cats in a set differ.
+// The traits for every slot are made in order, skipping any combination already used, so all bears in a set differ.
+const SKINS = COATS.map((c) => ({ name: c.name, base: c.base, light: c.light }));
 const traitCache = new Map();
 function traitsFor(slot, secret) {
   const ck = String(secret);
   let list = traitCache.get(ck);
-  if (!list) { list = { rnd: prng(crypto.createHmac('sha256', ck).update('cats').digest()), items: [], seen: new Set() }; traitCache.set(ck, list); }
+  if (!list) { list = { rnd: prng(crypto.createHmac('sha256', ck).update('bears').digest()), items: [], seen: new Set() }; traitCache.set(ck, list); }
   while (list.items.length <= slot) {
     let t, key, tries = 0;
     do {
+      const ci = pickW(COATS.map((c, i) => [i, c.w]), list.rnd())[0];
       t = {
-        species: 'CAT',
-        skin: Math.floor(list.rnd() * SKINS.length),
-        pattern: pick(list.rnd, PATTERNS),
-        eyes: pick(list.rnd, EYES),
-        mouth: pick(list.rnd, MOUTHS),
-        hat: pick(list.rnd, HATS),
-        acc: pick(list.rnd, ACCS),
-        bg: Math.floor(list.rnd() * BGS.length),
-        sparkle: list.rnd() < 0.5,
-        seed: Math.floor(list.rnd() * 1e9),
+        species: 'BEAR', skin: ci, coat: COATS[ci].key,
+        eyes: pickW(EYES, list.rnd())[0], mouth: pickW(MOUTHS, list.rnd())[0], acc: pickW(ACCS, list.rnd())[0],
+        bg: pickW(BGS, list.rnd())[0], blush: list.rnd() < 0.25, seed: Math.floor(list.rnd() * 1e9),
       };
-      key = [t.skin, t.pattern, t.eyes, t.mouth, t.hat, t.acc, t.bg, t.sparkle].join('|');
+      key = [t.skin, t.eyes, t.mouth, t.acc, t.bg, t.blush].join('|');
       tries++;
     } while (list.seen.has(key) && tries < 300);
     list.seen.add(key);
@@ -93,199 +57,202 @@ function traitsFor(slot, secret) {
   return list.items[slot];
 }
 
-function grid() { return Array.from({ length: H }, () => Array(W).fill(null)); }
-function put(g, x, y, c) { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = c; }
-const ell = (cx, cy, rx, ry) => (x, y) => { const dx = (x - cx) / rx, dy = (y - cy) / ry; return dx * dx + dy * dy <= 1; };
-// A triangle, for the ears. Pixels are tested at their centres.
-const tri = (a, b, c) => (x, y) => {
-  const px = x + 0.5, py = y + 0.5;
-  const d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
-  const l1 = ((b[1] - c[1]) * (px - c[0]) + (c[0] - b[0]) * (py - c[1])) / d;
-  const l2 = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / d;
-  return l1 >= 0 && l2 >= 0 && 1 - l1 - l2 >= 0;
-};
-const shrinkTri = (a, b, c, k) => { const m = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3]; const f = (p) => [m[0] + (p[0] - m[0]) * k, m[1] + (p[1] - m[1]) * k]; return tri(f(a), f(b), f(c)); };
-function fill(g, shape, c) { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y)) g[y][x] = c; }
-function stamp(g, art, cx, bottom) {
-  const w = art.rows[0].length, top = bottom - art.rows.length + 1;
-  art.rows.forEach((row, j) => { for (let i = 0; i < w; i++) { const ch = row[i]; if (ch !== '.') put(g, cx - ((w - 1) >> 1) + i, top + j, HAT_COLORS[ch]); } });
+const grid = () => Array.from({ length: H }, () => Array(W).fill(null));
+const put = (g, x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = c; };
+const ell = (cx, cy, rx, ry) => (x, y) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return dx * dx + dy * dy <= 1; };
+const fill = (g, shape, c) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y)) g[y][x] = c; };
+const px = (g, list, c) => list.forEach(([x, y, cc]) => put(g, x, y, cc || c));
+const rect = (g, x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(g, x, y, c); };
+const darken = (hex, k) => { const n = parseInt(hex.slice(1, 7), 16); return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join(''); };
+// Checkerboard blend between two shapes' colours, for a soft glow without gradients.
+const dither = (g, shape, a, b) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y)) g[y][x] = (x + y) % 2 ? a : b; };
+
+function drawBg(g, bg, r) {
+  const rows = (c, y0, y1) => { for (let y = y0; y <= y1; y++) for (let x = 0; x < W; x++) g[y][x] = c; };
+  const scatter = (n, c, y0, y1) => { for (let i = 0; i < n; i++) put(g, Math.floor(r() * W), y0 + Math.floor(r() * (y1 - y0 + 1)), c); };
+  const star = (x, y, c) => px(g, [[x, y], [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]], c);
+  const glow = (cx, cy, rx, ry, cols) => { cols.forEach((c, i) => { const k = 1 - i * 0.22; fill(g, ell(cx, cy, rx * k, ry * k), c); if (i > 0) dither(g, (x, y) => ell(cx, cy, rx * (k + 0.07), ry * (k + 0.07))(x, y) && !ell(cx, cy, rx * k, ry * k)(x, y), cols[i - 1], c); }); };
+  if (bg === 'cave') {
+    rows('#150e0a', 0, 63);
+    for (let i = 0; i < 26; i++) fill(g, ell(r() * W, r() * 44, 2 + r() * 4, 1.5 + r() * 3), r() < 0.5 ? '#1b110c' : '#110a07');
+    glow(32, 40, 30, 26, ['#2a1a10', '#3a2313', '#4d2e18', '#643b1e']);
+    for (const x of [3, 11, 19, 43, 51, 59]) { const hgt = 5 + Math.floor(r() * 9); for (let i = 0; i < hgt; i++) { const w = Math.max(1, Math.round((hgt - i) / 3)); rect(g, x - w, i, x + w - 1, i, i % 5 === 0 ? '#1c120c' : '#0d0806'); } }
+    rows('#1d130d', 55, 63); rows('#2a1a10', 55, 55); scatter(10, '#3a2616', 56, 63); scatter(6, '#0d0806', 57, 63);
+  } else if (bg === 'snow night') {
+    rows('#0f1630', 0, 63); rows('#131c3c', 14, 30); rows('#182350', 31, 44);
+    for (let i = 0; i < 9; i++) put(g, Math.floor(r() * W), Math.floor(r() * 34), '#f0f4ff');
+    for (let i = 0; i < 3; i++) star(4 + Math.floor(r() * 56), 3 + Math.floor(r() * 24), '#c9d6f4');
+    for (const [x, h] of [[3, 14], [10, 10], [50, 12], [58, 15], [56, 9]]) for (let i = 0; i < h; i++) rect(g, x - Math.floor(i / 3), 46 - h + i, x + Math.floor(i / 3), 46 - h + i, '#0a0f24');
+    rows('#dfe7f3', 54, 63); rows('#b9c8e0', 54, 54); rows('#c9d6ea', 58, 58); scatter(12, '#ffffff', 55, 63); scatter(6, '#aab9d4', 55, 63);
+  } else if (bg === 'campfire') {
+    rows('#1a0f0c', 0, 63); glow(32, 42, 30, 24, ['#2a170e', '#38200f', '#4a2a14', '#5e3519']);
+    rows('#241610', 54, 63); rows('#33201a', 54, 54); scatter(8, '#4a3020', 55, 63);
+    rect(g, 4, 59, 13, 61, '#4a2a14'); rect(g, 3, 60, 14, 61, '#35200f'); rect(g, 5, 59, 12, 59, '#6a3c1c');
+    fill(g, ell(8.5, 54, 4.5, 6), '#c4421a'); fill(g, ell(8.5, 55, 3.4, 4.6), '#e8782a'); fill(g, ell(8.5, 56, 2.2, 3.2), '#ffb347'); fill(g, ell(8.5, 57, 1.2, 1.8), '#ffe9a8');
+    px(g, [[7, 47], [9, 45], [5, 49], [12, 50], [10, 43]], '#ffb347');
+  } else if (bg === 'starry') {
+    rows('#0a1026', 0, 63); rows('#0e1632', 12, 26); rows('#131d42', 27, 40); rows('#192654', 41, 53);
+    for (let i = 0; i < 14; i++) put(g, Math.floor(r() * W), Math.floor(r() * 44), '#f4f0dc');
+    for (let i = 0; i < 4; i++) star(4 + Math.floor(r() * 56), 3 + Math.floor(r() * 30), '#e8e4c8');
+    fill(g, ell(52, 11, 5.4, 5.4), '#f6edcf'); fill(g, ell(54.4, 9.6, 4.4, 4.4), '#0a1026'); fill(g, ell(48, 6, 0.6, 0.6), '#fff');
+    fill(g, ell(10, 70, 34, 18), '#1b2652'); fill(g, ell(54, 72, 34, 20), '#222e5c');
+    rows('#dfe7f3', 58, 63); rows('#b9c8e0', 58, 58);
+  } else if (bg === 'dawn') {
+    rows('#26332a', 0, 63); rows('#33443a', 10, 24); rows('#4a5e48', 25, 40); rows('#6a7a56', 41, 52);
+    fill(g, ell(50, 34, 8, 8), '#f2b782'); fill(g, ell(50, 34, 6, 6), '#f8cf9f');
+    for (const x of [4, 9, 55, 59]) for (let y = 0; y < 54; y++) { g[y][x] = '#0d1810'; if (y % 6 === 0) put(g, x + 1, y, '#1c2c1c'); g[y][x + 1] = g[y][x + 1] || '#14221a'; }
+    scatter(6, '#0d1810', 0, 40);
+    rows('#2a2418', 54, 63); rows('#3d3422', 54, 54); scatter(14, '#4f6a3a', 55, 63); scatter(8, '#1c1810', 56, 63);
+  } else {
+    rows('#080d1c', 0, 63);
+    for (let x = 0; x < W; x++) { const o = Math.round(Math.sin(x / 6) * 3 + Math.sin(x / 2.3) * 0.8); for (let y = 3; y < 9; y++) put(g, x, y + o, y < 5 ? '#1c6a56' : '#2a9a7c'); for (let y = 9; y < 14; y++) put(g, x, y + o, y < 11 ? '#1a5a6a' : '#16445a'); for (let y = 14; y < 16; y++) put(g, x, y + o, '#102c44'); }
+    for (let i = 0; i < 6; i++) put(g, Math.floor(r() * W), 20 + Math.floor(r() * 24), '#e8f0fa');
+    for (const [x, h] of [[8, 16], [24, 12], [46, 18], [58, 11]]) for (let i = 0; i < h; i++) rect(g, x - i, 56 - h + i, x + i, 56 - h + i, '#0e1830');
+    rows('#d8e3f0', 56, 63); rows('#b6c6dc', 56, 56); rows('#c4d2e6', 60, 60); scatter(10, '#fff', 57, 63);
+  }
 }
 
-const EAR_L = [[6, 3], [5, 12], [13, 8]], EAR_R = [[26, 3], [27, 12], [19, 8]];
-const SHAPES = [
-  ell(16, 14.5, 10, 7.5),            // head
-  tri(EAR_L[0], EAR_L[1], EAR_L[2]), // ears
-  tri(EAR_R[0], EAR_R[1], EAR_R[2]),
-  ell(16, 25.5, 8, 5.5),             // body
-  ell(10.5, 29.5, 3.2, 2),           // front paws
-  ell(21.5, 29.5, 3.2, 2),
-  ell(26.8, 25, 2.2, 5.5),           // tail
-];
-const EAR_IN_L = shrinkTri(EAR_L[0], EAR_L[1], EAR_L[2], 0.5), EAR_IN_R = shrinkTri(EAR_R[0], EAR_R[1], EAR_R[2], 0.5);
+// Draws one body part on its own layer with a light top-left rim and a dark bottom-right rim, then lays it over the bear.
+function part(L, shape, c, shades) {
+  const m = grid(); fill(m, shape, c);
+  const out = m.map((row) => row.slice());
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!m[y][x]) continue;
+    const dn = y + 1 < H && m[y + 1][x], rt = x + 1 < W && m[y][x + 1], up = y > 0 && m[y - 1][x], lf = x > 0 && m[y][x - 1];
+    const dn2 = y + 2 < H && m[y + 2][x], rt2 = x + 2 < W && m[y][x + 2];
+    if (shades) {
+      if (!dn || !rt) out[y][x] = shades.deep;
+      else if (!dn2 || !rt2) out[y][x] = shades.dark;
+      else if (!up || !lf) out[y][x] = shades.light;
+    }
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (out[y][x]) L[y][x] = out[y][x];
+}
 
-// The plain cat outline as rows of pixels: [y, x, length]. Used for the locked tiles on the page.
+function drawBear(t, r) {
+  const coat = COATS.find((c) => c.key === t.coat);
+  const bg = grid(); drawBg(bg, t.bg, r);
+  const L = grid();
+  const furShade = { deep: coat.deep, dark: coat.dark, light: coat.light };
+  const blk = '#2c2c34', blkShade = { deep: '#14141a', dark: '#1f1f26', light: '#3e3e48' };
+  const P = coat.panda;
+  const snoutShade = { deep: coat.snoutDark, dark: coat.snoutDark, light: null };
+  // back to front: feet, body, arms, ears, head
+  part(L, ell(22, 58, 6.8, 3.9), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(42, 58, 6.8, 3.9), P ? blk : coat.base, P ? blkShade : furShade);
+  fill(L, ell(22, 58.6, 3.4, 1.8), coat.snoutDark); fill(L, ell(42, 58.6, 3.4, 1.8), coat.snoutDark);
+  part(L, ell(32, 45, 16.6, 14.8), coat.base, furShade);
+  part(L, ell(32, 47.4, 9.8, 9.4), coat.snout, snoutShade);
+  if (coat.moon) { part(L, ell(32, 38.8, 6.6, 3.6), '#efe3c8', null); fill(L, ell(32, 36.8, 6.6, 3.6), coat.base); }
+  part(L, ell(17.2, 45.8, 5.4, 10.2), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(46.8, 45.8, 5.4, 10.2), P ? blk : coat.base, P ? blkShade : furShade);
+  fill(L, ell(17.2, 54.4, 3.4, 2.2), coat.snoutDark); fill(L, ell(46.8, 54.4, 3.4, 2.2), coat.snoutDark);
+  px(L, [[16, 53], [18, 53], [45, 53], [47, 53]], P ? '#55555f' : coat.dark);
+  part(L, ell(19, 13, 6.2, 6.2), P ? blk : coat.base, P ? blkShade : furShade); part(L, ell(45, 13, 6.2, 6.2), P ? blk : coat.base, P ? blkShade : furShade);
+  part(L, ell(19.4, 13.8, 3.4, 3.4), coat.ear, { deep: coat.snoutDark, dark: coat.snoutDark, light: null }); part(L, ell(44.6, 13.8, 3.4, 3.4), coat.ear, { deep: coat.snoutDark, dark: coat.snoutDark, light: null });
+  part(L, ell(32, 25, 15.8, 14), coat.base, furShade);
+  if (P) { part(L, ell(24.4, 23.2, 4.4, 5.2), blk, blkShade); part(L, ell(39.6, 23.2, 4.4, 5.2), blk, blkShade); }
+  part(L, ell(32, 30.6, 7.6, 5.8), coat.snout, snoutShade);
+
+  // face
+  const eyeL = [24, 22], eyeR = [40, 22];
+  const open = (e) => { fill(L, ell(e[0] + 0.5, e[1] + 0.5, 2.1, 2.7), INK); px(L, [[e[0] - 1, e[1] - 1], [e[0], e[1] - 1], [e[0] - 1, e[1]]], '#fff'); put(L, e[0] + 1, e[1] + 2, '#7a6a68'); };
+  const closed = (e) => px(L, [[e[0] - 2, e[1] + 1], [e[0] - 1, e[1] + 2], [e[0], e[1] + 2], [e[0] + 1, e[1] + 2], [e[0] + 2, e[1] + 1]], INK);
+  const heart = (e) => { px(L, [[-2, -1], [-1, -1], [1, -1], [2, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]].map(([a, b]) => [e[0] + a, e[1] + b]), '#e8506a'); px(L, [[e[0] - 2, e[1] - 1], [e[0] - 1, e[1] - 1]], '#ff9aa8'); };
+  if (t.eyes === 'open') { open(eyeL); open(eyeR); }
+  else if (t.eyes === 'sleepy' || t.eyes === 'zzz') { closed(eyeL); closed(eyeR); }
+  else if (t.eyes === 'wink') { closed(eyeL); open(eyeR); }
+  else if (t.eyes === 'glare') { open(eyeL); open(eyeR); px(L, [[21, 17], [22, 18], [23, 18], [24, 19], [27, 19], [43, 17], [42, 18], [41, 18], [40, 19], [37, 19]], INK); }
+  else if (t.eyes === 'heart') { heart(eyeL); heart(eyeR); }
+  const nose = coat.darkNose ? '#2a2a33' : INK;
+  px(L, [[30, 26], [31, 26], [32, 26], [33, 26], [29, 27], [30, 27], [31, 27], [32, 27], [33, 27], [34, 27], [30, 28], [31, 28], [32, 28], [33, 28]], nose);
+  px(L, [[30, 26], [31, 26]], coat.darkNose ? '#555566' : '#5a4036');
+  px(L, [[32, 29], [32, 30], [32, 31]], INK);
+  if (t.mouth === 'smile') px(L, [[31, 32], [30, 32], [29, 31], [28, 30], [33, 32], [34, 32], [35, 31], [36, 30]], INK);
+  else if (t.mouth === 'flat') px(L, [[29, 32], [30, 32], [31, 32], [33, 32], [34, 32], [35, 32]], INK);
+  else if (t.mouth === 'open') { fill(L, ell(32, 33.4, 3.6, 2.4), '#7a2030'); fill(L, ell(32, 34.4, 2.4, 1.2), '#e8707a'); px(L, [[29, 31], [30, 31], [34, 31], [35, 31], [31, 32], [33, 32]], INK); }
+  else px(L, [[29, 33], [30, 32], [31, 32], [33, 32], [34, 32], [35, 33]], INK);
+  if (t.blush) { fill(L, ell(19.5, 29.6, 2.6, 1.5), '#e58a8a'); fill(L, ell(44.5, 29.6, 2.6, 1.5), '#e58a8a'); }
+  if (t.eyes === 'zzz') { px(L, [[50, 5], [51, 5], [52, 5], [53, 5], [53, 6], [52, 7], [51, 8], [50, 9], [50, 10], [51, 10], [52, 10], [53, 10]], '#cfd8ee'); px(L, [[56, 1], [57, 1], [58, 1], [58, 2], [57, 3], [56, 4], [56, 5], [57, 5], [58, 5]], '#cfd8ee'); }
+
+  // accessories
+  const a = t.acc;
+  if (a === 'beanie') {
+    part(L, (x, y) => ell(32, 15.4, 11.8, 7.8)(x, y) && y <= 15, '#b8402f', { deep: '#7a2418', dark: '#962f21', light: '#d4604a' });
+    for (let x = 22; x <= 42; x += 3) for (let y = 9; y <= 14; y++) put(L, x, y, '#962f21');
+    rect(L, 20, 16, 44, 18, '#e8d8b8'); for (let x = 20; x <= 44; x += 2) put(L, x, 17, '#cdb893'); rect(L, 20, 18, 44, 18, '#b8a27a');
+    fill(L, ell(32, 5.4, 3.6, 3.6), '#f2e6d3'); px(L, [[30, 4], [31, 3]], '#fff'); px(L, [[34, 7], [33, 8]], '#cdb893'); rect(L, 31, 8, 33, 9, '#b8402f');
+  }
+  if (a === 'nightcap') {
+    rect(L, 20, 15, 44, 17, '#e8d8b8'); for (let x = 20; x <= 44; x += 2) put(L, x, 16, '#cdb893'); rect(L, 20, 17, 44, 17, '#b8a27a');
+    const path = (t2) => [26 + t2 * 26, 14 - Math.sin(t2 * 2.2) * 9 + t2 * t2 * 14];
+    for (let i = 0; i <= 60; i++) { const t2 = i / 60, [cx, cy] = path(t2); fill(L, ell(cx, cy, 6.4 - 3.6 * t2, 6.2 - 3.4 * t2), i % 7 === 3 ? '#4a6ec4' : '#3a5aa8'); }
+    for (let i = 0; i <= 60; i += 6) { const [cx, cy] = path(i / 60); put(L, cx - 1, cy - 1, '#2a428a'); }
+    px(L, [[28, 10, '#ffd54a'], [34, 6, '#ffd54a'], [40, 9, '#ffd54a'], [44, 14, '#ffd54a']]);
+    const [ex, ey] = path(1); fill(L, ell(ex + 1, ey + 3, 3.6, 3.6), '#f2e6d3'); px(L, [[ex, ey + 1], [ex - 1, ey + 2]], '#fff');
+  }
+  if (a === 'scarf') {
+    fill(L, (x, y) => ell(32, 39.6, 13, 3.4)(x, y) && y >= 37 && y <= 42, '#c4452f');
+    for (let x = 18; x <= 46; x++) for (let y = 37; y <= 42; y++) if (L[y][x] && Math.floor(x / 3) % 2) L[y][x] = '#f2e6d3';
+    rect(L, 18, 42, 46, 42, '#8a2e1f');
+    for (let y = 43; y <= 53; y++) for (let x = 40; x <= 45; x++) L[y][x] = (Math.floor(y / 3) % 2) ? '#f2e6d3' : '#c4452f';
+    for (let x = 40; x <= 45; x += 2) { put(L, x, 54, '#c4452f'); put(L, x, 55, '#f2e6d3'); } rect(L, 45, 43, 45, 53, '#8a2e1f');
+  }
+  if (a === 'flowers') {
+    const fl = [[22, 13, '#e58aa8'], [27, 9, '#ffffff'], [32, 8, '#ffd54a'], [37, 9, '#e58aa8'], [42, 13, '#ffffff']];
+    px(L, [[24, 11], [25, 10], [29, 8], [30, 8], [34, 8], [35, 8], [39, 10], [40, 11]], '#4f9a52'); px(L, [[24, 12], [40, 12]], '#3a7a3e');
+    fl.forEach(([x, y, c]) => { px(L, [[x, y - 1], [x - 1, y], [x + 1, y], [x, y + 1]], c); put(L, x, y, c === '#ffd54a' ? '#e8782a' : '#ffd54a'); });
+  }
+  if (a === 'honey pot') {
+    part(L, ell(32, 53, 9.4, 6.6), '#8a5a2b', { deep: '#5a3a18', dark: '#6e4620', light: '#a87238' });
+    rect(L, 23, 47, 41, 48, '#f2bb55'); rect(L, 23, 47, 41, 47, '#ffd98a'); px(L, [[25, 49], [25, 50], [25, 51], [36, 49], [36, 50], [38, 49]], '#f2bb55');
+    rect(L, 24, 45, 40, 46, '#6e431e'); rect(L, 26, 52, 38, 53, '#e8d8b8'); px(L, [[29, 52], [31, 53], [33, 52], [35, 53]], '#8a5a2b');
+  }
+  if (a === 'mug') {
+    rect(L, 38, 46, 47, 55, '#e8e0d0'); rect(L, 38, 46, 47, 47, '#6b3a1c'); rect(L, 38, 55, 47, 55, '#b8ae9a'); rect(L, 46, 48, 47, 54, '#cfc6b2'); rect(L, 38, 48, 39, 54, '#fffdf4');
+    px(L, [[48, 49], [49, 49], [50, 50], [50, 51], [50, 52], [49, 53], [48, 53]], '#e8e0d0'); px(L, [[43, 50], [44, 50], [43, 51]], '#c4452f');
+    px(L, [[41, 44], [42, 43], [41, 42], [42, 41], [44, 44], [45, 43], [44, 42], [45, 41], [44, 40]], '#cfd6df');
+  }
+  if (a === 'fish') {
+    part(L, ell(31, 51, 8.6, 3.9), '#6fa6d4', { deep: '#3f6e96', dark: '#528cb8', light: '#9cc8ea' });
+    px(L, [[39, 49], [40, 47], [41, 47], [41, 48], [40, 49], [40, 50], [41, 51], [42, 52], [42, 54], [41, 54], [40, 53], [39, 52], [39, 51], [40, 52]], '#6fa6d4');
+    px(L, [[26, 50], [26, 53]], INK); put(L, 25, 50, INK); for (let x = 29; x <= 36; x += 3) { put(L, x, 50, '#a9cdea'); put(L, x + 1, 52, '#a9cdea'); }
+    px(L, [[30, 47], [31, 47], [32, 47], [31, 46]], '#528cb8'); fill(L, ell(26, 51, 1, 1), '#cfe4f4');
+  }
+
+  // floor shadow, bear over background, dark outline
+  { const sh = ell(32, 61.4, 20, 2.6); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (sh(x, y) && bg[y][x]) bg[y][x] = darken(bg[y][x], 0.55); }
+  const out = bg.map((row) => row.slice());
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (L[y][x]) out[y][x] = L[y][x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (L[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const xx = x + dx, yy = y + dy; return xx >= 0 && yy >= 0 && xx < W && yy < H && L[yy][xx]; })) out[y][x] = INK;
+  }
+  return out;
+}
+
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SHAPES = [ell(22, 58, 6.8, 3.9), ell(42, 58, 6.8, 3.9), ell(32, 45, 16.6, 14.8), ell(17.2, 45.8, 5.4, 10.2), ell(46.8, 45.8, 5.4, 10.2), ell(19, 13, 6.2, 6.2), ell(45, 13, 6.2, 6.2), ell(32, 25, 15.8, 14)];
+// The plain bear outline as rows of pixels: [y, x, length]. Used for the locked tiles on the page.
 function silhouette() {
-  const runs = [];
+  const runs = [], on = (x, y) => SHAPES.some((s) => s(x, y));
   for (let y = 0; y < H; y++) {
     let x = 0;
     while (x < W) {
-      if (!SHAPES.some((s) => s(x, y))) { x++; continue; }
+      if (!on(x, y)) { x++; continue; }
       let n = 1;
-      while (x + n < W && SHAPES.some((s) => s(x + n, y))) n++;
+      while (x + n < W && on(x + n, y)) n++;
       runs.push([y, x, n]); x += n;
     }
   }
   return runs;
 }
 
-function drawBackground(g, bg, rnd) {
-  for (let y = 0; y < H; y++) {
-    const band = Math.min(3, Math.floor(y / 7));
-    for (let x = 0; x < W; x++) {
-      let c = bg.sky[band];
-      const edge = y % 7;
-      if (band < 3 && edge >= 5 && (x + y) % 2 === 0) c = bg.sky[band + 1]; // dithered blend into the next band
-      g[y][x] = c;
-    }
-  }
-  for (let y = 27; y < H; y++) for (let x = 0; x < W; x++) g[y][x] = bg.floor;
-  for (let i = 0; i < 9; i++) { const y = 28 + Math.floor(rnd() * 4), x = Math.floor(rnd() * 30); put(g, x, y, bg.grain); put(g, x + 1, y, bg.grain); }
-  if (bg.decor === 'stars') for (let i = 0; i < 9; i++) put(g, Math.floor(rnd() * 32), Math.floor(rnd() * 14), '#fff4dc');
-  if (bg.decor === 'fireflies') for (let i = 0; i < 6; i++) { const x = 1 + Math.floor(rnd() * 30), y = 2 + Math.floor(rnd() * 20); put(g, x, y, '#ffe76a'); put(g, x - 1, y, '#8a8a2a'); put(g, x + 1, y, '#8a8a2a'); }
-  if (bg.decor === 'snow') for (let i = 0; i < 14; i++) put(g, Math.floor(rnd() * 32), Math.floor(rnd() * 26), '#ffffff');
-  if (bg.decor === 'lights') for (let i = 0; i < 7; i++) { const x = 1 + Math.floor(rnd() * 30), y = 2 + Math.floor(rnd() * 12); put(g, x, y, '#ffd27a'); put(g, x, y + 1, '#c28a3a'); }
-  if (bg.decor === 'sun') fill(g, ell(26, 5, 3.4, 3.4), '#ffd27a');
-  if (bg.decor === 'moon') { fill(g, ell(27, 5, 3.2, 3.2), '#f3f1e6'); fill(g, ell(28.4, 4.2, 2.6, 2.6), bg.sky[0]); }
-}
-
-function drawCat(t, rnd, transparent) {
-  const pal = SKINS[t.skin], bg = BGS[t.bg];
-  const g = grid();
-  drawBackground(transparent ? grid() : g, bg, rnd); // the same random numbers are used either way
-
-  if (!transparent) {
-    // the cushion the cat sits on
-    fill(g, ell(16, 29.8, 11.5, 2), bg.cushion[0]); fill(g, ell(16, 29.3, 10, 1.3), bg.cushion[1]);
-  }
-
-  // the hat goes in before the head so the ears and face always stay in front of it
-  if (t.hat) stamp(g, HAT_ART[t.hat], 16, HAT_ART[t.hat].bottom);
-
-  // silhouette, outline and light and shade
-  const mask = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => SHAPES.some((s) => s(x, y))));
-  const inM = (x, y) => x >= 0 && x < W && y >= 0 && y < H && mask[y][x];
-  const outline = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => mask[y][x] && (!inM(x - 1, y) || !inM(x + 1, y) || !inM(x, y - 1) || !inM(x, y + 1))));
-  const dist = Array.from({ length: H }, () => Array(W).fill(99));
-  const queue = [];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (outline[y][x]) { dist[y][x] = 0; queue.push([x, y]); }
-  for (let qi = 0; qi < queue.length; qi++) {
-    const [x, y] = queue[qi];
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy;
-      if (inM(nx, ny) && dist[ny][nx] > dist[y][x] + 1) { dist[ny][nx] = dist[y][x] + 1; queue.push([nx, ny]); }
-    }
-  }
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    if (!mask[y][x]) continue;
-    if (outline[y][x]) { g[y][x] = pal.line; continue; }
-    let c = pal.base;
-    if (dist[y][x] === 1) {
-      if (outline[y - 1][x] || outline[y][x - 1]) c = pal.light;
-      else if (outline[y + 1][x] || outline[y][x + 1]) c = pal.dark;
-    }
-    g[y][x] = c;
-  }
-  const interior = (x, y) => inM(x, y) && dist[y][x] >= 1;
-  const paint = (shape, c) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (shape(x, y) && interior(x, y)) g[y][x] = c; };
-
-  // inner ears and chest
-  paint(EAR_IN_L, '#f4a6b4'); paint(EAR_IN_R, '#f4a6b4');
-  paint((x, y) => ell(16, 26, 4.5, 3.5)(x, y) && y > 22, pal.belly);
-
-  // coat pattern
-  const dot = (x, y, c) => { if (interior(x, y)) put(g, x, y, c); };
-  const head = (x, y) => y <= 22 && x > 5 && x < 27 && ell(16, 14.5, 10, 7.5)(x, y);
-  if (t.pattern === 'tabby') {
-    for (const [x, y] of [[16, 7], [16, 8], [16, 9], [13, 8], [13, 9], [19, 8], [19, 9]]) dot(x, y, pal.dark);
-    for (const y of [24, 26, 28]) for (const x of [9, 10, 11, 21, 22, 23]) dot(x, y, pal.dark);
-    for (const y of [21, 24, 27]) { dot(26, y, pal.dark); dot(27, y, pal.dark); }
-  }
-  if (t.pattern === 'tuxedo') { paint(ell(16, 18, 4, 3), '#f4efe6'); paint((x, y) => ell(16, 26.5, 3.6, 4.5)(x, y) && y > 22, '#f4efe6'); paint(ell(10.5, 29.5, 3.2, 2), '#f4efe6'); paint(ell(21.5, 29.5, 3.2, 2), '#f4efe6'); }
-  if (t.pattern === 'socks') { paint(ell(10.5, 29.5, 3.2, 2), '#f4efe6'); paint(ell(21.5, 29.5, 3.2, 2), '#f4efe6'); paint((x, y) => y >= 27 && ell(26.8, 25, 2.2, 5.5)(x, y), '#f4efe6'); }
-  if (t.pattern === 'bicolor') for (let y = 8; y <= 22; y++) for (let x = 6; x < 16; x++) if (head(x, y) && interior(x, y) && g[y][x] === pal.base) g[y][x] = pal.belly;
-  if (t.pattern === 'calico') {
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (interior(x, y) && g[y][x] === pal.base) g[y][x] = '#f4efe6';
-    paint(ell(10, 10, 3.2, 2.8), '#e8892b'); paint(ell(22, 12, 3.4, 3.4), '#2b2b36'); paint(ell(10, 25, 3.2, 3), '#2b2b36'); paint(ell(22, 26, 3.4, 3), '#e8892b'); paint(ell(26.8, 24, 2, 4), '#e8892b');
-  }
-  if (t.pattern === 'points') {
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!interior(x, y)) continue;
-      const face = ell(16, 16, 5.5, 4.5)(x, y), ear = y <= 9 && (x <= 12 || x >= 20), paw = y >= 28, tail = x >= 25 && y >= 19;
-      if (face || ear || paw || tail) g[y][x] = pal.dark;
-    }
-  }
-  if (t.pattern === 'spots') for (let i = 0; i < 12; i++) { const x = 7 + Math.floor(rnd() * 19), y = 8 + Math.floor(rnd() * 21); dot(x, y, pal.dark); if (rnd() < 0.5) dot(x + 1, y, pal.dark); }
-
-  // eyes
-  const irisOf = { amber: '#ffb300', green: '#4cd964', blue: '#4aa8ff', odd: null, big: '#4cd964', angry: '#ffb300', laser: '#ff2a2a', wink: '#ffb300', heart: '#ffb300' };
-  const dark = '#15121f';
-  for (const [ex, ey, side] of [[11, 13, 0], [21, 13, 1]]) {
-    let iris = irisOf[t.eyes] || '#ffb300';
-    if (t.eyes === 'odd') iris = side ? '#4aa8ff' : '#ffb300';
-    if (t.eyes === 'sleepy' || (t.eyes === 'wink' && side)) { for (const [dx, dy] of [[-2, 1], [-1, 0], [0, -1], [1, 0], [2, 1]]) put(g, ex + dx, ey + dy, dark); continue; }
-    if (t.eyes === 'shades') {
-      for (let dx = -3; dx <= 3; dx++) for (let dy = -2; dy <= 1; dy++) put(g, ex + dx, ey + dy, dark);
-      put(g, ex - 2, ey - 1, '#7a86b8'); put(g, ex - 1, ey - 1, '#7a86b8');
-      continue;
-    }
-    if (t.eyes === 'heart') { for (const [dx, dy] of [[-1, -1], [1, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]]) put(g, ex + dx, ey + dy, '#ff3d7f'); continue; }
-    const big = t.eyes === 'big';
-    fill(g, ell(ex, ey, big ? 3.3 : 2.6, big ? 3.4 : 2.8), iris);
-    for (const dy of big ? [-1, 0, 1] : [-1, 0, 1]) { put(g, ex, ey + dy, t.eyes === 'laser' ? '#ffffff' : dark); if (big) put(g, ex - 1, ey + dy, t.eyes === 'laser' ? '#ffffff' : dark); }
-    put(g, ex + 1, ey - 1, '#ffffff');
-    if (t.eyes === 'angry') {
-      const left = side === 0;
-      for (let dx = -3; dx <= 3; dx++) {
-        const step = Math.floor((dx + 3) / 2);
-        put(g, ex + dx, left ? ey - 4 + step : ey - 4 + (3 - step), pal.line);
-      }
-    }
-  }
-  if (t.eyes === 'shades') for (let x = 14; x <= 18; x++) put(g, x, 12, dark);
-
-  // nose, mouth and whiskers
-  const L = pal.line;
-  const hline = (x0, x1, y, c) => { for (let x = x0; x <= x1; x++) put(g, x, y, c); };
-  hline(15, 17, 16, '#f07a98'); put(g, 16, 17, '#f07a98');
-  if (t.mouth === 'smile' || t.mouth === 'tongue' || t.mouth === 'fang') { put(g, 16, 18, L); hline(13, 15, 19, L); hline(17, 19, 19, L); put(g, 12, 18, L); put(g, 20, 18, L); }
-  if (t.mouth === 'tongue') { hline(15, 17, 20, '#ff5c8a'); put(g, 16, 21, '#d6406c'); }
-  if (t.mouth === 'fang') { put(g, 14, 20, '#ffffff'); put(g, 18, 20, '#ffffff'); }
-  if (t.mouth === 'open') { fill(g, ell(16, 20, 2.8, 1.8), '#3a0f1c'); put(g, 16, 21, '#ff5c8a'); put(g, 15, 21, '#ff5c8a'); }
-  if (t.mouth === 'grumpy') { put(g, 16, 18, L); hline(13, 19, 19, L); put(g, 12, 20, L); put(g, 20, 20, L); }
-  if (t.mouth === 'tiny') { put(g, 16, 18, L); put(g, 15, 19, L); put(g, 17, 19, L); }
-  const wh = '#e9e4da';
-  for (const [x, y] of [[5, 16], [4, 16], [3, 15], [5, 18], [4, 18], [3, 19]]) { put(g, x, y, wh); put(g, 32 - x, y, wh); }
-
-  // accessories
-  const NECK = '#e23b3b';
-  if (t.acc === 'bowtie') { for (const [x, y, c] of [[14, 24, NECK], [13, 24, NECK], [18, 24, NECK], [19, 24, NECK], [13, 25, NECK], [14, 25, NECK], [15, 25, dark], [16, 25, dark], [17, 25, NECK], [18, 25, NECK], [19, 25, NECK], [13, 26, NECK], [14, 26, NECK], [18, 26, NECK], [19, 26, NECK]]) put(g, x, y, c); }
-  if (t.acc === 'collar') { hline(10, 22, 23, NECK); put(g, 16, 24, '#ffd84d'); put(g, 16, 25, '#ffd84d'); put(g, 15, 25, '#c98a1e'); }
-  if (t.acc === 'chain') { for (let x = 10; x <= 22; x++) put(g, x, 25 - Math.round(Math.abs(x - 16) * 0.5), '#ffc65c'); hline(15, 16, 26, '#ffc65c'); hline(15, 16, 27, '#ffe27a'); }
-  if (t.acc === 'scarf') { for (let x = 9; x <= 23; x++) { put(g, x, 23, x % 4 === 0 ? '#ffffff' : '#e23b3b'); put(g, x, 24, '#b02a2a'); } for (let y = 25; y <= 28; y++) put(g, 21, y, y === 27 ? '#ffffff' : '#e23b3b'); }
-
-  // sparkles
-  if (t.sparkle) for (const [sx, sy] of [[3, 4], [29, 9], [2, 22]]) { put(g, sx, sy, '#fff4dc'); put(g, sx - 1, sy, '#ffc65c'); put(g, sx + 1, sy, '#ffc65c'); put(g, sx, sy - 1, '#ffc65c'); put(g, sx, sy + 1, '#ffc65c'); }
-  return g;
-}
-
-function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-
-// slot is 0-based. total is how many cats are in the set. owner is the wallet that holds this one (may be empty).
+// slot is 0-based. total is how many bears are in the set. owner is the wallet that holds this one (may be empty).
 function render(slot, total, owner, secret, opts) {
   const bare = !!(opts && opts.bare);
   const t = traitsFor(slot, secret);
   const pal = SKINS[t.skin];
-  const g = drawCat(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()), !!(opts && opts.transparent));
+  const g = drawBear(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()));
   let rects = '';
   for (let y = 0; y < H; y++) {
     let x = 0;
@@ -300,14 +267,13 @@ function render(slot, total, owner, secret, opts) {
   }
   const num = String(slot + 1).padStart(2, '0');
   const short = owner ? owner.slice(0, 4) + '…' + owner.slice(-4) : '';
-  const hat = t.hat ? t.hat + ' ' : '';
-  const traitLine = (pal.name + ' ' + 'cat' + ', ' + t.eyes + ' eyes' + (t.hat ? ', ' + t.hat : '')).toUpperCase();
-  if (bare) return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" shape-rendering="crispEdges" role="img" aria-label="Cat">' + rects + '</svg>';
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 38" width="1024" height="1216" shape-rendering="crispEdges" role="img" aria-label="' + esc(t.species + ' ' + num + ' of ' + total + ', ' + pal.name + ' ' + hat + 'with ' + t.eyes + ' eyes') + '">'
-    + '<rect width="32" height="38" fill="#0b0913"/>' + rects
-    + '<text x="16" y="34.3" text-anchor="middle" font-family="Courier New, monospace" font-weight="700" font-size="1.6" fill="' + pal.light + '" shape-rendering="auto">' + t.species + ' ' + num + ' / ' + total + '</text>'
-    + '<text x="16" y="35.9" text-anchor="middle" font-family="Courier New, monospace" font-size="0.95" fill="#9d96bc" shape-rendering="auto">' + esc(traitLine) + '</text>'
-    + (short ? '<text x="16" y="37.3" text-anchor="middle" font-family="Courier New, monospace" font-size="0.9" fill="#6f6890" shape-rendering="auto">held by ' + esc(short) + '</text>' : '')
+  const traitLine = (pal.name + ' bear, ' + (t.eyes === 'zzz' ? 'sleeping' : t.eyes) + ' eyes' + (t.acc !== 'none' ? ', ' + t.acc : '')).toUpperCase();
+  if (bare) return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512" shape-rendering="crispEdges" role="img" aria-label="Bear">' + rects + '</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 76" width="1024" height="1216" shape-rendering="crispEdges" role="img" aria-label="' + esc(t.species + ' ' + num + ' of ' + total + ', ' + pal.name + ' bear with ' + t.eyes + ' eyes') + '">'
+    + '<rect width="64" height="76" fill="#120d0a"/>' + rects
+    + '<text x="32" y="68.6" text-anchor="middle" font-family="Courier New, monospace" font-weight="700" font-size="3.2" fill="' + pal.light + '" shape-rendering="auto">' + t.species + ' ' + num + ' / ' + total + '</text>'
+    + '<text x="32" y="71.8" text-anchor="middle" font-family="Courier New, monospace" font-size="1.9" fill="#ad9a82" shape-rendering="auto">' + esc(traitLine) + '</text>'
+    + (short ? '<text x="32" y="74.6" text-anchor="middle" font-family="Courier New, monospace" font-size="1.8" fill="#7d6c58" shape-rendering="auto">held by ' + esc(short) + '</text>' : '')
     + '</svg>';
 }
 

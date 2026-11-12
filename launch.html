@@ -25,7 +25,7 @@ textarea{min-height:80px;resize:vertical}
 @media(max-width:560px){.two{grid-template-columns:1fr}}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .btn{font:700 15px var(--sans);border-radius:99px;padding:12px 22px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
-.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#07140c;border:0}
+.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#1a0f08;border:0}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .img{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .img img{width:96px;height:96px;image-rendering:pixelated;border-radius:12px;border:1px solid var(--line);background:#0b0913}
@@ -40,12 +40,12 @@ textarea{min-height:80px;resize:vertical}
 .cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer;margin-left:8px}
 .fine{font-size:12px;color:var(--dim)}
 
-/* cozy night house theme */
-:root{--bg:#0b1020;--surface:#131a30;--surface2:#1c2542;--line:#2e3b68;--fg:#f4efe9;--dim:#a8b3d6;--ember:#ff9a4a;--gold:#ffd27a;--good:#7ee0a8;--bad:#ff7a7a;
+/* hibernation cave theme */
+:root{--bg:#120d0a;--surface:#1a120d;--surface2:#241810;--line:#4d3826;--fg:#f4e8d4;--dim:#ad9a82;--ember:#e8782a;--gold:#ffb347;--good:#9be29b;--bad:#ff7a7a;
 --display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif}
-.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a1226 0%,#16224a 45%,#0b1020 100%)}
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#0a0f22 0%,#1a1a3a 40%,#2a1810 78%,#120d0a 100%)}
 .sky .moon{position:absolute;top:28px;right:6vw;width:66px;height:66px;image-rendering:pixelated;opacity:.95}
-.sky i{position:absolute;width:4px;height:4px;background:#ffe27a;box-shadow:0 0 8px 2px rgba(255,226,122,.6);animation:fly 5s ease-in-out infinite}
+.sky i{position:absolute;width:4px;height:4px;background:#ffb347;box-shadow:0 0 8px 2px rgba(255,150,60,.55);animation:fly 5s ease-in-out infinite}
 .sky b{position:absolute;width:3px;height:3px;background:#dff7e6;opacity:.7}
 @keyframes fly{0%,100%{opacity:.15;transform:translate(0,0)}50%{opacity:1;transform:translate(14px,-10px)}}
 .scene{position:fixed;left:0;right:0;bottom:0;height:min(36vh,320px);z-index:0;pointer-events:none}
@@ -57,7 +57,7 @@ textarea{min-height:80px;resize:vertical}
 <body>
 <div class="sky" aria-hidden="true"><img class="moon" src="/assets/moon.svg" alt=""><b style="left:8%;top:9%"></b><b style="left:22%;top:20%"></b><b style="left:41%;top:7%"></b><b style="left:57%;top:16%"></b><b style="left:73%;top:6%"></b><b style="left:90%;top:24%"></b><b style="left:34%;top:30%"></b>
 <i style="left:12%;top:46%;animation-delay:0s"></i><i style="left:30%;top:58%;animation-delay:1.3s"></i><i style="left:52%;top:50%;animation-delay:2.1s"></i><i style="left:68%;top:62%;animation-delay:.7s"></i><i style="left:84%;top:52%;animation-delay:3.2s"></i><i style="left:6%;top:68%;animation-delay:2.6s"></i></div>
-<div class="scene" aria-hidden="true"><img src="/assets/house.svg" alt=""></div>
+<div class="scene" aria-hidden="true"><img src="/assets/cave.svg" alt=""></div>
 <div class="wrap">
 <h1>Launch the coin</h1>
 <p class="lede">Creates the coin on the pump.fun bonding curve with the official pump SDK. Your dev buy goes in the same transaction as the launch, so nobody can buy in between. Only you should use this page.</p>
@@ -66,10 +66,10 @@ textarea{min-height:80px;resize:vertical}
   <div class="row"><button class="btn" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
     <div style="flex:1;min-width:200px"><label for="tok">Admin password <span class="rv">the ADMIN_TOKEN you set in Railway</span></label><input type="password" id="tok" autocomplete="off"></div></div>
   <div class="two">
-    <div><label for="nm">Name</label><input type="text" id="nm" maxlength="32" placeholder="Coin name" value="CatHouse"></div>
-    <div><label for="tk">Ticker</label><input type="text" id="tk" maxlength="10" placeholder="TICKER" value="CATS"></div>
+    <div><label for="nm">Name</label><input type="text" id="nm" maxlength="32" placeholder="Coin name" value="Bear Den"></div>
+    <div><label for="tk">Ticker</label><input type="text" id="tk" maxlength="10" placeholder="TICKER" value="BEAR"></div>
   </div>
-  <div><label for="ds">Description</label><textarea id="ds" maxlength="280" placeholder="Pixel cats. Hold the coin, collect your cat.">40 pixel cats, each one different. Hold $CATS, move into the CatHouse and collect yours.</textarea></div>
+  <div><label for="ds">Description</label><textarea id="ds" maxlength="280" placeholder="Pixel bears. Hold the coin, collect your bear.">40 pixel bears, each one different. Hold $BEAR, settle into the Den and collect yours.</textarea></div>
   <div class="two">
     <div><label for="tw">Twitter / X <span class="rv">optional</span></label><input type="text" id="tw" placeholder="@yourcoin or a post link" maxlength="120"></div>
     <div><label for="ws">Website <span class="rv">optional</span></label><input type="text" id="ws" placeholder="https://yourdomain.com" maxlength="120"></div>
@@ -77,7 +77,7 @@ textarea{min-height:80px;resize:vertical}
   <div>
     <label>Coin image</label>
     <div class="img"><img id="prev" alt="Coin image preview"><div>
-      <button class="btn" id="mascot" type="button">Use a generated cat</button>
+      <button class="btn" id="mascot" type="button">Use a generated bear</button>
       <div style="margin-top:8px"><input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp"></div>
       <div class="fine" id="imginfo"></div></div></div>
   </div>
@@ -119,7 +119,7 @@ textarea{min-height:80px;resize:vertical}
   }
   $('wbtn').addEventListener('click',connect);
 
-  // Turns the generated cat (an SVG from the server) into a PNG the metadata step can store.
+  // Turns the generated bear (an SVG from the server) into a PNG the metadata step can store.
   function mascot(){
     return fetch('/api/mascot.svg').then(function(r){return r.text()}).then(function(svg){
       return new Promise(function(ok,fail){
@@ -128,7 +128,7 @@ textarea{min-height:80px;resize:vertical}
         img.onerror=fail;
         img.src=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
       });
-    }).then(function(d){imageData=d;$('prev').src=d;$('imginfo').textContent='Generated cat, 512 by 512'}).catch(function(){toast('Could not make the cat image.')});
+    }).then(function(d){imageData=d;$('prev').src=d;$('imginfo').textContent='Generated bear, 512 by 512'}).catch(function(){toast('Could not make the bear image.')});
   }
   $('mascot').addEventListener('click',mascot);
   $('file').addEventListener('change',function(){
