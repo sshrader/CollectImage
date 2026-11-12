@@ -399,7 +399,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       var s3=step('Lock the bear');
       var ln=null;
       for(var tries=0;tries<3;tries++){ln=await post('/api/launched',{mint:out.mint,signature:out.signature,splitSignature:out.splitSignature||''},token);if(ln.ok||ln.status===409)break;await new Promise(function(ok){setTimeout(ok,2500)})}
-      if(ln&&ln.ok)s3('ok',bearName(pickSlot)+' is now locked to $'+sym);else s3('warn',(ln&&ln.json.error)||'Could not confirm. Your coin exists; contact the Den to lock its bear.');
+      var lockFailed=!(ln&&ln.ok);
+      if(!lockFailed)s3('ok',bearName(pickSlot)+' is now locked to $'+sym);else s3('warn',(ln&&ln.json.error)||'Could not confirm. Your coin exists on-chain.');
       var box=$('result');box.textContent='';
       var h=document.createElement('div');h.textContent='Your coin is live. Mint address:';box.appendChild(h);
       var m=document.createElement('div');m.style.cssText='margin:8px 0;color:#ffb347;font-family:var(--mono)';m.textContent=out.mint;box.appendChild(m);
@@ -411,6 +412,12 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       if(sh)parts.push(out.splitError?'The fee split did NOT go through ('+out.splitError+'), so creator fees currently go only to you. The Den expects its 5%, so please set the split from pump.fun.':'Creator fee split confirmed: '+(100-st.platform.bps)+'% you, '+(st.platform.bps/100)+'% the Den.');
       if(+bv>0)parts.push(out.atomic?'Your first buy landed in the same transaction as the launch.':'WARNING: the launch and your buy were separate transactions, so someone could have bought in between.'+(out.buyError?' The buy did not go through, see the log.':''));
       n.textContent=parts.join(' ');box.appendChild(n);
+      if(lockFailed){
+        var rl=document.createElement('button');rl.type='button';rl.className='btn';rl.style.cssText='margin-top:10px';rl.textContent='Try locking the bear again';
+        rl.onclick=async function(){rl.disabled=true;var s4=step('Lock the bear');var rr=await post('/api/launched',{mint:out.mint,signature:out.signature,splitSignature:out.splitSignature||''},token);
+          if(rr.ok){s4('ok','locked');rl.remove();refresh()}else{s4('warn',rr.json.error||'Still could not confirm. Your coin is live; the Den owner can attach it to its bear.');rl.disabled=false}};
+        box.appendChild(rl);
+      }
       box.classList.add('on');pickSlot=null;showPick();refresh();
     }catch(e){console.error(e)}
     finally{

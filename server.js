@@ -35,7 +35,12 @@ const cfg = () => ({
   // The one wallet that may launch the special Founder bear (not part of the numbered set).
   founderWallet: B58_RE.test((process.env.FOUNDER_WALLET || '').trim()) ? process.env.FOUNDER_WALLET.trim() : '',
 });
-const rpcUrl = (c) => (/^https?:\/\//.test(c.rpc) ? c.rpc : c.cluster === 'devnet' ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com');
+// Each network reads from its own endpoint. RPC_URL is for mainnet only, so a mainnet key is never used to read devnet.
+// Set DEVNET_RPC_URL to use a private devnet endpoint; otherwise the public one is used.
+const rpcUrl = (c) => {
+  if (c.cluster === 'devnet') return /^https?:\/\//.test(process.env.DEVNET_RPC_URL || '') ? process.env.DEVNET_RPC_URL.trim() : 'https://api.devnet.solana.com';
+  return /^https?:\/\//.test(c.rpc) ? c.rpc : 'https://api.mainnet-beta.solana.com';
+};
 
 // The secret that decides how each bear looks. It lives on the server only. Set IMAGE_SECRET to choose your own.
 function imageSecret() {
@@ -256,6 +261,24 @@ async function createMetadata(req, res) {
   send(res, 201, { uri: a.hold.pending.uri, image: imageUrl, slot: bearLabel(a.slot) });
 }
 
+// Reads a launch transaction from the chain and checks it: it succeeded, the new coin signed it, and it used the pump.fun program.
+// Returns the wallet that paid for it (the first signer).
+async function verifyLaunch(c, sig, mint) {
+  let tx = null;
+  for (let i = 0; i < 6 && !tx; i++) {
+    try { tx = await rpc(c, 'getTransaction', [sig, { encoding: 'json', commitment: 'confirmed', maxSupportedTransactionVersion: 0 }]); }
+    catch (e) { tx = null; }
+    if (!tx) await new Promise((ok) => setTimeout(ok, RETRY_MS));
+  }
+  if (!tx || (tx.meta && tx.meta.err)) return { error: 'Could not find that launch on ' + c.cluster + '. If it just went through, try again in a few seconds.' };
+  const msg = tx.transaction && tx.transaction.message;
+  let keys = ((msg && msg.accountKeys) || []).slice();
+  if (tx.meta && tx.meta.loadedAddresses) keys = keys.concat(tx.meta.loadedAddresses.writable || [], tx.meta.loadedAddresses.readonly || []);
+  const signers = keys.slice(0, (msg && msg.header && msg.header.numRequiredSignatures) || 1);
+  if (!signers.includes(mint) || !keys.includes(PUMP_PROGRAM)) return { error: 'That transaction is not a pump.fun launch for this coin.' };
+  return { wallet: signers[0], signers };
+}
+
 // Step 3 (after the launch lands): the server checks the transaction on the chain, then locks the bear to the coin.
 async function launched(req, res) {
   const a = authHold(req, res); if (!a) return;
@@ -265,20 +288,9 @@ async function launched(req, res) {
   if (!B58_RE.test(mint) || b58decode(mint).length !== 32) return send(res, 400, { error: 'That is not a valid coin address.' });
   if (!/^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(sig)) return send(res, 400, { error: 'That is not a valid transaction signature.' });
   if (Object.values(a.d.launched).some((l) => l.mint === mint)) return send(res, 409, { error: 'That coin already has a bear.' });
-  let tx = null;
-  for (let i = 0; i < 6 && !tx; i++) {
-    try { tx = await rpc(a.c, 'getTransaction', [sig, { encoding: 'json', commitment: 'confirmed', maxSupportedTransactionVersion: 0 }]); }
-    catch (e) { tx = null; }
-    if (!tx) await new Promise((ok) => setTimeout(ok, RETRY_MS));
-  }
-  if (!tx || (tx.meta && tx.meta.err)) return send(res, 422, { error: 'Could not find that launch on ' + a.c.cluster + '. If it just went through, try again in a few seconds.' });
-  const msg = tx.transaction && tx.transaction.message;
-  let keys = ((msg && msg.accountKeys) || []).slice();
-  if (tx.meta && tx.meta.loadedAddresses) keys = keys.concat(tx.meta.loadedAddresses.writable || [], tx.meta.loadedAddresses.readonly || []);
-  const signers = keys.slice(0, (msg && msg.header && msg.header.numRequiredSignatures) || 1);
-  if (!signers.includes(a.hold.wallet) || !signers.includes(mint) || !keys.includes(PUMP_PROGRAM)) {
-    return send(res, 422, { error: 'That transaction is not a pump.fun launch by your wallet for this coin.' });
-  }
+  const vr = await verifyLaunch(a.c, sig, mint);
+  if (vr.error) return send(res, 422, { error: vr.error });
+  if (vr.wallet !== a.hold.wallet || !vr.signers.includes(a.hold.wallet)) return send(res, 422, { error: 'That transaction is not a pump.fun launch by your wallet for this coin.' });
   const p = a.hold.pending || {};
   const d = loadBears(a.c); // re-read before writing
   d.launched[a.slot] = { mint, signature: sig, wallet: a.hold.wallet, name: p.name || '', symbol: p.symbol || '', uri: p.uri || '', at: Date.now(), split: !!text(b.splitSignature, 120), founder: a.slot === 'F' };
@@ -304,7 +316,7 @@ async function coinInfo(res, mint) {
   let onchain;
   if (hit && Date.now() - hit.at < 45000) onchain = hit.data;
   else {
-    onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, f.rec.wallet, c.rpc);
+    onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, f.rec.wallet, rpcUrl(c));
     coinCache.set(key, { at: Date.now(), data: onchain });
     if (coinCache.size > 200) coinCache.delete(coinCache.keys().next().value);
   }
@@ -339,6 +351,28 @@ async function adminState(req, res) {
   for (let i = 0; i < c.total; i++) bears.push(row(String(i), 'Bear #' + String(i + 1).padStart(2, '0')));
   if (c.founderWallet || d.launched.F || d.holds.F) bears.unshift(row('F', 'The Founder'));
   send(res, 200, { cluster: c.cluster, total: c.total, founderWallet: c.founderWallet || null, platformWallet: c.platformWallet || null, bears });
+}
+
+// Owner only: tie a coin that is already on the chain to a bear, for when the automatic lock did not go through.
+async function adminAttach(req, res) {
+  if (!guardAdmin(req, res)) return;
+  const b = await jsonBody(req, res, 2000); if (!b) return;
+  const c = cfg(), d = loadBears(c);
+  const key = b.slot === 'founder' ? 'F' : Number(b.slot) - 1;
+  if (key !== 'F' && (!Number.isInteger(key) || key < 0 || key >= c.total)) return send(res, 400, { error: 'No such bear.' });
+  const mint = text(b.mint, 60), sig = text(b.signature, 120);
+  if (!B58_RE.test(mint) || b58decode(mint).length !== 32) return send(res, 400, { error: 'That is not a valid coin address.' });
+  if (!/^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(sig)) return send(res, 400, { error: 'That is not a valid transaction signature.' });
+  if (d.launched[key]) return send(res, 409, { error: 'That bear already has a coin. Free it first.' });
+  if (Object.values(d.launched).some((l) => l.mint === mint)) return send(res, 409, { error: 'That coin already has a bear.' });
+  const vr = await verifyLaunch(c, sig, mint);
+  if (vr.error) return send(res, 422, { error: vr.error });
+  const name = text(b.name, 32), symbol = text(b.symbol, 10);
+  if (!name || !/^[A-Za-z0-9$._-]{1,10}$/.test(symbol)) return send(res, 400, { error: 'Add the coin name and ticker.' });
+  d.launched[key] = { mint, signature: sig, wallet: vr.wallet, name, symbol, uri: '', at: Date.now(), split: !!b.split, founder: key === 'F' };
+  delete d.holds[key];
+  saveBears(c, d);
+  send(res, 200, { ok: true });
 }
 
 // Owner only: free a locked bear again (for example after a devnet test).
@@ -454,6 +488,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/release') return await releaseHold(req, res);
     if (req.method === 'POST' && p === '/api/admin/release') return await adminRelease(req, res);
     if (req.method === 'POST' && p === '/api/admin/state') return await adminState(req, res);
+    if (req.method === 'POST' && p === '/api/admin/attach') return await adminAttach(req, res);
     if (p === '/api/lut' && (req.method === 'GET' || req.method === 'POST')) return await lutStore(req, res, uu);
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');

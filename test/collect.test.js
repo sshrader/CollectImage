@@ -51,6 +51,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   });
   await new Promise((ok) => fakeRpc.listen(0, '127.0.0.1', ok));
   process.env.RPC_URL = 'http://127.0.0.1:' + fakeRpc.address().port;
+  process.env.DEVNET_RPC_URL = process.env.RPC_URL;
 
   const server = require('../server.js');
   await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
@@ -240,6 +241,19 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the owner can free the founder bear', r.status === 200 && fs0.founder.state === 'reserved');
+  // attaching a coin that is already on the chain (when the automatic lock failed)
+  const amint = b58encode(crypto.randomBytes(32)), asig = sigOf(); txs[asig] = launchTx(f.address, amint);
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Bear Den', symbol: 'DEN' }, 'wrong');
+  check('attaching needs the admin password', r.status === 401);
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: sigOf(), name: 'Bear Den', symbol: 'DEN' }, 'a'.repeat(32));
+  check('attaching checks the launch on the chain', r.status === 422);
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Bear Den', symbol: 'DEN' }, 'a'.repeat(32));
+  fs0 = await (await fetch(base + '/api/bears')).json();
+  check('the owner can attach an existing coin to a bear', r.status === 200 && fs0.founder.state === 'launched' && fs0.founder.mint === amint, r.status);
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Bear Den', symbol: 'DEN' }, 'a'.repeat(32));
+  check('a bear that already has a coin cannot be attached twice', r.status === 409);
+  await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
+
   // admin page
   check('the admin page is served', (await fetch(base + '/admin')).status === 200);
   r = await post('/api/admin/state', {}, 'wrong');

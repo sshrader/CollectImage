@@ -28,7 +28,8 @@ Needs Node 20 or newer. The server itself uses no packages; only the browser lau
 | Variable | Purpose |
 | --- | --- |
 | `CLUSTER` | `devnet` (default) or `mainnet`. Devnet and mainnet keep separate bear books. |
-| `RPC_URL` | Your private RPC URL (for example Helius). Kept on the server; mainnet calls go through an allowlisted proxy. Falls back to the public endpoint. |
+| `RPC_URL` | Your private **mainnet** RPC URL (for example Helius). Kept on the server; mainnet calls go through an allowlisted proxy. Used only when `CLUSTER=mainnet`. Falls back to the public endpoint. |
+| `DEVNET_RPC_URL` | Optional private devnet endpoint. Devnet always reads from this or the public devnet endpoint, never from `RPC_URL`. |
 | `PLATFORM_WALLET` | Wallet that receives 5% of each coin's creator fees. If unset, there is no split. |
 | `FOUNDER_WALLET` | The one wallet that may launch the special Founder bear: a giant, mean grizzly in a gold crown with a coffee, one of one and outside the numbered set. It is shown as reserved above the bears, can be launched once per network, and its creator fees all go to that wallet (no 5% split). |
 | `SLOTS` | How many bears exist, 1 to 100. Default 4. |

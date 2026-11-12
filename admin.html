@@ -14,7 +14,7 @@ h1{font-size:26px;margin:0 0 4px}
 .sub{color:var(--dim);margin:0 0 20px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-input{flex:1;min-width:200px;font:15px var(--sans);color:var(--fg);background:#150e0a;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+input,select{flex:1;min-width:200px;font:15px var(--sans);color:var(--fg);background:#150e0a;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 button{font:700 14px var(--sans);border-radius:99px;padding:9px 18px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
 button.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#1a0f08;border:0}
 button.warn{border-color:var(--bad);color:var(--bad)}
@@ -40,6 +40,14 @@ a{color:var(--gold)}
     <div class="msg" id="msg"></div>
   </div>
   <div class="panel" id="list" hidden></div>
+  <div class="panel" id="attach" hidden>
+    <b>Attach a coin to a bear</b>
+    <p class="sub" style="margin:4px 0 12px">Use this if a coin launched but its bear did not lock. The server checks the launch transaction on the chain before it saves anything.</p>
+    <div class="row" style="margin-bottom:10px"><select id="aslot"></select><input id="aname" placeholder="Coin name" maxlength="32"><input id="asym" placeholder="Ticker" maxlength="10" style="min-width:110px;flex:0 1 130px"></div>
+    <div class="row" style="margin-bottom:10px"><input id="amint" placeholder="Coin (mint) address"></div>
+    <div class="row" style="margin-bottom:10px"><input id="asig" placeholder="Launch transaction signature"></div>
+    <div class="row"><button class="go" id="agoBtn" type="button">Attach</button><span class="msg" id="amsg"></span></div>
+  </div>
 </div>
 <script>
 (function(){
@@ -48,7 +56,23 @@ a{color:var(--gold)}
   function call(path,body){return fetch(path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body||{})}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok,status:r.status,json:j}})})}
   function short(a){return a?a.slice(0,4)+'…'+a.slice(-4):''}
   function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+  function drawAttach(j){
+    var sel=$('aslot');sel.textContent='';
+    j.bears.filter(function(b){return b.state!=='launched'}).forEach(function(b){var o=document.createElement('option');o.value=b.slot;o.textContent=b.label;sel.appendChild(o)});
+    $('attach').hidden=!sel.firstChild;
+  }
+  $('agoBtn').addEventListener('click',function(){
+    var m=$('amsg');m.className='msg';m.textContent='';
+    var body={slot:$('aslot').value,name:$('aname').value.trim(),symbol:$('asym').value.trim().toUpperCase().replace(/^\$/,''),mint:$('amint').value.trim(),signature:$('asig').value.trim()};
+    if(body.slot!=='founder')body.slot=Number(body.slot);
+    $('agoBtn').disabled=true;
+    call('/api/admin/attach',body).then(function(r){
+      $('agoBtn').disabled=false;
+      if(r.ok){m.className='msg ok';m.textContent='Attached.';load()}else{m.className='msg err';m.textContent=r.json.error||('Failed ('+r.status+')')}
+    }).catch(function(){$('agoBtn').disabled=false;m.className='msg err';m.textContent='Could not reach the server.'});
+  });
   function draw(j){
+    drawAttach(j);
     cluster=j.cluster;var n=$('net');n.hidden=false;n.textContent=j.cluster;n.className='net'+(j.cluster==='mainnet'?' main':'');
     var box=$('list');box.hidden=false;box.textContent='';
     j.bears.forEach(function(b){
