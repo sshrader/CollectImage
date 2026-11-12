@@ -35,7 +35,7 @@ Needs Node 20 or newer. The server itself uses no packages; only the browser lau
 | `PUBLIC_URL` | Your domain, used in each coin's metadata and logo links. Set this before any mainnet launch: those links are permanent. |
 | `IMAGE_SECRET` | Optional. Decides how each bear looks. If unset, one is created in the data folder. |
 | `BLOCKED_WORDS` | Optional, comma separated. Extra words refused in names, tickers and descriptions. |
-| `ADMIN_TOKEN` | Password for `POST /api/admin/release` (frees a locked bear, for example after a test). Off while unset. |
+| `ADMIN_TOKEN` | Password for the `/admin` page, where you can see every bear and free a locked one (for example after a test). The page keeps the password in memory only. Off while unset. |
 | `DATA_DIR` | Where bears, logos and metadata are stored. Defaults to `/data` if it exists. On Railway, attach a volume at `/data`: a coin's logo link points here, so losing it breaks every coin's picture. |
 
 ## Deploy on Railway

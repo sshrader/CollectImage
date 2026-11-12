@@ -240,6 +240,13 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the owner can free the founder bear', r.status === 200 && fs0.founder.state === 'reserved');
+  // admin page
+  check('the admin page is served', (await fetch(base + '/admin')).status === 200);
+  r = await post('/api/admin/state', {}, 'wrong');
+  check('admin state needs the password', r.status === 401);
+  r = await post('/api/admin/state', {}, 'a'.repeat(32));
+  const as = await r.json();
+  check('admin state lists every bear, the founder first', r.status === 200 && as.cluster === 'devnet' && as.bears[0].slot === 'founder' && as.bears.length === 5, JSON.stringify(as).slice(0, 200));
   delete process.env.FOUNDER_WALLET;
 
   // one more full pass on a second network keeps its own books

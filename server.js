@@ -325,6 +325,22 @@ async function releaseHold(req, res) {
   send(res, 200, { ok: true });
 }
 
+// Owner only: everything about the bears on this network, for the /admin page.
+async function adminState(req, res) {
+  if (!guardAdmin(req, res)) return;
+  const c = cfg(), d = loadBears(c), now = Date.now();
+  const row = (key, label) => {
+    const L = d.launched[key], H = d.holds[key];
+    return { slot: key === 'F' ? 'founder' : Number(key) + 1, label, state: L ? 'launched' : H ? 'held' : 'open',
+      name: L ? L.name : null, symbol: L ? L.symbol : null, mint: L ? L.mint : null, dev: L ? L.wallet : H ? H.wallet : null,
+      at: L ? L.at : null, holdSeconds: H ? Math.max(0, Math.round((H.until - now) / 1000)) : null };
+  };
+  const bears = [];
+  for (let i = 0; i < c.total; i++) bears.push(row(String(i), 'Bear #' + String(i + 1).padStart(2, '0')));
+  if (c.founderWallet || d.launched.F || d.holds.F) bears.unshift(row('F', 'The Founder'));
+  send(res, 200, { cluster: c.cluster, total: c.total, founderWallet: c.founderWallet || null, platformWallet: c.platformWallet || null, bears });
+}
+
 // Owner only: free a locked bear again (for example after a devnet test).
 async function adminRelease(req, res) {
   if (!guardAdmin(req, res)) return;
@@ -437,12 +453,14 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/launched') return await launched(req, res);
     if (req.method === 'POST' && p === '/api/release') return await releaseHold(req, res);
     if (req.method === 'POST' && p === '/api/admin/release') return await adminRelease(req, res);
+    if (req.method === 'POST' && p === '/api/admin/state') return await adminState(req, res);
     if (p === '/api/lut' && (req.method === 'GET' || req.method === 'POST')) return await lutStore(req, res, uu);
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/bears') return bearsState(res);
     { const m = /^\/api\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(p); if (m) return await coinInfo(res, m[1]); }
     if (/^\/coin\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(COIN_PAGE)); }
+    if (p === '/admin') { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' }); return res.end(fs.readFileSync(path.join(__dirname, 'admin.html'))); }
     if (p === '/cave.js') return serveStatic(res, path.join(__dirname, 'cave.js'), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
     if (p === '/api/health') return send(res, 200, { ok: true });
     if (p === '/api/founder.svg') { if (!cfg().founderWallet) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.founderSvg('', true), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); }
