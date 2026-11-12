@@ -130,9 +130,9 @@ function drawBg(g, bg, r, A) {
   }
 }
 
-function drawAgent(t, r) {
+function drawAgent(t, r, noBg) {
   const g = grid(), P = CHASSIS[t.skin], A = ACCENTS[t.accent][1], Ad = mix(A, '#000000', 0.55);
-  drawBg(g, t.bg, r, A);
+  drawBg(noBg ? grid() : g, t.bg, r, A); // with noBg the picture is the same agent on nothing, and later random picks (chest) still match
   const hx0 = t.wide ? 14 : 16, hx1 = 63 - hx0;
   // antenna, behind the head
   if (t.antenna === 'single') { rect(g, 31, 6, 32, 11, P.dark); rect(g, 30, 3, 33, 6, INK); rect(g, 31, 4, 32, 5, A); put(g, 31, 4, '#ffffff'); }
@@ -260,10 +260,10 @@ function png(slot, secret, scale) {
 }
 
 // ---- PRIME: one special agent that is not part of the numbered set. A big graphite flagship with a gold crown and an amber visor. ----
-function drawFounder() {
+function drawFounder(noBg) {
   const g = grid(), A = '#ffb347', GOLD = { base: '#ffc84a', light: '#fff0a0', dark: '#c8901c', deep: '#8a5c0a' };
   const P = { base: '#3a3d48', light: '#5a5e6e', dark: '#262830', deep: '#16171c' }, Ad = '#7a4a10';
-  drawBg(g, 'racks', (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })(), A);
+  drawBg(noBg ? grid() : g, 'racks', (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })(), A);
   // arms: gold pauldrons over graphite forearms, gold fists
   for (const f of [(x) => x, mx]) {
     const a = f(4), b = f(13), lo = Math.min(a, b), hi = Math.max(a, b);
@@ -306,4 +306,47 @@ function founderSvg(owner, bare) {
     + '</svg>';
 }
 
-module.exports = { render, traitsFor, agentFor, silhouette, SKINS, png, founderPng, founderSvg, ROLES };
+
+// ---- Voxels: the same pixel art pushed out into depth, for the 3D views. Cells are [x, y, depth, glows, colour index]. ----
+function voxelize(g, depthFn) {
+  const palette = [], index = new Map(), cells = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const c = g[y][x]; if (!c) continue;
+    const [z, e] = depthFn(x, y, c);
+    let pi = index.get(c); if (pi == null) { pi = palette.length; palette.push(c); index.set(c, pi); }
+    cells.push([x, y, z, e ? 1 : 0, pi]);
+  }
+  return { w: W, h: H, palette, cells };
+}
+function agentVoxels(slot, secret) {
+  const t = traitsFor(slot, secret), P = CHASSIS[t.skin];
+  const g = drawAgent(t, prng(crypto.createHash('sha256').update(String(t.seed)).digest()), true);
+  const hx0 = t.wide ? 14 : 16, hx1 = 63 - hx0, SCR = '#0d1822', GLARE = '#1f3a4d';
+  return voxelize(g, (x, y, c) => {
+    if (x >= hx0 + 4 && x <= hx1 - 4 && y >= 16 && y <= 30) { const lit = c !== SCR && c !== GLARE; return lit ? [10.6, 1] : [9, 0]; }
+    if (x >= 22 && x <= 41 && y >= 42 && y <= 53) { const lit = c !== P.deep; return lit ? [9.6, 1] : [8, 0]; }
+    if (y < 12) return [3, 0];
+    if ((x < hx0 - 1 || x > hx1 + 1) && y >= 17 && y <= 33 && y <= 34) return [6, 0];
+    if (y <= 34 && x >= hx0 - 1 && x <= hx1 + 1) return [12, 0];
+    if (y >= 35 && y <= 37 && x >= 28 && x <= 35) return [4, 0];
+    if (y >= 58) return [6, 0];
+    if (x <= 12 || x >= 51) return [6, 0];
+    return [10, 0];
+  });
+}
+function founderVoxels() {
+  const g = drawFounder(true), dx = (x, y) => (x - 32) * (x - 32) + (y - 45) * (y - 45);
+  return voxelize(g, (x, y, c) => {
+    if (x >= 19 && x <= 44 && y >= 14 && y <= 28) { const lit = c !== '#1a0a05'; return lit ? [10.6, 1] : [9, 0]; }
+    if (dx(x, y) <= 5.6 * 5.6 && c !== INK) return [12.4, 1];
+    if (y < 9) return [5, 0];
+    if (y <= 33 && x >= 14 && x <= 49) return [12, 0];
+    if (y >= 33 && y <= 35 && x >= 27 && x <= 36) return [4, 0];
+    if (y >= 59) return [7, 0];
+    if ((x <= 13 || x >= 50) && y >= 34 && y <= 44) return [9, 0];
+    if (x <= 13 || x >= 50) return y >= 56 ? [7, 0] : [6, 0];
+    return [11, 0];
+  });
+}
+
+module.exports = { agentVoxels, founderVoxels, render, traitsFor, agentFor, silhouette, SKINS, png, founderPng, founderSvg, ROLES };
