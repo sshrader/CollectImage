@@ -27,7 +27,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .wallet.on{border-color:var(--good)}
 h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,6.4vw,60px);line-height:1.05;margin:44px 0 14px;text-wrap:balance;text-shadow:0 2px 0 #000}
 h1 span{color:var(--gold)}
-h2{font-family:var(--display);font-size:22px;margin:40px 0 12px}
+h2{font-family:var(--sans);font-weight:800;font-size:24px;letter-spacing:.01em;margin:40px 0 12px;text-shadow:0 1px 0 #000}
 .lede{max-width:60ch;color:var(--dim);font-size:17px;margin:0 0 24px;text-shadow:0 1px 0 #000}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:16px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -44,13 +44,16 @@ textarea{min-height:72px;resize:vertical}
 @media(max-width:760px){.bears{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bear{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:6px;justify-items:center;text-align:center;min-width:0;font:inherit;color:inherit;cursor:pointer}
 .bear img{width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:6px;display:block}
-.bear b{font-family:var(--display);font-size:15px}
-.bear small{font:500 12px var(--mono);color:var(--dim);overflow-wrap:anywhere}
+.bear b{font-family:var(--sans);font-weight:800;font-size:16px;overflow-wrap:anywhere}
+.bear.launched{text-decoration:none;color:inherit}
+a.bear.launched{cursor:pointer}
+a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
+.bear small{font:500 13px var(--mono);color:var(--dim);overflow-wrap:anywhere}
+.bear.launched small{color:var(--gold)}
 .bear.open:hover{border-color:var(--gold)}
 .bear.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,179,71,.25)}
-.bear.locked{cursor:default}
-.bear.locked img,.bear.held img{filter:grayscale(.85) brightness(.55)}
-.bear.locked small a{color:var(--gold)}
+.bear.held{cursor:default}
+.bear.held img{filter:grayscale(.85) brightness(.55)}
 .facts{font:500 13px var(--mono);color:var(--dim)}
 .msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
 .log{font:500 13px var(--mono);display:grid;gap:4px;overflow-wrap:anywhere}
@@ -251,17 +254,19 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var g=$('bears');g.textContent='';if(!st)return;
     var open=0;
     st.bears.forEach(function(b){
-      var el=document.createElement(b.state==='open'?'button':'div');
+      var goodMint=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(b.mint||'');
+      var el=document.createElement(b.state==='open'?'button':(b.state==='launched'&&goodMint?'a':'div'));
       if(b.state==='open'){el.type='button';open++;el.addEventListener('click',function(){pickSlot=pickSlot===b.n?null:b.n;drawBears();showPick()})}
+      if(el.tagName==='A'){
+        el.href=st.cluster==='mainnet'?'https://pump.fun/coin/'+b.mint:'https://explorer.solana.com/address/'+b.mint+'?cluster=devnet';
+        el.target='_blank';el.rel='noopener';el.title='Open '+(b.name||b.symbol)+(st.cluster==='mainnet'?' on pump.fun':' on Solana Explorer (devnet)');
+      }
       el.className='bear '+b.state+(pickSlot===b.n?' sel':'');
-      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.svg';im.alt='Bear '+b.n;im.loading='lazy';el.appendChild(im);
-      var t=document.createElement('b');t.textContent='#'+String(b.n).padStart(2,'0');el.appendChild(t);
+      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.svg';im.alt=b.state==='launched'?(b.name||('Bear '+b.n)):'Bear '+b.n;im.loading='lazy';el.appendChild(im);
+      var t=document.createElement('b');t.textContent=b.state==='launched'&&b.name?b.name:'#'+String(b.n).padStart(2,'0');el.appendChild(t);
       var sm=document.createElement('small');
-      if(b.state==='launched'){
-        var sym=document.createTextNode('Locked to $'+b.symbol+' ');sm.appendChild(sym);
-        var href=st.cluster==='mainnet'?'https://pump.fun/coin/'+b.mint:'https://explorer.solana.com/address/'+b.mint+'?cluster=devnet';
-        if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(b.mint||'')){var a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener';a.textContent='view';sm.appendChild(a)}
-      }else sm.textContent=b.state==='held'?'Being launched…':(pickSlot===b.n?'Selected':'Open');
+      if(b.state==='launched')sm.textContent='$'+b.symbol+' · #'+String(b.n).padStart(2,'0');
+      else sm.textContent=b.state==='held'?'Being launched…':(pickSlot===b.n?'Selected':'Open');
       el.appendChild(sm);g.appendChild(el);
     });
     $('count').textContent=open+' of '+st.total+' bears open';
