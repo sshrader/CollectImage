@@ -36,6 +36,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   // A fake chain: transactions by signature.
   const txs = {};
+  const fake = { chain: null };
   const fakeRpc = http.createServer((req, res) => {
     let b = ''; req.on('data', (c) => (b += c));
     req.on('end', () => {
@@ -43,6 +44,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
       let result = null;
       if (j.method === 'getTransaction') result = txs[j.params[0]] || null;
       else if (j.method === 'getSlot') result = 123;
+      else if (fake.chain && fake.chain[j.method]) result = fake.chain[j.method](j.params);
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ jsonrpc: '2.0', id: j.id || 1, result }));
     });
@@ -152,6 +154,29 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await (await fetch(base + '/api/bears')).json();
   const locked = r.bears.find((x) => x.n === SL);
   check('the bear shows its coin', locked.state === 'launched' && locked.symbol === 'HONEY' && locked.mint === mint);
+
+  // the coin's own page
+  const chainMod = require('../chain.js');
+  const curveAddr = chainMod.curveFor(mint);
+  check('the bonding curve address is a program address (off the curve)', !chainMod.isOnCurve(chainMod.b58decode(curveAddr)) && chainMod.b58decode(curveAddr).length === 32);
+  const curveData = Buffer.alloc(81); curveData.writeBigUInt64LE(1000000000000000n, 8); curveData.writeBigUInt64LE(40000000000n, 16); curveData.writeBigUInt64LE(693100000000000n, 24); curveData.writeBigUInt64LE(10000000000n, 32); curveData.writeBigUInt64LE(1000000000000000n, 40);
+  fake.chain = {
+    getTokenSupply: () => ({ value: { amount: '1000000000000000', decimals: 6, uiAmountString: '1000000000' } }),
+    getAccountInfo: () => ({ value: { data: [curveData.toString('base64'), 'base64'] } }),
+    getTokenLargestAccounts: () => ({ value: [{ address: 'AcctCurve', amount: '693100000000000' }, { address: 'AcctDev', amount: '50000000000000' }, { address: 'AcctOther', amount: '20000000000000' }] }),
+    getMultipleAccounts: () => ({ value: [curveAddr, a.address, b.address].map((o) => ({ data: { parsed: { info: { owner: o } } } })) }),
+    getTokenAccountsByOwner: () => ({ value: [{ account: { data: { parsed: { info: { tokenAmount: { amount: '50000000000000' } } } } } }] }),
+  };
+  r = await fetch(base + '/api/coin/' + mint);
+  let cj = await r.json();
+  check('coin page data has the den details', r.status === 200 && cj.name === 'Honey' && cj.symbol === 'HONEY' && cj.bear === SL && cj.dev === a.address && cj.feeSplit === true && cj.platformBps === 500, JSON.stringify(cj).slice(0, 200));
+  check('coin page data has supply and the bonding curve', cj.onchain.supply === 1000000000 && cj.onchain.curve && Math.abs(cj.onchain.curve.progress - 12.6) < 0.1 && cj.onchain.curve.raisedSol === 10 && cj.onchain.curve.marketCapSol > 0, JSON.stringify(cj.onchain.curve));
+  check('coin page data has holders, the dev share and top 10 without the curve', cj.onchain.holders.length === 3 && cj.onchain.holders[0].isCurve && cj.onchain.holders[1].isDev && cj.onchain.devHoldPct === 5 && cj.onchain.top10Pct === 7, JSON.stringify(cj.onchain).slice(0, 300));
+  check('an unknown coin has no page', (await fetch(base + '/api/coin/' + b58encode(crypto.randomBytes(32)))).status === 404);
+  r = await fetch(base + '/coin/' + mint);
+  check('the coin page is served', r.status === 200 && (await r.text()).includes('Top holders'));
+  r = await fetch(base + '/cave.js');
+  check('the cave script is served', r.status === 200 && (await r.text()).includes('window.Cave'));
   r = await post('/api/launched', { mint, signature: s4 }, xa2.json.token);
   check('the used hold cannot lock again', r.status === 401);
   const again = await reserve(e, SL);

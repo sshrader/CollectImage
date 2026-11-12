@@ -6,12 +6,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const art = require('./art');
+const chain = require('./chain');
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || (fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data'));
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const SECRET_FILE = path.join(DATA_DIR, 'image-secret.txt');
 const INDEX = path.join(__dirname, 'index.html');
+const COIN_PAGE = path.join(__dirname, 'coin.html');
 
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const B58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -264,10 +266,41 @@ async function launched(req, res) {
   }
   const p = a.hold.pending || {};
   const d = loadBears(a.c); // re-read before writing
-  d.launched[a.slot] = { mint, signature: sig, wallet: a.hold.wallet, name: p.name || '', symbol: p.symbol || '', at: Date.now(), split: !!text(b.splitSignature, 120) };
+  d.launched[a.slot] = { mint, signature: sig, wallet: a.hold.wallet, name: p.name || '', symbol: p.symbol || '', uri: p.uri || '', at: Date.now(), split: !!text(b.splitSignature, 120) };
   delete d.holds[a.slot];
   saveBears(a.c, d);
   send(res, 200, { ok: true, slot: a.slot + 1 });
+}
+
+
+// ---- A coin's Den page: what the Den knows (bear, dev, links) plus the chain's public numbers, cached briefly ----
+const coinCache = new Map();
+function findLaunched(c, mint) {
+  const d = loadBears(c);
+  for (const k of Object.keys(d.launched)) if (d.launched[k].mint === mint) return { slot: Number(k), rec: d.launched[k] };
+  return null;
+}
+async function coinInfo(res, mint) {
+  const c = cfg();
+  if (!B58_RE.test(mint)) return send(res, 404, { error: 'No such coin.' });
+  const f = findLaunched(c, mint);
+  if (!f) return send(res, 404, { error: 'That coin was not launched from the Den.' });
+  const key = c.cluster + ':' + mint, hit = coinCache.get(key);
+  let onchain;
+  if (hit && Date.now() - hit.at < 45000) onchain = hit.data;
+  else {
+    onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, f.rec.wallet, c.rpc);
+    coinCache.set(key, { at: Date.now(), data: onchain });
+    if (coinCache.size > 200) coinCache.delete(coinCache.keys().next().value);
+  }
+  let meta = {};
+  const mm = /\/metadata\/([a-f0-9]{16})\.json$/.exec(f.rec.uri || '');
+  if (mm) { try { meta = JSON.parse(fs.readFileSync(path.join(META_DIR, mm[1] + '.json'), 'utf8')); } catch (e) { /* no metadata file */ } }
+  send(res, 200, {
+    cluster: c.cluster, mint, bear: f.slot + 1, total: c.total, name: f.rec.name, symbol: f.rec.symbol, dev: f.rec.wallet,
+    launchedAt: f.rec.at, signature: f.rec.signature, feeSplit: !!f.rec.split, platformBps: c.platformWallet ? PLATFORM_BPS : 0,
+    description: meta.description || '', twitter: meta.twitter || '', website: meta.website || '', onchain,
+  });
 }
 
 // Lets the launcher give the bear back (closed the page, changed their mind).
@@ -393,6 +426,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/bears') return bearsState(res);
+    { const m = /^\/api\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(p); if (m) return await coinInfo(res, m[1]); }
+    if (/^\/coin\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(COIN_PAGE)); }
+    if (p === '/cave.js') return serveStatic(res, path.join(__dirname, 'cave.js'), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
     if (p === '/api/health') return send(res, 200, { ok: true });
     { const m = /^\/api\/preview\/(\d+)\.svg$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.render(n - 1, c.total, '', imageSecret(), { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); } }
     if (p === '/assets/cave.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
