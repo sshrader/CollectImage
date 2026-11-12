@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PetPad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: a warm cave at night. One 1240px column of stacked sections, a snowy hero with a bear in the den, hard 2px edges and pixel shadows. */
+:root{
+  --bg:#120d0a;--p1:#1a120d;--p2:#241810;--p3:#2d1f14;--fg:#f4e8d4;--mut:#ad9a82;--b1:#33241a;--b2:#4d3826;
+  --amber:#ffb347;--ember:#e8782a;--snow:#a9cdee;--ink:#120d0a;--shadow:#080504;
+  --display:'Pixelify Sans','Courier New',monospace;--sans:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.6 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+img{max-width:100%;image-rendering:pixelated;display:block}
+.col{max-width:1240px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lbl{font:500 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.16em;color:var(--mut)}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;text-wrap:balance}
+h1{font-size:58px;line-height:1.04;letter-spacing:-.01em}
+h2{font-size:34px;line-height:1.1}
+h3{font-size:20px;line-height:1.2}
+.sec{padding:84px 0 0}
+.sec-h{display:flex;flex-direction:column;gap:10px;margin-bottom:32px;max-width:60ch}
+.sec-h p{margin:0;color:var(--mut)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 20px;font:600 16px var(--display);background:var(--p2);border:2px solid var(--b2);color:var(--fg);box-shadow:4px 4px 0 var(--shadow)}
+.btn:hover{border-color:var(--amber)}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow)}
+.btn.go{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+.btn.go:hover{background:#ffc470;border-color:#ffc470}
+.tag{display:inline-block;font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--mut);border:1px solid var(--b2);padding:3px 8px}
+.chip{font:500 13px var(--mono);background:var(--p1);border:1px solid var(--b2);padding:8px 14px;min-height:40px;color:var(--mut)}
+.chip[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:700}
+.pane{background:var(--p1);border:2px solid var(--b1);box-shadow:5px 5px 0 var(--shadow)}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;gap:26px;height:64px;background:var(--bg);border-bottom:2px solid var(--b1)}
+.logo{display:inline-flex;align-items:center;gap:10px;font:700 22px var(--display)}
+.logo svg{width:28px;height:28px;shape-rendering:crispEdges}
+.links{display:flex;gap:22px;margin-left:auto}
+.links a{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--mut);padding:8px 0;border-bottom:2px solid transparent}
+.links a:hover{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* hero */
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:48px;align-items:center;padding:56px 0 8px}
+.hero-l{display:flex;flex-direction:column;gap:24px;min-width:0}
+.hero-l p{margin:0;max-width:50ch;color:var(--mut);font-size:18px}
+.hero-l p b{color:var(--fg);font-weight:500}
+.cta{display:flex;gap:14px;flex-wrap:wrap}
+.den{position:relative;overflow:hidden;border:3px solid var(--b2);box-shadow:6px 6px 0 var(--shadow);background:radial-gradient(ellipse at 50% 78%,#5a3015 0,#3a2012 32%,#1b110b 66%,#120d0a 100%);display:flex;flex-direction:column;align-items:center;gap:0;padding:28px 20px 0;min-width:0}
+.den canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.den .art{position:relative;width:min(320px,76%);aspect-ratio:1;border:2px solid var(--b2);background:var(--bg)}
+.den .art img{width:100%;height:100%}
+.den .cap{position:relative;width:100%;margin-top:22px;padding:14px 4px 18px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.meter{font:500 14px var(--mono);letter-spacing:.02em;white-space:pre;overflow:hidden;color:var(--amber)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2px solid var(--b1);background:var(--p1);max-width:540px}
+.stat{padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat+.stat{border-left:2px solid var(--b1)}
+.stat .n{font:600 28px/1 var(--display)}
+
+/* how */
+.flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+.ascii{margin:0;padding:22px;font:400 13px/1.5 var(--mono);white-space:pre;overflow-x:auto;color:var(--fg)}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:16px 18px;background:var(--p1)}
+.steps li+li{border-top:2px solid var(--b1)}
+.steps li:hover{background:var(--p2)}
+.steps .k{font:600 20px var(--display);color:var(--amber)}
+.steps b{display:block;font:600 18px var(--display);margin-bottom:2px}
+.steps span{color:var(--mut);font-size:15px}
+
+/* den gallery */
+.gal{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.tile{position:relative;padding:0;border:2px solid var(--b1);background:var(--p1);aspect-ratio:1;overflow:hidden}
+.tile img{width:100%;height:100%}
+.tile.free img{opacity:.55}
+.tile:hover{border-color:var(--mut)}
+.tile[aria-pressed="true"]{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber)}
+.tile.dim{opacity:.22}
+.tile .no{position:absolute;left:3px;top:2px;font:600 10px var(--mono);color:var(--fg);text-shadow:1px 1px 0 var(--ink)}
+.sel{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px;padding:16px}
+.sel .big{border:2px solid var(--b2);aspect-ratio:1;background:var(--bg)}
+.sel .big img{width:100%;height:100%}
+.tr{display:grid;grid-template-columns:90px minmax(0,1fr);gap:6px 12px;font-size:14px}
+.tr dt{color:var(--mut);font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.12em;padding-top:3px}
+.tr dd{margin:0;text-transform:capitalize}.tr dd.mono{text-transform:none}
+.rar{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.12em;padding:2px 8px;border:2px solid currentColor}
+.r-Common{color:var(--mut)}.r-Uncommon{color:var(--snow)}.r-Rare{color:var(--amber)}.r-Legendary{color:var(--ember)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+
+/* collections */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.card{display:flex;flex-direction:column;gap:12px;padding:16px;min-width:0}
+.card:hover{border-color:var(--b2)}
+.card .pic{border:2px solid var(--b2);aspect-ratio:1;background:var(--bg)}
+.card .pic img{width:100%;height:100%}
+.card p{margin:0;color:var(--mut);font-size:14px}
+.kv{display:flex;gap:16px;flex-wrap:wrap;margin-top:auto;padding-top:12px;border-top:2px solid var(--b1)}
+.kv div{display:flex;flex-direction:column;gap:3px}
+.kv .v{font:600 14px var(--mono)}
+.card.next{border-style:dashed;justify-content:center;align-items:flex-start;background:transparent;box-shadow:none}
+
+/* planner */
+.plan{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.plan>div{padding:26px;display:flex;flex-direction:column;gap:24px;min-width:0}
+.plan>div+div{border-left:2px solid var(--b1);background:var(--p2)}
+.fld{display:flex;flex-direction:column;gap:10px}
+.fld .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fld output{font:600 22px var(--display)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--b2)}
+input[type=range]::-moz-range-track{height:6px;background:var(--b2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:26px;background:var(--amber);border:2px solid var(--ink);margin-top:-10px}
+input[type=range]::-moz-range-thumb{width:14px;height:24px;background:var(--amber);border:2px solid var(--ink);border-radius:0}
+.res .r{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:2px solid var(--b1);font:500 14px var(--mono)}
+.res .r span:first-child{color:var(--mut)}
+.note{font:400 12px/1.5 var(--mono);color:var(--mut);margin:0}
+.s-light{color:var(--snow)}.s-mid{color:var(--amber)}.s-heavy{color:var(--ember)}
+
+/* feed */
+.log-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:2px solid var(--b1);flex-wrap:wrap}
+.log-b{height:300px;overflow-y:auto;padding:14px 16px;font:400 13px/1.8 var(--mono);background:var(--bg)}
+.log-b div{overflow-wrap:anywhere}
+.log-b .t{color:var(--mut)}
+.c-claim{color:var(--amber)}.c-deny{color:var(--ember)}.c-mut{color:var(--mut)}
+.foot{margin-top:84px;padding:26px 0 40px;border-top:2px solid var(--b1);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media (max-width:1000px){
+  .hero{grid-template-columns:1fr;gap:32px}
+  .flow{grid-template-columns:1fr}
+  .gal{grid-template-columns:1fr}
+  .sel{position:static;display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);align-items:start}
+  .sel>*:not(.big){grid-column:2}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles{grid-template-columns:repeat(8,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  h1{font-size:38px}h2{font-size:27px}
+  .sec{padding-top:60px}.links{display:none}.nav .btn{margin-left:auto;min-height:40px;padding:0 14px}
+  .tiles{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  .plan{grid-template-columns:1fr}.plan>div+div{border-left:0;border-top:2px solid var(--b1)}.plan>div{padding:20px 16px}
+  .cards{grid-template-columns:1fr}
+  .stat .n{font-size:22px}
+  .sel{grid-template-columns:1fr}.sel>*:not(.big){grid-column:1}
+}
+@media (max-width:420px){.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+
+
+<div class="col" id="top">
+  <header class="nav">
+    <a class="logo" href="#top" aria-label="PetPad home">
+      <svg viewBox="0 0 10 9" aria-hidden="true"><rect x="1" y="0" width="2" height="2" fill="#ffb347"/><rect x="7" y="0" width="2" height="2" fill="#ffb347"/><rect x="1" y="2" width="8" height="6" fill="#ffb347"/><rect x="2" y="3" width="1" height="1" fill="#120d0a"/><rect x="7" y="3" width="1" height="1" fill="#120d0a"/><rect x="4" y="5" width="2" height="2" fill="#7a4a2b"/></svg>
+      PetPad
+    </a>
+    <nav class="links" aria-label="Sections"><a href="#how">How it works</a><a href="#den">The den</a><a href="#sets">Collections</a><a href="#plan">Planner</a><a href="#feed">Feed</a></nav>
+    <button class="btn go" id="connect" type="button">Connect</button>
+  </header>
+
+  <section class="hero" aria-label="Introduction">
+    <div class="hero-l">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="lbl">Pet coin launch pad</span><span class="tag">Concept &middot; sample data</span></div>
+      <h1>Hold the coin. Get a bear.</h1>
+      <p>The market is down and the bears are warm. PetPad launches a coin together with a set of one-of-a-kind pixel pets. <b>Holders sign with their wallet and claim one</b>, and only that wallet can open the full-size image.</p>
+      <div class="stats" role="group" aria-label="Sample figures">
+        <div class="stat"><span class="n" id="sClaimed">26</span><span class="lbl">Bears asleep</span></div>
+        <div class="stat"><span class="n">40</span><span class="lbl">In the set</span></div>
+        <div class="stat"><span class="n">0.10%</span><span class="lbl">Min hold</span></div>
+      </div>
+      <div class="cta"><a class="btn go" href="#plan">Plan a pet coin</a><a class="btn" href="#den">Visit the den</a></div>
+    </div>
+    <div class="den" id="denBox">
+      <canvas id="snow" aria-hidden="true"></canvas>
+      <div class="art"><img id="heroImg" alt="A pixel bear from the sample set" width="256" height="256"></div>
+      <div class="cap">
+        <span class="lbl" id="heroNo">Bear 01 / 40</span>
+        <h3 id="heroName">Bear</h3>
+        <span class="mono" style="color:var(--mut);font-size:13px" id="heroTr"></span>
+        <span class="meter" id="heroMeter" aria-label="26 of 40 bears claimed"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="sec-h"><span class="lbl">How it works</span><h2>From launch to bear in five steps</h2><p>The same flow the CatHouse prototype uses, with bears in place of cats.</p></div>
+    <div class="flow">
+      <pre class="ascii pane" aria-label="Flow: launch, hold, sign, check, claim">┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│  LAUNCH  │──▶│   HOLD   │──▶│   SIGN   │──▶│  CLAIM   │
+│ coin + N │   │ min amt  │   │ message  │   │ one bear │
+└────┬─────┘   └────┬─────┘   └────┬─────┘   └────┬─────┘
+     │              │              │              │
+     ▼              ▼              ▼              ▼
+ create + dev   balance read   proves you    random free
+ buy, 1 tx      from chain     own wallet    slot, locked
+
+   ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+   no keys leave the wallet · one bear per holder</pre>
+      <ol class="steps pane">
+        <li><span class="k">1</span><div><b>Launch the coin</b><span>Create the coin and the dev buy in one transaction, with the set size you choose.</span></div></li>
+        <li><span class="k">2</span><div><b>Holders connect</b><span>A holder opens the site and connects a wallet.</span></div></li>
+        <li><span class="k">3</span><div><b>Sign a message</b><span>Signing proves the wallet is theirs. It costs no SOL and moves nothing.</span></div></li>
+        <li><span class="k">4</span><div><b>Check the balance</b><span>The server reads the wallet&rsquo;s balance on chain and compares it to the minimum.</span></div></li>
+        <li><span class="k">5</span><div><b>Claim a bear</b><span>A random free slot is assigned and locked to that wallet.</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="den">
+    <div class="sec-h"><span class="lbl">The den &middot; sample set of 40</span><h2>Forty bears, no two alike</h2><p>Eight coats, six pairs of eyes, hats, scarves and snacks. Pick a bear to see its traits.</p></div>
+    <div class="filters" role="group" aria-label="Filter bears">
+      <button class="chip" type="button" data-f="all" aria-pressed="true">All 40</button>
+      <button class="chip" type="button" data-f="claimed" aria-pressed="false">Claimed</button>
+      <button class="chip" type="button" data-f="free" aria-pressed="false">Free</button>
+    </div>
+    <div class="gal">
+      <div class="tiles" id="tiles"></div>
+      <aside class="sel pane" id="sel" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="sets">
+    <div class="sec-h"><span class="lbl">Collections</span><h2>One coin, one species</h2><p>Each launch picks its pet. Sample figures, except where a card says it is built.</p></div>
+    <div class="cards">
+      <article class="card pane"><div class="pic"><img id="cBear" alt="Bear from the Bear Market set"></div><span class="lbl">Concept</span><h3>Bear Market</h3><p>Hibernation cave. Pixel bears that sleep through the dip.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Min hold</span><span class="v">0.10%</span></div><div><span class="lbl">Claimed</span><span class="v">26</span></div></div></article>
+      <article class="card pane"><div class="pic"><img id="cCat" alt="Cat from the CatHouse set"></div><span class="lbl">Built &middot; devnet tested</span><h3>CatHouse</h3><p>Night house with pixel cats. The collect site and the launch page both exist.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Ticker</span><span class="v">$CATS</span></div></div></article>
+      <article class="card pane"><div class="pic"><img id="cFrog" alt="Frog from the Pond set"></div><span class="lbl">Retired concept</span><h3>The Pond</h3><p>The first version, with frogs and toads. Replaced by CatHouse.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Ticker</span><span class="v">$POND</span></div></div></article>
+      <article class="card next pane"><span class="lbl">Next</span><h3>Your species</h3><p>Dogs, bunnies, owls or something stranger. Pick the pet for your coin and PetPad draws the set.</p><a class="btn" href="#plan">Plan it</a></article>
+    </div>
+  </section>
+
+  <section class="sec" id="plan">
+    <div class="sec-h"><span class="lbl">Planner &middot; sample math</span><h2>How much supply does a set ask holders to hold?</h2><p>If every pet is claimed, holders together must hold the set size times the minimum.</p></div>
+    <div class="plan pane">
+      <div>
+        <div class="fld"><div class="row"><label class="lbl" for="size">Pets in the set</label><output id="sizeO" for="size">40</output></div><input id="size" type="range" min="10" max="200" step="1" value="40"></div>
+        <div class="fld"><div class="row"><label class="lbl" for="minh">Minimum hold, % of supply</label><output id="minhO" for="minh">0.10%</output></div><input id="minh" type="range" min="0.05" max="1" step="0.05" value="0.1"></div>
+        <div class="fld"><div class="row"><label class="lbl" for="claimed">Pets claimed so far</label><output id="claimedO" for="claimed">26</output></div><input id="claimed" type="range" min="0" max="40" step="1" value="26"></div>
+        <p class="note">The server picks a random free slot, so a bigger set means lower odds of any one specific pet. A holder at the minimum gets one pet, never more.</p>
+      </div>
+      <div class="res" aria-live="polite">
+        <div class="fld"><span class="lbl">Asleep</span><div class="meter" id="pBar"></div></div>
+        <div>
+          <div class="r"><span>Free slots left</span><span id="pFree">14</span></div>
+          <div class="r"><span>Supply to claim every pet</span><span id="pNeed">4.0%</span></div>
+          <div class="r"><span>Weight on holders</span><span id="pSt" class="s-light">LIGHT</span></div>
+          <div class="r"><span>Odds of one chosen slot</span><span id="pOdds">7.1%</span></div>
+        </div>
+        <p class="note">Weight bands are sample thresholds: under 5% light, 5 to 15% medium, over 15% heavy.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="feed">
+    <div class="sec-h"><span class="lbl">Feed &middot; sample</span><h2>Bears waking up, one claim at a time</h2></div>
+    <div class="pane">
+      <div class="log-h"><span class="lbl">Claims and checks</span><span class="tag">Sample data</span></div>
+      <div class="log-b" id="logb" role="log" aria-label="Sample claim feed"></div>
+    </div>
+  </section>
+
+  <footer class="foot"><span class="lbl">PetPad &middot; concept page &middot; sample data only</span><span class="lbl">Collectibles carry no promise of value. Not financial advice.</span></footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var D = {"pets":[{"n":1,"coat":"Black bear","eyes":"heart eyes","mouth":"grumpy","acc":"nightcap","bg":"starry","rarity":"Rare","owner":"3Zwt…8D3y","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABqUlEQVR42r2WMU4DMRBFXQMSCkWKVCgVNBwgdapUlGgPkCIFF0DiAHsSjsAR6ChoKOgQKA0CIUS7aFb6q8kwHo8da4uvzcbr+c/f9nrD4eSsG0s/Xy///guxhrEUPA/Njg+yC1Mf6Pfj0QaIJYAC8/nF8NtjSFo0d4OsfsEquFw23Xp9O1w5iGWoKQZhAsB801z1VwJIGUFaHw0ixMypI8yhHHOIQ7gBeAIotH2+zxL6Ydq+3596SQgTgDojiRKhfxEAX9lYC7nmfOfEdlHw7OfS0XveHyHHfHu52bmm2jwQSQAePxWH6L69ue6ltVUDkIuQDGCMecW9TCYFQG/gMJktOkuYhre23Rm1BoA06FmYp+q7AHgK3EyTHP3eAIDgayGWQK55EoAfNnLVc2PZLg+tIgB5GuYK/VJpBG/sXJ+vD67/igEsc8ROhlxyHXghghW/BZDaBXsDaAmkzGMQ1RIYFWC0BKanq05KOwNqrAHNSwWwIEpHH/OJAgAiJ4VccxdA6ZuwGoA2DfjYlKoKcHRy3ot/HfOvXE3ac6hTlABPggtFpeRzntp/c/qu4BKtkTcAAAAASUVORK5CYII="},{"n":2,"coat":"Brown bear","eyes":"sleepy eyes","mouth":"flat","acc":"fish","bg":"snow night","rarity":"Common","owner":"fQYG…y7BX","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABlklEQVR42tVWLU9DQRBcjSFBNZVYgsfhm/BDwOBB4BDvhxDwCH4BAYGrwYAiNAgMluTINZmX7WZ3b/eeaBCTa/JuZ6Zzex+0Nz8q2wT9CwPz3Z00cbSGWiQVJ4ez8XdEOFNDHtHF4qDcnh6PI0i9GswHWjUUIXsezjbIPEBY1qQMIEIQATIRbdRqPBNrA6vvXzMBSRYBr5m0BLUYSfQA9V0GeEfLxoqKT9oFcjf0Gph8DvTGHzVBs/1FsSDjl9vt9X5YQ/vGDWjctfHr2DSgNSGEIciNaAl4Gq4BmKhkH8OwIa4ZgIk6NyIeNsBT4GIaMv8+ZEDrhdYSRMVDPSAby0rCOgO6e0DehlmgrpUGRWPPJJDZCZQVjzZh1AR58W/VgJZAS7znQKLMHRARP79Zpu4Eir7tYKAKeNBMdBnQ7gCI1O91vHv5GsFNTE4gYsIC5oRfxQ+Pb8VCthcscU+D3j9/ioXe55g04GnQ03JVLFjLgMemhGXA0zATuLy6XoO/jvkrV4M2DzxmAl48fCk4QCoh50W4/wA9H5VVyPyDdQAAAABJRU5ErkJggg=="},{"n":3,"coat":"Black bear","eyes":"open eyes","mouth":"smile","acc":"flowers","bg":"starry","rarity":"Common","owner":"7HK3…2ep3","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABpklEQVR42sWWMU7DQBBFXQMSCgVFKpQKGg5AnSoNEhXKAVJQcAEkDpAjcAKOQkeVjg5RIigQ7aKJ9K2f0ezO7NoKlr6c2J75z9+7a3eHk/P0n+rGbvjz/TY+wPT4oBqEa34/X9sApIloNrvsf1vn+bhXEwaQwvl8mVarx37PTUXXTzdJNtnjGK6HUNMEgGZ3y9udZh/r5x3THmaz6I11TRUAIkQjCMY6Gd4DBDUMYY0FNwEG4GhL4pqSuQsgxUiiRah3H0Fu7uYGVtR80CzQs6EVYNBCpM1lKwHp8xEIF4DjR6T4v3643yp3vgrAGgc8HVkwhqEGqQKYTK9SSTpymFkADAHzXF+5YdmHADgFNrMUBYBcAEDwWMDdcxIt5i4Ar/XWOOBHkFsDGASxhwD027BWqPPS6KKxs77eX0LHmgFK5njuYsjKTUUPootMvdw0LM2CwQBWAp65tyANTmCvAHtL4PRskbRy74ChY8DyMgFKEK13n/PJAgCiJoVa8xBA60o4GoD1GPCxqTUqwNHJxVb8dcxfuZas69CnKQFOgoWmWvq6SO8/PUOG3N2LyG4AAAAASUVORK5CYII="},{"n":4,"coat":"Polar bear","eyes":"sleepy eyes","mouth":"flat","acc":"honey pot","bg":"snow night","rarity":"Common","owner":"U3xC…2u5e","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABjklEQVR42tVWIU+DQQytxpCgyARickgMHofH8CP4Awgcgp+CJyHBk6EwCNSQbAIEIEmO3Jc8Ukrba++DEJq83JZd+17e2rujjclu+UvQvxAwWV9LF47mUKtIxfnF/PNzhDiTQ16h1dNbqYEVRb0c7AdaORQpdn9z+6WYBxDLnJQAWIhCgHREW7UcT0TTAVksAp6TcmD5/P7NBTjRA+R39QDvaNlYUfJRUyCnoVfA6HOg1/6oCNqc7hcL0n45bgjtNy7A42gK0JoQMZvtDOBCNAe6BUCERq4J4CIi5GEB3IVWpAXU2Y+I4MURfEx7yEM9IBvLcsI6A7p7QN6GWSCv5QZFbc84kJkEypJHmzAqgiKj9xsC0PwpB2oc7W25yB5IlLkDarxcHbjwBKReRJYDZ4fbA1FdAf79xwRodwAntQRUjBZgibAESKRexZfXi2JB64Ueco+DHh5fiwWrFyLkXIDHQfO7ZbFg9QIemxKWAI/DdOD45HQAfx3zV64GbR/qmA549vC/ggNFJeS+SO0PwbTCv8y86V4AAAAASUVORK5CYII="},{"n":5,"coat":"Brown bear","eyes":"open eyes","mouth":"smile","acc":"nightcap","bg":"aurora","rarity":"Common","owner":"LhR7…HrWD","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABv0lEQVR42sWWMUpDQRCGt06TVlJoH/ECNvaCrUUOIJgLKIKd1Wu8Rg4g4gkEa5sI6URJGSxtnsziv4zjzO7s8kgCH+Hxdub/d3Z33obReL8fgoP5eaImLgwhmKNowDNwMh4Vhaf31wl6phiQ0wg510hwdrT3LxkXJLggcTxbJHic1AjcNYeCbk4P+8XlSfrnRnKCGpoJIsiZ8BJC/KWbx38yUBICWgzllBMOk9lFT8hyUiDEQY044Ca4AZAMcGCCKoBE6+VTFYjDsn19vkbikrEJqwYiv1VAJVpAvGYApD5gmeB7oVYc8fxESQ21EUkTrbPn/cPSCKUGxJPSL2dIvi+ZKLZiWX6UEc9vD13Eej+IAW0TQhiC0shgBvgyfHTdH3HNAEzQWI+42wCvAhfTqJm9amC9+S7uBcyeV6JF3LUH5MaSJqS47AHNe0B+DWtBXKkawXsErZNgnQDvcoRace8m9JoIng64EwNaBUriLQ2pqgJbNbDzClgXka3sAc+HaIjZuzphTRWavoaPz6veovU6Jg3kNMLyfdNbWMuAy6bEMpDTMA1c3d5F+O2Y33I1tHHIU21AVoKDpBI5zpP7B151kL9rrI8cAAAAAElFTkSuQmCC"},{"n":6,"coat":"Honey bear","eyes":"sleepy eyes","mouth":"grumpy","acc":"no extras","bg":"cave","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABrElEQVR42s2WTUoDQRCFa6HGJBolDAjBrRs9g8dw7xG8jBsP4Nq9Jwl4CBFcj/TAG2oqr6p/dMDFYzrJVL2vq6s7Ld35qk9aL44HeZ+975hysXos/wpARCjQ7qIeADEsPwXwkiS9PHbjWEMysRiWG3kkSrR/vuu/3h/GJ5JGMXgfysVQgM1yMUn2+fY0SRYJxjamCgAlRCLIVoQ9WUwEIbly2mQl0jFNFdBVQCVahPgmAN3RtrFKzb1dUAxwu7ucNFYLQMrRBPAb8xoIdxsCQJffbrfvj9dB7DcL4EEImzmkt6MWjGGoQbwKeBDimWsIZs4ANAQzZxASmbMqaDOmEgANEQLc33SDbC/klgDmiG8CgLFtLN2QGsQ7AwCCxk5K4wlAtPYth5COy/WCRLOPzL2193YCWwoXIDIvbcLcdswClM58NgBWgZx5zYHUVIHZANgRPHcFwnPA+w/4yx4YAa63Z31S7ghuBfDKD98RwIOoqUKt+QGAhWi9jkUA1u8AQEN4y4DLplUOgHlRgKSrzXKQvh3rWy4Tew95PB/Zrk/7nKzR6uSIyr5XkvsHO65gEX7M5hsAAAAASUVORK5CYII="},{"n":7,"coat":"Glacier bear","eyes":"glare eyes","mouth":"smile","acc":"nightcap","bg":"starry","rarity":"Uncommon","owner":"gFRE…cFFH","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABl0lEQVR42sWWPUoEQRCFK1ZB1mCDjQz1CnsEjyB4C++hpxBPIGaGmhkIYrDZwmLggoiajvTAG4qiun56hnXhMQszXe/r19U9Q/uzk25KfX+uUs/T1ABZhQAWh3vpwmUM9Lt9bgNAgYvL6+F/xLBoeX47yBpHVsGrm4fu7mk1XDmIZaipBmECwPzxddNfC4BnBGljNAjSOhixwxzKmEMcwgXQEkCh97f7lDAOy/a1eeklIUyAMhhJtAjjmwB4Z5ck0JSe8JzcObVdRJH9zIvXQOQ9AIw6iKRZ+VlJyPsRCLLObr4VtVmuP356jUnBTUBrQhjDUIKkAGaLZWdJRg4zDYBDwNyrHwLgKXAzTR5AWfIUACB4L2D2PImW2bsA/GWj9QFfAm3toSYA+TbMCuO8NCgae20n1HZAdDkoax5twigERbbevwBoCXjm3oE0OoGdAuwsgfnxWSdVeweM7QHNSwWwIFpnX/OpAgAik0LWPATQehJOBqAtAz42pSYFODg67cW/jvlXribtOdRpSoAnwYWiUvK5SO0/zc5J7ro7sQwAAAAASUVORK5CYII="},{"n":8,"coat":"Honey bear","eyes":"sleepy eyes","mouth":"flat","acc":"beanie","bg":"cave","rarity":"Common","owner":"P1pU…R8vX","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABx0lEQVR42rWWMU4DMRBFXQAhCQQUrYQU0dJAwQmQuAQ9R+AyNByAOmUkjkEDEjWiRJGoF9nwV6PJH4/XmxRfmzie+c/jWcehOZ60UdPRfpL13Rpj8mLl51ACMBuP6JzFyZ+2BhBCoEAw0WPrz9ckDRHnsDHkpwBsFVjh033TfZbjEgCGLIblBowJEAPfH6/a9ctd90TS1e01VYL6nw8hxvLJAiDZ9/IhPS1jLRlTBYASIlFUqTmEOA/CrcBQgEFbEINRia+3VS9h5RoAr7QLIDtaN1aJcm9BMcDl4rR7G2oBYo4qgCHmfSCCZQ4AWX6UFGA/H89J7DcNYEEEyxwAaEIpGMNQgrAKxMazIIJlLiGYOQOQEHr1UhSATWRVkGZMJQASIgtwc9Ek6V7wtgDmiK8CgLFuLKsS1hkAkCxAbu9rDiEZ5/VCyK0+Z56rAKuGVQUKkDMvbULrQCoGKF35zgBYBTxz70AaXIGdAbAjeNcVyJ4D1n/ANnugAzifH7VR3hFcC2CVH74dgAXRpwp9zTcANETtdSwHoP02ACSEtQ24bGp5AMyLAkSdzcZJ8nYsb7lMbB7yWD5hPj1sPWmjycEelZ5XkvsXGnV5wcKKQ4oAAAAASUVORK5CYII="},{"n":9,"coat":"Brown bear","eyes":"sleepy eyes","mouth":"flat","acc":"no extras","bg":"starry","rarity":"Common","owner":"Wyc2…gEhH","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABcElEQVR42s2WQWoCQRBFex0F0YWEWblMkFzAjXshB9EjeARPkgPkElllHcgVhCxCtiMt/KEsq6uqawbN4jOCXfWfv6vbSaPpU3tPpX8H8PvzfbWomTxUN6Y1f8fPWAK5Sdbry2P32QOr1bgBcuF+s2zftuvuiaZaDdZDVk3yNPs47C6aaYIxr6kCQIRoBPFEpKdUAwhpFswEeDOPaI1mbgLkYiQREepDM0Anmg+W17zXKeCnIQrgvohKZzoavxfC3AIaPz9uX++Hs6TvBgOQhhDGMKQg1QlMm1WriW8DzCQACgFzq78LgKZAzSQNDpCHk8+CtQVecxNAGqxSEqU7wAJJ1t5HLiFaZ6WhAmjmWgJSGlUAmrl3CL0QyXP07gIgJWCZWxdS7wRuCnCzBOaLTctV+g/oOwOSlwigQUR/fcmnCACImhRqzV0A0ZtwMABpG/CyyTUowHj2fBZ9O6ZvuZKkdegTSoAmQYWmXHydp/cJLdbMaNXXcP4AAAAASUVORK5CYII="},{"n":10,"coat":"Honey bear","eyes":"heart eyes","mouth":"open","acc":"no extras","bg":"snow night","rarity":"Uncommon","owner":"9tSN…Lzen","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABk0lEQVR42tVWMUoEQRDs2EQ4DORCUz/gG4xMzI2NLtbA7H5g4gOMDQVz8QEmgmjoRiLKZQcjs1BHX9Pd0zNzchgUs8tuVxU1vTtNk+lR2iboXxiY7u5UE0drqESScXO2t7qOCNfUkEf0cn2Yvh9OVytIvRq8D1g1w+eybABkX3ezNTIPEJY1VQkgQhABMhFt1Wo8E8UEJFkEvKYpAZ4CkmgB6psM8I6WjRUV7/oK5NfQaqD7P8BJh5PztbX0LGKC9g+OkwUZfyYH8v3i9XaE9owb8DSKBmQTZgEIY49xL5PpNgATnBRimgGkERUPG+ApcDENGzeg9YKVQK14qAfkP56bGGYXI7i4dmZwznwIhQzI07AWqCulQdHYtQS0vbd+SEUDPBpPPNqEURMU+fS2YkBLoCRumdAMIHGqOYB6DVRNRH+RQNNItskeaJqIeg0UJ6L7x7dkobYXLHFPg94/fpKF1nFMGvA06Ol5SBasbcCwKWEZ8DTMBC6v5iP4dMynXA3ae+AxE/Di4VvBAVIJ+V6E+xeje45Xd1ll9QAAAABJRU5ErkJggg=="},{"n":11,"coat":"Black bear","eyes":"wink eyes","mouth":"grumpy","acc":"honey pot","bg":"snow night","rarity":"Rare","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABpklEQVR42tWWsUoDQRCGp04jpJIUFtceWNubyl6QfYAUKfICAe1S5ImE9CEPYK2FhakUtA1s2Mgck2FmdnbvQAz83CW5mf9jdnZuYTy5iX8p+BcAk4tRcWJvDOSSJDXNdXfvMS6JASvRdBribPbYXTGpFYPPo3Ix4Ek2Dw9nySyhMY8pAsASYiIUr4h0lWIsiGwFeDKPaEyvJUjBWIkaYXwVAO1o3lhec20X7D8P/jlAG6sGoPccKDFNHxrjgYDL5i5q4uXn2229XJzE/+cAlkcWQGpCNEZDDjIYAEJI5hIAhfCYuwFoFaiZpMEBpF7ILYHX3NUDvLFow1EQbQZwkDQD6D3k1r5mCNG4XDXAW3aqr/ed67dqAMscy54MqbStmIMAz9bTtqG1C3oDSBVIBovbK1OlAwlK3gEp+ffm3pQFUHQi0iqwDu2vUWg7nX0fCkB8BxBTFSC0/QE0CA2Aq+hU/Lx9jZqkXqgxtzzg7eMnalJ7wWFOASwP2L3soyatF/CwyaUBWB5qBZZPq5Po6ZieciVJz2EetQJWeehSUGFSLv6cJ/cRjjU3bjb4+WYAAAAASUVORK5CYII="},{"n":12,"coat":"Black bear","eyes":"glare eyes","mouth":"open","acc":"flowers","bg":"starry","rarity":"Rare","owner":"4GFK…5bLE","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABtklEQVR42r2WMU7DQBBFXQMSCgVFKpQKGg5AnSoNEhXKAVJQIGqQOICPwAk4Ch0VHR2KRIOgQLSLxtK3vkezO7vrJJG+HNk7899+79pu9ienYZv6/XlPXm+2DeApC2B6uFfcmGv+vl7rAKSJaDY77/9b1/m8V5MNIIXz+TKsVo/9kZuKLp+ugvzkiHMYD6GmCgDNbpbXg2br9nlg2sO8LXpjXVMEgAjRCIKxToaPAEENQ1hrwU2AATjalLgmZR4FkL2LFJBEjVBftQZ4RUsSWJSeMG70LtC7Ac1jIPqaN/PsBNhEfqkk9HULQj+aXQDe13qW7cNtpzEpuADWIoQxDDVIEcBkehFSwozWbTswtwAAIWNhzr0kft0/C4BTYDNLevZefxcAELwWvFuQa+4C8LPeWgefd/ed9P3XL60qAP02LBXqvDSa3NhZ3x8vWeeqAVLmuN9iyIptRQ+iScWfAvB2wWgAKwHP3HsgjU5gpwA7S+D4ZBG0Yu+AsWvA8jIBUhC1s4/5RAEAUZJCqXkWQO2TcGMA1m3Ax6bWRgEOjs468dcxf+VassahT1UCnAQLTbX0uJze/wHMhdO0K1zUAAAAAElFTkSuQmCC"},{"n":13,"coat":"Honey bear","eyes":"open eyes","mouth":"smile","acc":"fish","bg":"cave","rarity":"Common","owner":"zi7D…VzQ2","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB1ElEQVR42r2WMU4DQQxFXQAhCQQUrYQU0dLAGTgGPTeAy9BwgEh06TkDHQ0SJ6BCSNSLvNJfHMf2eEaCSF+72R37v/V4Zpe641nPmk/2B3n/F9PJzjVP1jh5TZ5TFsC79i8Aq5Pfa0REGQDEVAHI5EjCerztxvOSuRejAeBFUaK3h6v+6/lmPCJpFIPxEGK86lEm2efmfitZJBjrGM+HPHMORCJIV8Q6WjGA4JVUXQGdLCMZ01QBWQVUokWIbwKQHa0bK2teWjk8JSHA5ep0q7FaADhH5EE15vyLgPT9DAR55gCQ5ddL7ft9Pci7LwE8CPLMAWA1IYxhqEE8AAuCPHMJYZlbABJCmnOzeRAUmVtVkGaWoqe3IEKA64tukO4FPL2shGWO+CYAGOvG0hDa3HpnWBBbANHct2xCMi6aChfAKru3ErwVYE1HGiAyzzZhaTkWAbJP/mcAVgVK5jUbUlMFMuZ369d6AGsL9irABpEsiGhLppp3AEz4Ph+fXj5GSYiadwKdL496VmkL1hCeMKZUfviOAB5ETS/Umu8AaIjWz7EIQPvtAEgIbxrwsalVArC8TADW2WI6SH4dy69cS9Y45PF8aDk/7EvSRrODPVN6XCb3D7I9Viik4hD5AAAAAElFTkSuQmCC"},{"n":14,"coat":"Cinnamon bear","eyes":"sleeping eyes","mouth":"smile","acc":"mug","bg":"starry","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABmElEQVR42sWWPU7DQBCFt4ZIKBQgRRSUQEmZI6TkGEHiANyDhhNwDU5gKkQRiZQ0IAqU1pEtnjUa5ndjoHhykZ15n9/OZl32p2ftf6qM2ezrc5VeEwKYHeylYVDTPaF0Aii8uTw2m1g1zcvHIKm+WI0eri7a5nYxPNHUqsF6qKvRzF0ANFvfLYdmNFJJMEZNVQKIEI0gnoj0lGoAvnlvdAA+nUiAN4uI1ljm7hZ0xUiiRqi35iZ0CvhgRc0jJ6dEjlXt20eObfkN8wyEC0Dj58ft7fG+l/TbaADSEMIYhhTESkC6K8p0Nm8t8W2AmQRAIWDu9Q8B0BSomaTRAQBBZwFvT5OoMXcBpMHiENxcujOqAPhtmBXqvDRKNHbtJGgnILodJWseGcLm+TUMUSJHLwMAcwpRBSAl4Jl7f0g7J+AZX89PfuhvE1g/qVIBjk4XLZd2B7gQgnFf8w0geYkAFsQuCaQAAJFKQTHWzEMAtf+EdPgsDxdA2gZ8bHKNCjA5PO9Fv47pV64kaR36VCVAk6BCUy6+LtJ7C/DmSGXSicHRAAAAAElFTkSuQmCC"},{"n":15,"coat":"Glacier bear","eyes":"open eyes","mouth":"open","acc":"no extras","bg":"starry","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABf0lEQVR42sWWMU4DMRBFXUMkFAqKVJRwBY7AHbgDBRWXCKfgCGlTQkdHlQ4JUQSJAmgXeaUfDV9jz4y9SiJ9JdLuzH/5Hns3Hc8vhkMq9RR/f226rrsBFidHYThZ8/v50gaQm2Td3D3sfnuMIzWp1mj5uB5Wz5vdN5rWanA/pNXIpUmeZk+v7/+a1QRjrgklgAjRCOJEtG+tBhDaLJgJcDOPZE3N3ATIxUiiRagPLwFPNA+W17xrF/BuaAWwDqMUMc+fGhBft+J3Acj4eau9bX9Gla5PAqANIYxhyCAhgPniaqiJI4eZBiAhYG71dwHIFKSZpskBACFnwVoCaZ53QTOAdsZLiI/b+1G8/vzMaALgp2FUqLOWInljL+2E0g7wzkKKmnuH0AuRPFvvIABaApa5dSB1J7BXgL0lcHZ+PbBKz4DeGdC8VIAaROu/L/kUAQARSSFq7gJoPQknA9CWAS+brEkBZqeXo+TbsXzL1aTdhz5NCcgkpNCUxfd5ev8BGsNO1zKld2cAAAAASUVORK5CYII="},{"n":16,"coat":"Honey bear","eyes":"open eyes","mouth":"smile","acc":"mug","bg":"snow night","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABlklEQVR42sWWsUoEQQyGU9sIYiGHla0vID6Cvb29jb2FnW9g4wNYWwr2YqeFCIJ4dm4lotgJI3PwHzEmM0lu0YOfXdhN/u/+zewOrUy2StXw+lVw/pei/zANA0yWl8KNvTXUa1J1urc6P/cYR2qo1ejhZLO8X+7Oj2jaqsH9UK+GPM3ezg9+NGsJxrImBIAI0QiSiWhHraYF0U1ANvOI1yz0CGoxksgI9SkAPtFysLzmC60CuRqyAAu/B3jT+msByeseCFrb2CmWZPxyqX0+ns1kXQdAy6MLoA0hjGEoQUYDAIRmrgFwCI+5G4CnwM00jQ6gzQL+PU8iY+6aATlYEkKaa9+MFID8GkaFul4a5I3dWgnWCvA+Doqae4bw5n7qhiDP0osAwJxDpAC0BHrmmRcSRT5APeP97fVfSm1IsgkMz7emwgDWRiQKUGvCAC2I0RO4uHoqlqKzYBlXWR40ffkolrLbMTn9LQ+6vhuKJesxYLMpZQG0PMwEDo+OZ+K7Y77L1aTdhz5mAq14+KPgQlMpeZ+n9zf7z5GbPz5lJQAAAABJRU5ErkJggg=="},{"n":17,"coat":"Ember bear","eyes":"wink eyes","mouth":"smile","acc":"scarf","bg":"snow night","rarity":"Rare","owner":"DHMp…7ZSg","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABkElEQVR42tVWoU5EQQysPkOCgZw8icGSIFAYvoDwFXgEDkEQfAryPoAQPJgz4OApBFiSJXtJL72m3U73HiG8ZLKXvG1n3mx7W9qeHpS/BP0LAdOtSToxGkNRkoqz2c7qN0KciaHh49tNdHO4V+anR6uVk7bIeT8jiiEk2eL6fC1ZC0ysY1IC2EJOxNCOWKsV0xIROqCTIZAxGx1BDWYnesDxXQJkRevCQsmhLkDaqvfrkbalMcnrI2MQEbQ7OyketP263Ya72yX0ey2gxREKsIqQiZlQCxlNAIuwyC0BUgRCDguQLkgyC6MLsGqBv1460UMO1YAuLC1Ck1t3RpcAfRtmwXGRG4TaXnF/vF8+356gVbtRr31YgPf3i5LXFW1HQlrPa0MLkQDtRMqBiLxCH0HoQOYOQAS0HEhNRL/hQNdIlhWRvZrDiWhTAeFENH94KR6yteCRtzjo9f2reOgdx7SAFgc9Pg/Fg3cMPGxqeAJaHK4DF5dXS8jpWE65Fqx9nMd1oGWPPAoJTqqh9yG5fwC8KKlKClyY0gAAAABJRU5ErkJggg=="},{"n":18,"coat":"Cinnamon bear","eyes":"sleeping eyes","mouth":"flat","acc":"beanie","bg":"campfire","rarity":"Uncommon","owner":"DinK…ZRZL","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABu0lEQVR42sWWMU4DMRBFXSILKQghkBAFBdU2SHABOqSUHIOCGnEEehpOQE+TlhOkoAkdFUpFwQUW2dlxZmdnxmNvohRfkbLr+c/fY6/d6WS/3aXcuAK+09YBPPvf389nlPS8D+lrAFYDH65OSBHPAHh2zHzxm8RBOM387a5p50/T9AtFZzeXrKJh9z4ojJHMswBQ7PvlPv5KxlR4TGUCqwihUJDVHATjIIXqBMYCaOZZgDAYklguZkWCmY8AWHc0bSyLhjun+hzwxea5dS9KoMa8BCILgOPHp1rsi4/XKO7ZKIDr80kU3o5YYAyGGIRLYF3PAAAvYwjOnAPAENRcgogA7fsta86lgM045QAohNNmjyFwL+SWQDMXASRj2lhSEvIZoKfgcmtfcwjhcblecNrsNXMtAW0nUAgnzV4ytzahBUIFsM58awBcAjlz64EECtu/KIFNA+w8AXEbSt+ATfZA2oYXxwdtUFqXr+fuaNY/RGNnD74JACCCeVBNL5SaswDLxybKchhZLyRmgGlz1JO0DHDZpLIAYL8BAE7i7HAvCt+O+7fcobj3oA5nLgLQxqRGUJSKvifNGusfOdwlNh2g7eMAAAAASUVORK5CYII="},{"n":19,"coat":"Black bear","eyes":"open eyes","mouth":"flat","acc":"fish","bg":"campfire","rarity":"Common","owner":"r7zf…27T4","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABwklEQVR42tWWMUoEQRBFO5RBWBExEANZjDYw8QoLgieQPcAGBpoKggeYgwgbewkTMxNjEcTEI4x0y5+pqanqqulRxIXPLDtd9V9XV/d2OJhtN3+p8E8AqoLk1U8AVEnz+Un73Wfsjwm5RMvlqlmv79pnl1SPwXjIigmeZJerC5ZMF4yHMaMAvkuIRBCviPSUYnIQZgV4Mo9ozKQliMGoRIkQXwjQdTRvLK/5xF3Q3w3lABPPAZo0fnJA/L0HwgSg5edbrb69StLeFwOcHs2S6HakgjEMOQgH6PI5ADCYQsRkb3XdM5cAABHHcnMNIuTMpSpQM0na7DUIEwAQtBesJciZqwDNw5lozBtLq4R+BuSrEKy1LzmEaJzVCyG39pr55+uj6zdPLwRt9po5Sh4NqbStaFUh5MqfA7B2wWQAqQKWufdAKq6Ax/z6/vl3KxANcpIgTAAOof0HwCS+j8/N00crCuGpQLsNj/d3mii8aF7qdChZEJowxpo9fFsAQERznIpje2GsuQjwfrNIss6DMbciN8D5Yq8nbRlw2eTyAFC/AQCtxOHuVhK9HfdvuUNJ45BHMlcBeGNyIyTl4uO0WVN9AfEgX5EoM652AAAAAElFTkSuQmCC"},{"n":20,"coat":"Polar bear","eyes":"wink eyes","mouth":"flat","acc":"honey pot","bg":"snow night","rarity":"Rare","owner":"98Go…4sRB","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABpElEQVR42rVWLU8EQQytxpCgyAkE8k5i8Dg8hh/BH0CcQ+xPwZOQ4MmhMAgUKMIhOAFIkrl0k5Je03baGa7Jy+zlpn1v33Y+YG9yXDwsV7+lNqcHsM3iXQL4m092d9KFozlQK4K4vln8PUeIMzngFfr4/CkYNFJRL4fmE2o5ECn2/PC4UcwDEcuclACykAoRpCPaqOV4IqoOyGIR8JyuT4DJ5EQLKL9JAO9o2VhR8q5VIFdDq4DufSBDisFzIiJg//C0WJD2y+VGIf+XAjyOqgCtCSmm06MRUogUgNt6kwASgcXehmGDXBNAInBu5O3DArgLtfDs15yoCtB6gYIv0xp5cw/IxrKcsPaA5iaUp2EWlFdzA6K2ZxzQ3EgJ8MijTRgVAZ792xLAV0PKAYyLkwMX3oakOpA5AzC+7s5ceAJSNyLLgeF8NhLhSOC//02AdgZwUksAoluAJcISIJG6Fd/evxQLWi+0kHsc8Pr+XSxYvRAh5wI8Dlg8LYsFqxfosilhCfA4TAcu51cj+O2Y33I1aPOojumAZw//FBxUVELOi9ReA6erxgxleoCQAAAAAElFTkSuQmCC"},{"n":21,"coat":"Ember bear","eyes":"sleepy eyes","mouth":"smile","acc":"no extras","bg":"dawn","rarity":"Uncommon","owner":"16By…wMiU","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABiUlEQVR42tVWMU4DMRBMjYRCgRSUMkoVCR5wFPQ0VEgoL0jJGyhPFDyFDr7CA5Co+YCRT5pos5q1vYsBUYzOSrwz47k927Pz4SIB8+XJBPlbTzD+2b8wsJwfucVYjdtAJsnYrhb7cYuwVeMykAsfLzfp9e5q/wRpSRzzAVnjNgCyt/H+gKwECOsalwFECCJAJ8KerAYmQgloshbImmoCw/WQAEzIY6SAJCJAfebS/IBpACZYY7WKo97irxqAiejqpXg4gWj80sTny8OEkAEZv/7cPp6fJrD/uhlgTQhhCEojVgLgDvfA+zgeiDMDMJHn6tWHEmApSDEGK/6wAdYLWL1MoiYe7gHdWNqEFmdnRugz1KehF6ir7oS3u5sEYEIe13ZA691bX4LmB6iBknhrEzITLgOtK/8xAyyBmnhtQ/p2Ar9q4M8TsC4i3XugdCUrHUTe1ZtXss36LFnw9oIlXtKoGojuhN0MsNeAy6ZGVwOL0+MJ8nYsb7kMbB54QgnIJCRAqqHntXB/AUnZO/SBDrurAAAAAElFTkSuQmCC"},{"n":22,"coat":"Brown bear","eyes":"glare eyes","mouth":"open","acc":"no extras","bg":"aurora","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABu0lEQVR42sWWsUoDQRCGt06TViy0V3wGe8HWIg8QMJWdErCzusbX8AHERxB8gwh2IqRMbXMyC/8yN87Mzh5HEvhJwu3M/93s7uym2fykn0Knq5uilrg0haGnKkBk4PF8VjU+e34oov8UE4FJHjUlIV1fHJXfmiGXF6N5JE7NRYHrq/P+5fayfCOparxY5mcYD/EYDSRpyQCAZB/dapDME4xljOaRATL5YvmvjBSIRJCsiPatxXiVKwBcgKCkMllEPKZUTfEwATCfFIxKjBHiNQCo9AELApXg8+sJ4/h68TzURiQheHILRD4DgNlbPADeB7gJfbxKyOc1iGorlvtavuXna5c1tgohAG0RwhiGEmQ0wHb3a07DT9cNzDUAQNDYiHnoNJRV4GaaWt4+VAFtLdSmIGoeWgPW1iPD7d06S86/PDNGAcjTsFWIq1UjRbegtROsHRCdjtRqHl2EUYgU6YAHAdAqUDMf05CaKrBXgINXwLqI7GUNRA6iKd4+1AlbqjDqNHx7/+ot1ZpR5E5IOTyPtPne9ZasacBlU8oC8DxMgPvHpyx+Ox7cchVp45CnGUBWggtJpeS4SO4/THt021KlypoAAAAASUVORK5CYII="},{"n":23,"coat":"Cinnamon bear","eyes":"sleeping eyes","mouth":"smile","acc":"nightcap","bg":"aurora","rarity":"Rare","owner":"YNsM…dw4y","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABxklEQVR42sWWoU4EMRRFq9esJFkBfiWST0AiEPsBiBVYCAkOtQaF4Qv2CwgWg12BGYEgIZBRZIPEDGnDbS4vr9PXZjIrTmYn2/be3r526ibT/W4IDpankZJ+bgjBPrIGLA1n00lWeH57GfHvvo+k14DmGh3PD/fib03QI8WOFuvIpvkKcP9ogF0zvvH6ZN5tro7jk430CWqwOOPkTDhCiL/dLcPTG8gJAfTxM2cTcsJutjjrPDJOLwZxUCIO2DgbANEAAxM+AQzUNo9FoB+W7fvzJRCWjCasGgj8pYAkakB/zQCI50DKBNdCqThvv1iwQkM9iKSJ2tmn9j5ruNwBVBu/xUT2KJbx87737+3TfUD7jw202596A1oRQhiCbGTQBHgZPlarf+KaAZjwbS3iqgEZl0yBxTRKZm/+HMtawOw5iRpxUw3IwpImpLg8A7I1kKpQ+TUsBf1yaThr7KmdkNoB1uVwpeLWIrSacKUn4GgGtARy4jUHUlECoxrYeQKpi8goNWD5EA0xe9NJWJJC1dfw4fm1S1F7HZMG+jRc877tUqSWAZdNScpAn0bSwMX1TYBvx3zL1dDaYZxiAzIJBoNKZDvL2L+hvt/HI5n98gAAAABJRU5ErkJggg=="},{"n":24,"coat":"Polar bear","eyes":"wink eyes","mouth":"smile","acc":"no extras","bg":"cave","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABpUlEQVR42rWWP0/DQAzFPQClfyioqoRUsXbJyswXZuc7wMTKV2Bg6x50kV7kuM8+9yAnPSVtzn6/c3xJZH+36ovWi+tB3m/vP6ZarD6XuQBERFIA2+WCBulJh3s/sSfEeADII9EqSpKi17f38ZzNxSLK0Yvx4CVawffPqS8DRySNYjAfqsVIJtnXx+ckWSQY2xhWMRcAJUQiyFaEHVlMVIVqBWyyjHTMn25BCUYlWoT4JgBAsMbKmkc7JwXQHR4mjdUCUHI0AbSYl6FjMhDimQNAl99uNwx7nQF4EOKZA4A1IUbXPQ+yIB4AgxDPXEMwcwagIZg5g5DInFWhNjIAGiIEeDnuB9leQLNh2OswR3wTAIxtY1mI6AUEMYgJQHTvWx5COq7WCxKtPjL37r23E7wqUIDIPNuEte1YBciufDYAliw7ZqvAbADsETx3BcLngPcO+M8eGAGedpu+qPYIbgXwyg/fEcCDuKQKl5qfAViI1s+xCMD6nQFoCO824GPTqgbAvChA0eN2OUh/HeuvXCY2D3k8H9mtb/uarNHq5orKzsvk/gU7RAInlPe2RAAAAABJRU5ErkJggg=="},{"n":25,"coat":"Brown bear","eyes":"wink eyes","mouth":"flat","acc":"fish","bg":"starry","rarity":"Uncommon","owner":"zwVA…TYB3","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABi0lEQVR42sWWvUpDQRCFt45CiEWQVCkN4gukSR/wQWJj7yPkQYLpfQkLsbER8gSBgIXY3rCBcxmH2fnZezWBww1kZ87H2dnNTRejm+acSl2Kv792/wMwGQ7CjWnNz+G9DiA3ybq/u26/e4wjNUlr9LS8bZ5Xi/aJploN1kNWTfI0e10//GqmCca8JgSACNEI4olIT6kGENIsmAnwZh7RGs3cBMjFSKJGqK+aATrRfLC85p1OAT8NtQCdLqKoef7QGg9E0q5VHj8/bp8v65P471UA1nGkgjEMOUgIYDSZN5r4NsBMAqAQMLf6uwBoCtRMUu8AgKCzYG0BNc+zZQKUFkl3fCmJ0h1gpZCsva+5hGidtRXJG3skASmNEIBm7h1CL0TyHL2zAEgJWObWhdQ5AY/54+bjbxPIBpokCBVgPF02XKX/AJjk3/Nz+7ZvRSFKCUheIoAHoiSs8ZirAICIzELU3AVQexP2BiBtA142uXoFuLyanUTfjulbriRpHfpUJUCToEJTLr7O0/sIrMDOaPrxCtsAAAAASUVORK5CYII="},{"n":26,"coat":"Cinnamon bear","eyes":"open eyes","mouth":"grumpy","acc":"beanie","bg":"starry","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABkElEQVR42sWWPU4DMRCFXQMSCkWQUlECDRIlFXVKjkGRA3APGk7AEdJyghQ0FCmoUJpIKIpoF9nSiyajsWc8tpJIT7uJd/y+ff6Jw+noejimQkvx5PwkqSvA9ncpGkm/bX4+k3LtuP9bL3wJ4A1n95d7b4t7CsDbeE01QCx8f7odFi/T3RWdzh/vRMU2PA+hxgWAzr5fn9M1Z8xFa1wAiBAdRVnNIdRRCGkuqAm0ApTMVYBYjCRWX/Mq4c3dc4DOaD6xLGpeBXw1eAGadkJuHj8lIN5ugVABaPyIFN9XH29JufYuAJiEVDCGIQepAhhNHoaSeOQwkwAoBMy1/k0ANAVqJqk7ACDoXNCGwGquAsBAmvnUmLfTPUADCdrYezYhWqelsQcQDyO52HMrIbcCrMMRLGNeMraAlCCCZekdBUBKQDPXNqTmBA4KcLAExlfTgSv3H9A6ByQvEaAE4X37nE8WABA1KdSamwC8O2E3AGkYcNjk6gpwdnGTRE/H9JQrSXoO/bgSoElQoVMu/pyl739ECDoObDmayAAAAABJRU5ErkJggg=="},{"n":27,"coat":"Honey bear","eyes":"sleeping eyes","mouth":"open","acc":"flowers","bg":"dawn","rarity":"Legendary","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABsklEQVR42tVWsUoDQRBNLUgsAkpqK0U/IJ+QJiCkt7RMbWl5vU0+QCztLPIRVoKCbcBKJGC9MgdveRlmb28nq2LgsXebnXlv387u7eBsch6A4figBffVhJV/8C8EjId7xWSIkRYoFoDA5eUoPmsS3a9jnl4+IiCilwAZ/Hp7GjareWxZiGC2vAjykxZ9GA9IDJMXCUCyz4dFTCb96+Z+izSKeZ5GYsS4HICFSASAWDvDLYQghoW7HGABbG0XOAbkyV0wmU4CgAHyDBfghAeIl1w6P5AUABFWYfUlR3wqf1YARHhnz+RuB7z2s4jN400LlwC2n7edvH+93bWw/qsmwCpCEIOQhVR1gJdh3TRb5JYAiJCxmnwnAewCk1lIzd4twKqF3BJY5O4a0IXFIt4X1y30+uuPlmsb6q9hKRCXPQnnV7MAYIA8507A1NqndoLOD5gCusj7FqElokhA35n/mADLgRx57kDa2YFfFfDnDqQuItVroOtK1vUhKp198kp2cnwUUiithRR5F0dWgPckrCbAWgZcNjWqCjgc7bfg2zHfci1Y45DH5QA7wUBSDT2uT+5vQuc4LsWtPuUAAAAASUVORK5CYII="},{"n":28,"coat":"Honey bear","eyes":"wink eyes","mouth":"flat","acc":"nightcap","bg":"campfire","rarity":"Uncommon","owner":"WtBR…83xF","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABsklEQVR42tWWsUoDQRCGt5QjEJFgIRYWVrG08wUEexsrH8HSZ7C38QHEUrAJ+Bg2BqwlpQSsT3blv5ubzMzObiLBwE8IuZn/25nZvQ0H41G7TYV/AtBUJG+IqgF+EzxcTxzJmoHOrp46WXHBSji/P2mXr5fd9xBEN5SkQZgAMP96vknfESBnBEkxEkTQzGMgzKESc4hCFAD0FUCixfusSIhD25afb0kcwgSIwahEjRBfCdBPNmah1Hy4c5rSFgx3Qz3AaL1zoMQ0fmiMByILQMtP9338/f3xmMT/Xxvg9GicRLcjFYxhyEE4QJ/PAYCHKYRkLgFQCG6uQQTLXKoCNZOUA+AQWQBA0FnItcAyVwE0Yz5YWiX0M8CuQsj1vuYQonG5WQjW6i1zqwLWTuAQQVu9Zu4dQg+ECeBd+Z8BSBXImXsPpPblvK4CmwLYegVWADiE9g7Y5Ax02/B4f7eN6vozv0s9yr2I1l09fDsAQETzfkjKZqHUXARY3E6TPIeR91bkBriYTgbS2oDLJpcHgPqtANBKHO7tJNHbMb3lSpKeQx7JXAXgg8mNkJSLP6etmuoH0HCrxVUqvHMAAAAASUVORK5CYII="},{"n":29,"coat":"Cinnamon bear","eyes":"open eyes","mouth":"open","acc":"fish","bg":"cave","rarity":"Uncommon","owner":"Qor8…R426","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB3UlEQVR42rWWMU7DQBBFpwBCEggoihQpoqVJSc8FKDkGBVDnHjQcAMExOACi4QCUiEsYrdG3xuM/O7sWRPqyHe/Mfzser1dWx7NmMZ0088l+q3SdZK+9/5iiWH0uXtBfAKSJ6f9EREYBbE6GSSIAxEQVEkaokyTdXqy788i8JIYCsETP19vmfXfVHZE0F4PxEIvRk5WSZJ8PN71kOcHYxng+HYBuGJQQiSBbEXZkMTmIsAI2WYl0THEFGEAKRiXGCPGjAHRH28YqNS95c7IA281pr7HGAKQcowCYefrlgOz9EgjxzAGgy29fta/Xx1befQ3gQYhnDgDWhDCGoQXxABiEeOYagpkzAA3BzBmE5MxZFbQZUwmAhhCsgmzQ5fmqle2F6BHAHPEhAKsAjG1j9SDud78yz99+MxhED0DfQDXs17BWiIt6QXKzz5l7z957E7wqUICceWkTRq9jCFA6838DYBWIzGsWpFEVKDG/e/qoB2BLsFeBZJATg8gtyVLzDYBJup+OL2/fnTREzTdBzpZHTVK0BFsITxgTlR++HYAHUdMLteYDAAsxdjuWA7B+AwAN4T0GbDatIgDmRQGS1otpK7071rtcJjYOeTwfWc4Pm0jWaHawR2XHleT+AeuCxEXQCR+yAAAAAElFTkSuQmCC"},{"n":30,"coat":"Black bear","eyes":"heart eyes","mouth":"smile","acc":"beanie","bg":"snow night","rarity":"Common","owner":"29bf…1BbW","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABpUlEQVR42sVWu04DMRB0TYNEhVLeB4SWkiIVFSXKB6RIwQ9Ego7ivui+AKWHggoKBLkKJGiRjGxp0N7Ka6+9RBSje9i7Mx6v79YdzU79f8JZgmeHBxF7F5AiCe8+3+4jpHGzAKyw6+aT1eKeCuBjPKZaQAhcLJZ+tbr+vSLpcHaSRBjDfAAxTQKQbL28jFeJmIPGNAmAhUgUoCUHEFcSUXTAKsC0BSEYToyPQxWwcpWA8f07ewp4YWlgPgX8NLQKMH8HaNLxYj25lsY0Itxxd+4lcPtDciA895uriNQYFZDjKApAEVIRIMYe45k7YxYAESHZa99PVp0SADfCXA25WgB1gZKlULN6lYBULWD11IkWclUNALzq+RZI34DmGuB/w1ogruSG09pO8fGyVb1rFpAjx74HQgpehFoRLmd/TkDpFJgFpBwokUsisgJqfkBWAVUd0T4caGrJ/rIGmjoiq4BiRzTcPXkJtbUgkec43PPuy0tobce4gByH2z6MXoK0DWg2OSQBOQ7Rgc3NbQTtjmmXm0JqHvKIDuTsoVtBgaQcfJ4m9w9c1nMii9bJdAAAAABJRU5ErkJggg=="},{"n":31,"coat":"Black bear","eyes":"sleepy eyes","mouth":"smile","acc":"mug","bg":"starry","rarity":"Common","owner":"rRXu…qe1f","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABl0lEQVR42tWWsUoDQRCGt1ZBYpEiWEgqbXyA1Kl8AskDpFDwBQQfwCezi5WVoGCTRrQQ25MN/Mc4+XdndhIVi58Ll5v5v/t39u7S7uC4+0ulfwEw2t9pbixrPl8XMYDcJGs8Pu1/e4xbatYAPt4f+0bT6aybz2/6I5rWzHE9ZNUkT7OL2fm3ZjXBWNc0ASBCNIJ0IuzIagDBZsFMQDfzSNbUzE2AXIwkIkJ9aQnyvLl2gR4sr3loFzCI6N17tm36CXMvhGsJZPx6u91eX63E/vOmYAKwIYQxDCVI6zKkwWjS1aSXAWYMQELA3OrvApApSDOmrQMAQs4C7l4mETE3AdhgaQhtzt4ZIQD9NmwV6qw0kjd2qbeXO9e5MEDNHOueDaXkEC4entwQybP1StuQCeYSIgTAErDMrQfSxglYxpeTwzX9agLL5/uiigDDo7NOq/QOsCCYca4BAPOiADWITRJoAgBESwol45K5CyD6JJTDV/MwAdgy4GNTa6sAewcnK8mvY/mVy8SuQ59QAjIJKTTV0td5en8BakqexeF6u3MAAAAASUVORK5CYII="},{"n":32,"coat":"Cinnamon bear","eyes":"sleepy eyes","mouth":"grumpy","acc":"beanie","bg":"starry","rarity":"Uncommon","owner":"43Yr…fQsh","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABiUlEQVR42sWWMU4DMRBFXQMSCkWQUlECDRJlKuqUHIOCA3APGk7AEdJyghQ0FBRUKA0SQoh20Vr66Gc03hmPl6T42mh3Pf/5e+xs2p+cdrtUahk8O9zL+ncAmHx/vm7c+3p/ztIg+N7Px6oMwEVLM7y9PN6YLX4zgHwmx1Qn0A98vD7vVneLvyuKLq8uVPXP8D6EMSEAFHu7v8nXkrEUjwkBIEIU6uU1hzCOIbReMBNoBRgyNwH6wUhi/bKsEmYe7gHuaNlYHjXvArkbogBNB1HUvAbCBOD4ESnA1k8PWdqzEIA8FXk7smAMQwapTmAym3dDkssAMw2AIWBu1XcBcApspml0AEBwL1hL4DU3AbTG4oZkkNIZYIEka+0jhxCPs9JI3thLO6G0A7zLkWrNvU3ohUierbcTAC0By9w6kJoT2CrA1hKYniw6qdJ/QGsPaF4qwBBEdPYlnyIAIGpSqDV3AURPwtEAtGXAx6bUqAAHR2dZ/HXMX7matPdQJ5QAJ8FCUSn5nqf2L1wBOPmRsAkfAAAAAElFTkSuQmCC"},{"n":33,"coat":"Black bear","eyes":"open eyes","mouth":"flat","acc":"flowers","bg":"snow night","rarity":"Common","owner":"2EvH…Ptk8","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABqElEQVR42tWWP0oDURDGX20jWEnKPYC1B0iVRrCSHCCFhRcIaGeRI3gCj+AJJAfQ1hQiptLCVngygW+ZHd782fciYuBjN7s78/2YN2930tHkNP+l0r8AmBwejE4cjUleElLXnfTnpfv8uhcTBqDA6XSeF4vr/siTks7uzjP96IhreB5CTBUAkl3OLwbJ3lb3A9Me5nnWG8sYF2D78T0wp0AkgmAsK8OPAEGMB+FWgAPw0lriMU1LQMGoRI0QXwXAO1o2VtS8aRfI3VAL0Pwe4EnpZwHJ+xGIdNzNsiZZfpQU/1fLq520+wCwPFyAUhPCGIYSZG8AgCiZlwA4RMQ8DMCrwM1K2jtAqRe8JYiah3pANpZWCe0dUN0D8ms4VojzqpGiZef6fF2HrlUDWOYoORlyaVvRg0iRrWetvdULTQClCnjmkRcSzR3wofM05gPUChD+GP1WBUYBaINISw9UTUStAO5E9PD4kjWN7QXN3PJIm/evrKl2HJMAlkdaP22zJm0ZMGxKaQCWh1qB5c3tTnw65lNuSaXnkEetgFUevhRcSColn4vk/gFen071NiL6egAAAABJRU5ErkJggg=="},{"n":34,"coat":"Black bear","eyes":"open eyes","mouth":"flat","acc":"fish","bg":"starry","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABl0lEQVR42tWWsUoDQRCGt9aAxMIilaTSxgewTuUTSB4ghYU+gOAD+CCCb2IjNpZ26QKiRbA92cB//A6zM7N7J2Lg50JuZ/6Pf+c2l/anJ91fKv0LgNnBXnVjrvl6f2kDyE2y5vOz/nvEuKYmWY0Wi2W3Wt31VzS1arAe8mpSpNnV8vJHM0swljXce/v5ZgMgQjSCZCLaVasBhDYLbgKyWURcY5m7ALkYSbQI9U0zwBMtBytqLp8C3vvwOcCD1QIw6CCS5vljAcn7EQgXgOOXj9r97fVOpfujAGhDCGMYSpAqgOnsvLMkI4eZBsAQMPf6hwA4BTbTNDoAIHgWvC2ImrsA2hlfSqJ0Bnggydv7lkOI67w0UjR21sf6KfRbM4BljsizIav0KHoQKfLoWXtvzcIgAC0Bz9w7kAYnEDG/eXj93QSygSUNwgQ4Or7opEr/ATDJ9/P18XnTiyFKCWheKkAEoiSsiZibAIComYVa8xBA60k4GoC2DXjZlBoVYHJ4uhO/HfNbriZtHfo0JcBJsNBUSq6L9P4Gnh+F4bQZYoEAAAAASUVORK5CYII="},{"n":35,"coat":"Brown bear","eyes":"glare eyes","mouth":"smile","acc":"beanie","bg":"snow night","rarity":"Common","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABp0lEQVR42sVWMU4DMRB0TYNEFaWkRYiWDupIPASeAAUdxb2EB1DcCxDUUEADFXAVBbRIRrY00Wa1613biRJpdKfYuzMe754d9ubHcZsIPcHz3Z2MjQuQSNJ/P59PGdq4W8D0/Vdc4dnhbGW1eKcC+BiPqXYgBV4uDuLt+cnyiaTj6ZGINIb5AGKaBCDZ43CRnxoxB40xBUj2w0IkSvCSA4izRCwd4ELgQK+Ari1IwXBiehmrgJU3C6AVnZxAUVrAvO4u4N2A5JoQPmat3O0AJUm/khN83CMizPYXkSIVI955X/NVvt4NGZYLnIMilAZpO1KAGIRcyNoEQERK9jEMK+SSAIhIcz3kbgHUBUomoWb1LgFSLWD11IkWclcNaK3Ht0Dae6BJAD8Na4E4y43gtV3rBK0DvNsRasm9RegVEUr2b1WA5IBF3vJBCp4zYF0C3IfRphyoEiCdAb010HQj6hVg3ojG+7eoobYWNPISR3j/+o0arI+RBQgocYSH5ylq0LYBl00OTUCJQ3Xg6vomg96O6S1XgjQPeVQHSvbQraBAUg4+z5P7HzpKvY1nTLHFAAAAAElFTkSuQmCC"},{"n":36,"coat":"Brown bear","eyes":"open eyes","mouth":"smile","acc":"beanie","bg":"aurora","rarity":"Common","owner":"53ib…hsFe","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABuElEQVR42sWWsUpDMRSGM3fpKh10V8RH0FlwdfABBPsCiuDm1MXX8AFE+gSCs0sL3QRxFF8gcoJ/OD2ck5zchrbw09vmJv+X/57kJozG+7GHDqaXWS39wiaGk/EoiZtLVQE8N5KJnCn99/v1kUTXh093WWj3wIQSNWZ4cby3NltccwBAWH0sj8Cpuajj/flRfL45zd8YdH52ooracD+EPpoHKfDoZIQY7H02Td+WsRTvwwGkRwKYXF1HEm9EhBiI5DWH0K8EQcoAXICgBDYFyLWgeJgASf8pIInvxbxJmLkFAOV9wILQCssjvgpKHupGJCFazTmAubeUAPg+wAelTwlIttcgqluxjB+R4vfyZZZktXcBQBFywRiGEqQbgPYYYKYBcAiPuRuAp8DNNHUH0GoBs+dJDDF31YAsLAkhzeUeMLgG5NuwVehXSyN4Y7dWgrUCvI8jtJp7i9ALETxLbycAWgI18yEbUlMCWwXYeQLaO2BrNeB5EfWYvWsnbElh0Nvw9W0VLQ09jkmAkkdYfP5ES9ZjwGFTygIoeZgAtw+PSfx0vHbKVaTdh3GaAWQSXBhUSt7nGfsPsJSKaWMFEp0AAAAASUVORK5CYII="},{"n":37,"coat":"Ember bear","eyes":"glare eyes","mouth":"open","acc":"beanie","bg":"campfire","rarity":"Legendary","owner":"oKyu…Lq64","img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABuUlEQVR42sWWsUrEQBCGt5QgnIgoiIWIVRoLSwvtBJ9AfIorxUc4LHyUA5u8h433ApLaF4js5v5kMjezs8nenQc/B9nd+b+Znd3Enc8Om/+UywtQrLVzgEJ89vvzFaSNbwGgzfDl6oxlWwgAhbFmNEDRvN+VTfV83/0jaPVwIyqMredDPcgEAARbLeYthGLMRddMBGhLiEBeqeYQ1lkQZgVyAbK2wC9GJervapSQeQZA39G+EmhKS5i3hVMwPA0IroHwMSvz5ApQE/+LVYKPp0CYAPRc8yzr5UdQThVEgNvLWRA9jlQwhiEH4QB9vAQATKYQkrkEQCG4uQbhYuZSFaiZJAuAQ5gAgKC9YG1BzFwFwGDz+Tgw1o5eMJ2/tWL7P7wD4lVw1t7zt1uqsM7qBRfb+5i5tvfWSeAQTsteM09twhSIKEBq5jsDkCpgmadeSJMrsFeAvVaAQ2jvgG32QHcMr0+PGq/uIlotwmVkvYhys4dvBwAIb47bcGwvjDUXAerXMijlMrI0GuCpPBlI2wZ8bHKlAFC/DQBaiYvjgyD6dTz8yt2UNA9xJHMVgDcmN0JQLj5Py5rqD5m00iPq4aDZAAAAAElFTkSuQmCC"},{"n":38,"coat":"Brown bear","eyes":"sleeping eyes","mouth":"smile","acc":"flowers","bg":"starry","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABoElEQVR42s2WMUoEQRBFJ1ZB1kBkI0NFvICJ+YAI3kKP4BHmCJ5gD+AljDYSVjA1VAzEtKUGflMW1V3VNcPqwqfZ2an6b/9093S3uzhJNX19vibrninq/j0Aabm/09yYagieRqgZAIVX50dqE625rFlvPrI0iK5mft+fpdXtZR45COn64SbRh0Zcw/0Q1ZTMTQA0exrucjO6/jasfplmmOc+G6MmlAAiRCMIxjIZPgIENRz8+33dngAH4NHWxGtq5iYAFSOJiFBfW0WuVSAnlte8tvzc+wBWQxRg0kYUNW+BMAF4/HzZ0feXx2GU9ttsANokhDEMOUhzAovlRapJPgaYaQAcAuZW/xGAXho1AJ4CN9MUAvCkwOcC/j1PImJuAmgTS0JIc7kHWCCd9ewjmxCvs9IozgFrByw9+9JKcCeAU0zJ3DsJvRCdZ+n9CYCWgGVubUiTE9gqwNYSODzuk1TpHTB1DmheKkANIvrvSz5FAEC0pNBq7gKI7oSzAWiPAYdNqVkB9g5OR/HTMT/latLuQ59QAjwJLjSVkvd5ev8AZ8zmfpzLZmgAAAAASUVORK5CYII="},{"n":39,"coat":"Panda bear","eyes":"sleepy eyes","mouth":"grumpy","acc":"scarf","bg":"snow night","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABh0lEQVR42tWXMUsDQRCFt7YRrCSldcDGwj9gc72/xsIuvyiFVSoRe62101QWZ8rAhhEmPIed2be3B+LC4xL29s13c7ObSTpbXOe/VPoXAIvTk2Zjdk2qmYiWy6vjZyZwy5oUGYmJVWQ4ZQ0FMAy3v8wieWuaAKyRSr7LGMedey2tiSCqGUAzCcDIAnS/AhEbXNVdA1jRmN4IBufX603fLkAI+0QlCDuvAN3ngBegBoBZCAHOL4bsyaYft5tWvs7brYgAUYwqgJjYp9SBNSLDZqcbQCEw1TgsgGaDDU4DYBZqY3YAWwsIYTPQGpyqASw6FAa283gGTK6BuU/CbgDR481lHj9eqGsXgPe7zgaXa6kn6AcgdkEzwPZrTwMwo/QKPACJnVpaK2ZEGZjUEc2ZgW4A9iRsaUybOyL2KKY7ooent+wJIbwfpFJwBBCPKEZ6//zOnqaehvbpoxjp+XWbPXm1oC0XyrtPPKIYbgbu7lc/KkHU/pTgferjZiBKD74KlJpa2fsY7wOxH5i0IW3juAAAAABJRU5ErkJggg=="},{"n":40,"coat":"Glacier bear","eyes":"glare eyes","mouth":"open","acc":"no extras","bg":"snow night","rarity":"Uncommon","owner":null,"img":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABjElEQVR42sVWO0oEQRCt2EQwkg09hWfwDt7BwEgDM1M9hUcQMzPdA4iRaCCsE4iJmAktPVBLWdTndc8su/CYhZmq9+ZV1XTR3uKwbBM0R5Lh63ezAha7O82J0RjKklQcn16v/yPELTEUJbq6uS+3y5f1lZNGMfw8I4shJNnj8+pfsghMrGO8fiGPvAZyIoZ2xLpaMZELqQM6GQIZM6kENZid6AHHdwmQHV2dkPWNwM9NngI9DZzcE6LvZW8OOyBJ6i9yQt9HRND+wVHxoOdav+X758+IzIWIIxVgNSETM6EWMpsAFmGRWwKkCIQcFiBdkGQWZhdg9UJWApQc6gFv9CrhcHI2QtdfnxldAvRp2AqOy9wg1HZvErwJQMtBreRoE6IiCBm9rQiwHMjIez5IhJwBcwmAD6NNOdAkwFtEpvRA10Y0VUC6Ed09vBYPrb3gkUcc9PbxXTxkHyNkJ6w5Ig5aPg3Fg1cGXjY1PAERh+vA+cXlCLkdyy3XgvUc53EdiOyRpZDgpBr6OST3HxNYCLsGCNjhAAAAAElFTkSuQmCC"}],"sil":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAXklEQVR42mNgGAVDAVhpyf6nhx6shqBjWugZnA7AZhAleEAdQdUooKsDKHUIVbPhgDlgyAb/8HHAaCIk1xE0qRGHXBYc2kXxgNeGow4YdcBok2y0Oh7U7QFK1Q0qAAD0yo4frPDw1QAAAABJRU5ErkJggg==","cat":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAADlElEQVR4AbSWWUgVYRzF5RK0YgiplJlYWhJIYUUoCkpkBFGiRm/R6oMUBiH1kD0YPZQIpRRhkNlDRGhISUYFChq2WCRBiUtuSKmYkFYWQf2GI9/9nDvXFlAOh/P9l3Nm1Jl7fSkxS2YVvpBZ/pmVgCf38sxlewR0jo6b9j8Js9j0oNEsegTQ06h9IRQDYQ9oRTMnL3VIwE5AVNg8lM2FORksRKSUmvqt5WuAmUEDrpQKk4AVhgEVm32cB8cmbaadv+1IT0UNO2yqSxGULozpHF8Io0H5zf7GrhHGGGaFiu0j7b4DHFlgFLCDpoIWjn/pC/nxsXfXLx3lzpiODFPBl6NhJ4BzICYGToC9awfeFMWxtqGtFSBwySl+iQbo/AvXQrYnab22+bWEzd4BmUWH7CEy8BJwlIDRm1OzHJwtNjH2ItojoKSmoXNojJ4NbgU7QBEWsOYooAO3aHkEpMeFg8QzXbQNFuU9MloCRwnxcF8bW9I2++LDF3A2zBCa3zW/Fuog8dwEHAzDH4bUiohZx9bh5BiOOBj2dY585exi2jfeRnPVuPd0t8BUAoF7xNJI2LRcPji774BRqjCIXZWMOwJGI2zgizsVGI0A2rXZ/zcoqKxjwga+5mhrFak8a66VJmPxZL+02Lj5Ay7u30EVaMKTf5bcFUyXDMFUcAC4qeIP4EwVIIJhTuFOWmKEJ3AApjUtgGRAj38GnobLxw6gQWx0LCzElxVIwKaeuTGJh4AtijgAhOAErI6az4EqyfWndqNVUQbLPQM9eAkuTRfgbrZwwAc3VXx4dQx+g6nC0nBJbgJXRAbL3Aq+AmsSsKwZcCZzE9i62tJXWN2Oj3Hz3wFVll1MjIOaBjLo2pC7081NsLd4QpXBMHUnABUMjDrIyeDl45p52PqK953TrW5XC427tOGZAljgBQCqWj+xUFdebIMKqWRgyiRHT8wUYC+4Xm20CJuo2MpbFj0D/jYg0CJ9blNgURX7nv4/QF6ezKueP75avtvPh4JBE+KiPVOfizoGMiZ2kaPw5ztwvWqMS+P3NKON4CWfXTFqjgiPgMF92aFXil/0j/EfgjtDoKxq6sWJFqjwgQE4Msn8lvvlPJhZqeuprIwMhYE7AHeq755OfT/gaRJ4XI+erwT93b0woMLTR5dL1vcJbZGxaUXY+6HP+IBpAcSm1T+Oun6HxrLTBxnFReAoUJSA0erCHNnCGiAMfgMAAP//tyAs0gAAAAZJREFUAwCntFHPDPKvKgAAAABJRU5ErkJggg==","frog":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAADUElEQVR4AbSTT0hUURjFX68WlmaRJlpGYQaVNIhRRBgUUi0MKoKEwAoXbcRVQiFEE21aGBEyLoYIQgymFikoFDG0aOgfVMPEVOBkLmpmAguaslwU9bt+w503972mCRo5Hs479/vOd++7b+yq9atLCtsq8V9uwPTVHaWYlR2g0n1+xf97SHZAddd9K+ZXXIoBZcvKia3vfXaqq3z6Xjssjid3LJ/y9Enw9G3c2U8zwpdHrOpd47B2lr5fqzU1++fHCYLR2jdqtC816hWhaDO47EUtndcHwjBaVikL3OiGAQ4+q0YNvqwKqwEoA3QmMmGw9ZgFAxw2Tln34QCMxsEHzhqWDHgPMIqcj/oETrOA9hjA1ji16hkdtZqalLAsnDvRNrScAI3Do5VfQ68yHf8eA2Y3pY/0qCyrr09X4uxtDvNINIzGQRg19GK+62+BBfbC2kqUmzGteFxBqewJSGfjMECoFUcNj+SodJ8fRuPY39MZlMHzdn9rrGx7cs26cjQpiIWTJAKnkCX4eHOQerrIWdef4DcLo0n2PsGvu4skiy1o8E5I5xFGIzRaffuop4vEm4MPow1DLKFhjzugjmpSWHbi9AHVJk5rQ0ckNoaGAWLwUpAuevdsXANwBHkDJnobxf0rs2VAGQxEMAOxZGcdQAhyA1S6z69YVv6ROcfK9s/uptwArkUuhyLjFeMUxttVw5wjNHDbXaYGlM99qTAzYD4G6i6MdBYPoimmi14SECe2ZSYCLbDN80w6o/nr0A8uiuviSp14/DzshrMATRe9JJAWfFTZfD4B552ANYqA8QkdPLuCTblh+HTRC8hh79EzjbAaYHRSx40B8Y0UMTUbq/TKtzQ8Vc8JYI8BNHNjAFE89IaMFu8BVAOjtPDjnzbkPYBqUDixyNW8ARWdC/gF+NryrvTWuWSBLGOVc0cmQ+ToFjv18oMGt883wEXpZREnDwVFGOz2OTcJ5OjM3AkWP61iTb4BHaR2FBtjU28iFnEG8DkuNboeQQI5pKGBXbd9A0B92fyR96N7aFOYDOFsGa+RJbQT2pcxqn5uNxSTRiawUw9eARTABSzrFCIAS7Ab2ne2kABYEuRekTxzmoqeGipA/cWfqdepYkAl9QLJ0fwbAAD//6MEb6EAAAAGSURBVAMAdxKYlBHS0xoAAAAASUVORK5CYII="}, PETS = D.pets, N = PETS.length;
+  var reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var pad2 = function (n) { return String(n).padStart(2, '0'); };
+  function bar(p, n) { var f = Math.round(Math.max(0, Math.min(1, p)) * n); return '[' + new Array(f + 1).join('█') + new Array(n - f + 1).join('░') + ']'; }
+  function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  var cb = $('connect');
+  cb.addEventListener('click', function () { var o = cb.textContent; cb.textContent = 'Sample only'; setTimeout(function () { cb.textContent = o; }, 1400); });
+
+  /* images used outside the gallery */
+  $('cBear').src = PETS[0].img; $('cCat').src = D.cat; $('cFrog').src = D.frog;
+
+  /* ---------- hero den: cycles through claimed bears ---------- */
+  var claimedList = PETS.filter(function (p) { return p.owner; });
+  var hi = 0;
+  function showHero(p) {
+    $('heroImg').src = p.img;
+    $('heroNo').textContent = 'Bear ' + pad2(p.n) + ' / ' + N;
+    $('heroName').textContent = p.coat;
+    $('heroTr').textContent = p.eyes + ' · ' + p.acc;
+  }
+  showHero(claimedList[0]);
+  $('sClaimed').textContent = String(claimedList.length);
+  $('heroMeter').textContent = bar(claimedList.length / N, 20) + ' ' + claimedList.length + ' of ' + N;
+  if (!reduce) setInterval(function () { hi = (hi + 1) % claimedList.length; showHero(claimedList[hi]); }, 3200);
+
+  /* pixel snow behind the bear */
+  (function snow() {
+    var cv = $('snow'), box = $('denBox'); if (!cv.getContext) return;
+    var g = cv.getContext('2d'), flakes = [], W = 0, H = 0, S = 3;
+    function size() { W = box.clientWidth; H = box.clientHeight; cv.width = Math.ceil(W / S); cv.height = Math.ceil(H / S); flakes = []; for (var i = 0; i < 46; i++) flakes.push({ x: Math.random() * cv.width, y: Math.random() * cv.height, v: 0.12 + Math.random() * 0.22, c: Math.random() < 0.3 ? '#a9cdee' : '#f4e8d4' }); draw(); }
+    function draw() { g.clearRect(0, 0, cv.width, cv.height); flakes.forEach(function (f) { g.fillStyle = f.c; g.fillRect(Math.floor(f.x), Math.floor(f.y), 1, 1); }); }
+    function tick() { flakes.forEach(function (f) { f.y += f.v; f.x += Math.sin(f.y / 7) * 0.08; if (f.y > cv.height) { f.y = -1; f.x = Math.random() * cv.width; } }); draw(); requestAnimationFrame(tick); }
+    cv.style.imageRendering = 'pixelated';
+    size(); if (window.ResizeObserver) new ResizeObserver(size).observe(box);
+    if (!reduce) requestAnimationFrame(tick);
+  })();
+
+  /* ---------- gallery ---------- */
+  var tiles = $('tiles'), sel = $('sel'), filter = 'all', cur = claimedList[0].n - 1, tileEls = [];
+  PETS.forEach(function (p, i) {
+    var b = mk('button', 'tile' + (p.owner ? '' : ' free')); b.type = 'button';
+    b.setAttribute('aria-label', 'Bear ' + pad2(p.n) + ', ' + (p.owner ? 'claimed' : 'free'));
+    var im = document.createElement('img'); im.src = p.owner ? p.img : D.sil; im.alt = ''; im.width = 64; im.height = 64;
+    b.appendChild(im); b.appendChild(mk('span', 'no', pad2(p.n)));
+    b.addEventListener('click', function () { pick(i); });
+    tiles.appendChild(b); tileEls.push(b);
+  });
+  function pick(i) {
+    cur = i;
+    tileEls.forEach(function (t, k) { t.setAttribute('aria-pressed', String(k === i)); });
+    var p = PETS[i];
+    sel.textContent = '';
+    var big = mk('div', 'big'); var im = document.createElement('img'); im.src = p.owner ? p.img : D.sil; im.alt = p.owner ? 'Bear ' + pad2(p.n) : 'Unclaimed slot ' + pad2(p.n); big.appendChild(im);
+    var head = mk('div'); head.appendChild(mk('span', 'lbl', 'Bear ' + pad2(p.n) + ' / ' + N));
+    var h = mk('h3', null, p.owner ? p.coat : 'Still asleep'); h.style.margin = '4px 0 8px'; head.appendChild(h);
+    if (p.owner) head.appendChild(mk('span', 'rar r-' + p.rarity, p.rarity));
+    sel.appendChild(big); sel.appendChild(head);
+    if (p.owner) {
+      var dl = mk('dl', 'tr');
+      [['Eyes', p.eyes], ['Mouth', p.mouth], ['Extras', p.acc], ['Room', p.bg], ['Held by', p.owner + ' (sample)']].forEach(function (r) { dl.appendChild(mk('dt', null, r[0])); dl.appendChild(mk('dd', r[0] === 'Held by' ? 'mono' : null, r[1])); });
+      sel.appendChild(dl);
+    } else {
+      sel.appendChild(mk('p', 'note', 'This slot is free. Hold the coin, sign with your wallet and a random free slot is yours. The picture stays hidden until then.'));
+    }
+  }
+  function applyFilter() {
+    tileEls.forEach(function (t, k) { var own = !!PETS[k].owner; t.classList.toggle('dim', (filter === 'claimed' && !own) || (filter === 'free' && own)); });
+  }
+  [].forEach.call(document.querySelectorAll('[data-f]'), function (c) {
+    c.addEventListener('click', function () {
+      filter = c.getAttribute('data-f');
+      [].forEach.call(document.querySelectorAll('[data-f]'), function (x) { x.setAttribute('aria-pressed', String(x === c)); });
+      applyFilter();
+    });
+  });
+  pick(cur);
+
+  /* ---------- planner ---------- */
+  function plan() {
+    var size = +$('size').value, minh = +$('minh').value, cl = $('claimed');
+    cl.max = size; if (+cl.value > size) cl.value = size;
+    var claimed = +cl.value, free = size - claimed, need = size * minh;
+    $('sizeO').textContent = String(size); $('minhO').textContent = minh.toFixed(2) + '%'; $('claimedO').textContent = String(claimed);
+    $('pBar').textContent = bar(claimed / size, 20) + ' ' + claimed + ' of ' + size;
+    $('pFree').textContent = String(free);
+    $('pNeed').textContent = need.toFixed(1) + '%';
+    var st = $('pSt');
+    if (need < 5) { st.textContent = 'LIGHT'; st.className = 's-light'; } else if (need <= 15) { st.textContent = 'MEDIUM'; st.className = 's-mid'; } else { st.textContent = 'HEAVY'; st.className = 's-heavy'; }
+    $('pOdds').textContent = free ? (100 / free).toFixed(1) + '%' : 'none left';
+  }
+  ['size', 'minh', 'claimed'].forEach(function (id) { $(id).addEventListener('input', plan); }); plan();
+
+  /* ---------- feed ---------- */
+  var logb = $('logb');
+  var W8 = ['7xKp…q9Rt', '9TbF…c4Wz', '5HnR…p8Jx', '3QmV…h2Ld', '8WcY…t3Vn', '4RjK…d9Ps', 'Hn2d…Lk8a', 'Q4vB…z7Me'];
+  function ts(d) { return [d.getHours(), d.getMinutes(), d.getSeconds()].map(pad2).join(':'); }
+  function row(d, tag, cls, text) {
+    var r = mk('div'); r.appendChild(mk('span', 't', ts(d) + '  ')); r.appendChild(mk('span', cls, tag.padEnd(7, ' '))); r.appendChild(mk('span', null, text));
+    logb.appendChild(r); while (logb.children.length > 60) logb.removeChild(logb.firstChild); logb.scrollTop = logb.scrollHeight;
+  }
+  var rp = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+  function ev(d) {
+    var r = Math.random(), w = rp(W8);
+    if (r < 0.5) { var p = rp(PETS); row(d, 'CLAIM', 'c-claim', 'Bear ' + pad2(p.n) + ' / ' + N + '  ' + w + '  ' + p.coat + ', ' + p.eyes); }
+    else if (r < 0.72) row(d, 'SIGN', 'c-mut', w + ' signed the challenge');
+    else if (r < 0.88) row(d, 'CHECK', 'c-mut', w + ' holds ' + (0.1 + Math.random() * 0.9).toFixed(2) + '%, needs 0.10%');
+    else row(d, 'DENIED', 'c-deny', w + ' holds ' + (Math.random() * 0.09).toFixed(2) + '%, needs 0.10%');
+  }
+  (function seed() { var n = Date.now(); for (var i = 7; i >= 1; i--) ev(new Date(n - i * 3200)); })();
+  setInterval(function () { ev(new Date()); }, 3200);
+})();
+</script>
+
+</body>
+</html>

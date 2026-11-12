@@ -68,6 +68,9 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   let r = await (await fetch(base + '/api/status')).json();
   check('status shows set up and empty', r.configured && r.total === 3 && r.claimed === 0 && r.slots.length === 3);
 
+  const pp = await fetch(base + '/petpad');
+  check('PetPad concept page is served', pp.status === 200 && (await pp.text()).includes('Hold the coin. Get a bear.'));
+
   const a = newWallet(), b = newWallet(), c = newWallet(), d = newWallet();
 
   let x = await collect(a);

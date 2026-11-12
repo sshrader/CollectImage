@@ -1,0 +1,385 @@
+<title>PetPad</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: a warm cave at night. One 1240px column of stacked sections, a snowy hero with a bear in the den, hard 2px edges and pixel shadows. */
+:root{
+  --bg:#120d0a;--p1:#1a120d;--p2:#241810;--p3:#2d1f14;--fg:#f4e8d4;--mut:#ad9a82;--b1:#33241a;--b2:#4d3826;
+  --amber:#ffb347;--ember:#e8782a;--snow:#a9cdee;--ink:#120d0a;--shadow:#080504;
+  --display:'Pixelify Sans','Courier New',monospace;--sans:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.6 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+img{max-width:100%;image-rendering:pixelated;display:block}
+.col{max-width:1240px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lbl{font:500 11px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.16em;color:var(--mut)}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;text-wrap:balance}
+h1{font-size:58px;line-height:1.04;letter-spacing:-.01em}
+h2{font-size:34px;line-height:1.1}
+h3{font-size:20px;line-height:1.2}
+.sec{padding:84px 0 0}
+.sec-h{display:flex;flex-direction:column;gap:10px;margin-bottom:32px;max-width:60ch}
+.sec-h p{margin:0;color:var(--mut)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 20px;font:600 16px var(--display);background:var(--p2);border:2px solid var(--b2);color:var(--fg);box-shadow:4px 4px 0 var(--shadow)}
+.btn:hover{border-color:var(--amber)}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow)}
+.btn.go{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+.btn.go:hover{background:#ffc470;border-color:#ffc470}
+.tag{display:inline-block;font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--mut);border:1px solid var(--b2);padding:3px 8px}
+.chip{font:500 13px var(--mono);background:var(--p1);border:1px solid var(--b2);padding:8px 14px;min-height:40px;color:var(--mut)}
+.chip[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:700}
+.pane{background:var(--p1);border:2px solid var(--b1);box-shadow:5px 5px 0 var(--shadow)}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;gap:26px;height:64px;background:var(--bg);border-bottom:2px solid var(--b1)}
+.logo{display:inline-flex;align-items:center;gap:10px;font:700 22px var(--display)}
+.logo svg{width:28px;height:28px;shape-rendering:crispEdges}
+.links{display:flex;gap:22px;margin-left:auto}
+.links a{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--mut);padding:8px 0;border-bottom:2px solid transparent}
+.links a:hover{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* hero */
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:48px;align-items:center;padding:56px 0 8px}
+.hero-l{display:flex;flex-direction:column;gap:24px;min-width:0}
+.hero-l p{margin:0;max-width:50ch;color:var(--mut);font-size:18px}
+.hero-l p b{color:var(--fg);font-weight:500}
+.cta{display:flex;gap:14px;flex-wrap:wrap}
+.den{position:relative;overflow:hidden;border:3px solid var(--b2);box-shadow:6px 6px 0 var(--shadow);background:radial-gradient(ellipse at 50% 78%,#5a3015 0,#3a2012 32%,#1b110b 66%,#120d0a 100%);display:flex;flex-direction:column;align-items:center;gap:0;padding:28px 20px 0;min-width:0}
+.den canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.den .art{position:relative;width:min(320px,76%);aspect-ratio:1;border:2px solid var(--b2);background:var(--bg)}
+.den .art img{width:100%;height:100%}
+.den .cap{position:relative;width:100%;margin-top:22px;padding:14px 4px 18px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.meter{font:500 14px var(--mono);letter-spacing:.02em;white-space:pre;overflow:hidden;color:var(--amber)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2px solid var(--b1);background:var(--p1);max-width:540px}
+.stat{padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat+.stat{border-left:2px solid var(--b1)}
+.stat .n{font:600 28px/1 var(--display)}
+
+/* how */
+.flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+.ascii{margin:0;padding:22px;font:400 13px/1.5 var(--mono);white-space:pre;overflow-x:auto;color:var(--fg)}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:16px 18px;background:var(--p1)}
+.steps li+li{border-top:2px solid var(--b1)}
+.steps li:hover{background:var(--p2)}
+.steps .k{font:600 20px var(--display);color:var(--amber)}
+.steps b{display:block;font:600 18px var(--display);margin-bottom:2px}
+.steps span{color:var(--mut);font-size:15px}
+
+/* den gallery */
+.gal{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.tile{position:relative;padding:0;border:2px solid var(--b1);background:var(--p1);aspect-ratio:1;overflow:hidden}
+.tile img{width:100%;height:100%}
+.tile.free img{opacity:.55}
+.tile:hover{border-color:var(--mut)}
+.tile[aria-pressed="true"]{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber)}
+.tile.dim{opacity:.22}
+.tile .no{position:absolute;left:3px;top:2px;font:600 10px var(--mono);color:var(--fg);text-shadow:1px 1px 0 var(--ink)}
+.sel{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px;padding:16px}
+.sel .big{border:2px solid var(--b2);aspect-ratio:1;background:var(--bg)}
+.sel .big img{width:100%;height:100%}
+.tr{display:grid;grid-template-columns:90px minmax(0,1fr);gap:6px 12px;font-size:14px}
+.tr dt{color:var(--mut);font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.12em;padding-top:3px}
+.tr dd{margin:0;text-transform:capitalize}.tr dd.mono{text-transform:none}
+.rar{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.12em;padding:2px 8px;border:2px solid currentColor}
+.r-Common{color:var(--mut)}.r-Uncommon{color:var(--snow)}.r-Rare{color:var(--amber)}.r-Legendary{color:var(--ember)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+
+/* collections */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.card{display:flex;flex-direction:column;gap:12px;padding:16px;min-width:0}
+.card:hover{border-color:var(--b2)}
+.card .pic{border:2px solid var(--b2);aspect-ratio:1;background:var(--bg)}
+.card .pic img{width:100%;height:100%}
+.card p{margin:0;color:var(--mut);font-size:14px}
+.kv{display:flex;gap:16px;flex-wrap:wrap;margin-top:auto;padding-top:12px;border-top:2px solid var(--b1)}
+.kv div{display:flex;flex-direction:column;gap:3px}
+.kv .v{font:600 14px var(--mono)}
+.card.next{border-style:dashed;justify-content:center;align-items:flex-start;background:transparent;box-shadow:none}
+
+/* planner */
+.plan{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.plan>div{padding:26px;display:flex;flex-direction:column;gap:24px;min-width:0}
+.plan>div+div{border-left:2px solid var(--b1);background:var(--p2)}
+.fld{display:flex;flex-direction:column;gap:10px}
+.fld .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fld output{font:600 22px var(--display)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--b2)}
+input[type=range]::-moz-range-track{height:6px;background:var(--b2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:26px;background:var(--amber);border:2px solid var(--ink);margin-top:-10px}
+input[type=range]::-moz-range-thumb{width:14px;height:24px;background:var(--amber);border:2px solid var(--ink);border-radius:0}
+.res .r{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:2px solid var(--b1);font:500 14px var(--mono)}
+.res .r span:first-child{color:var(--mut)}
+.note{font:400 12px/1.5 var(--mono);color:var(--mut);margin:0}
+.s-light{color:var(--snow)}.s-mid{color:var(--amber)}.s-heavy{color:var(--ember)}
+
+/* feed */
+.log-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:2px solid var(--b1);flex-wrap:wrap}
+.log-b{height:300px;overflow-y:auto;padding:14px 16px;font:400 13px/1.8 var(--mono);background:var(--bg)}
+.log-b div{overflow-wrap:anywhere}
+.log-b .t{color:var(--mut)}
+.c-claim{color:var(--amber)}.c-deny{color:var(--ember)}.c-mut{color:var(--mut)}
+.foot{margin-top:84px;padding:26px 0 40px;border-top:2px solid var(--b1);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media (max-width:1000px){
+  .hero{grid-template-columns:1fr;gap:32px}
+  .flow{grid-template-columns:1fr}
+  .gal{grid-template-columns:1fr}
+  .sel{position:static;display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);align-items:start}
+  .sel>*:not(.big){grid-column:2}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles{grid-template-columns:repeat(8,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  h1{font-size:38px}h2{font-size:27px}
+  .sec{padding-top:60px}.links{display:none}.nav .btn{margin-left:auto;min-height:40px;padding:0 14px}
+  .tiles{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  .plan{grid-template-columns:1fr}.plan>div+div{border-left:0;border-top:2px solid var(--b1)}.plan>div{padding:20px 16px}
+  .cards{grid-template-columns:1fr}
+  .stat .n{font-size:22px}
+  .sel{grid-template-columns:1fr}.sel>*:not(.big){grid-column:1}
+}
+@media (max-width:420px){.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+
+<div class="col" id="top">
+  <header class="nav">
+    <a class="logo" href="#top" aria-label="PetPad home">
+      <svg viewBox="0 0 10 9" aria-hidden="true"><rect x="1" y="0" width="2" height="2" fill="#ffb347"/><rect x="7" y="0" width="2" height="2" fill="#ffb347"/><rect x="1" y="2" width="8" height="6" fill="#ffb347"/><rect x="2" y="3" width="1" height="1" fill="#120d0a"/><rect x="7" y="3" width="1" height="1" fill="#120d0a"/><rect x="4" y="5" width="2" height="2" fill="#7a4a2b"/></svg>
+      PetPad
+    </a>
+    <nav class="links" aria-label="Sections"><a href="#how">How it works</a><a href="#den">The den</a><a href="#sets">Collections</a><a href="#plan">Planner</a><a href="#feed">Feed</a></nav>
+    <button class="btn go" id="connect" type="button">Connect</button>
+  </header>
+
+  <section class="hero" aria-label="Introduction">
+    <div class="hero-l">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="lbl">Pet coin launch pad</span><span class="tag">Concept &middot; sample data</span></div>
+      <h1>Hold the coin. Get a bear.</h1>
+      <p>The market is down and the bears are warm. PetPad launches a coin together with a set of one-of-a-kind pixel pets. <b>Holders sign with their wallet and claim one</b>, and only that wallet can open the full-size image.</p>
+      <div class="stats" role="group" aria-label="Sample figures">
+        <div class="stat"><span class="n" id="sClaimed">26</span><span class="lbl">Bears asleep</span></div>
+        <div class="stat"><span class="n">40</span><span class="lbl">In the set</span></div>
+        <div class="stat"><span class="n">0.10%</span><span class="lbl">Min hold</span></div>
+      </div>
+      <div class="cta"><a class="btn go" href="#plan">Plan a pet coin</a><a class="btn" href="#den">Visit the den</a></div>
+    </div>
+    <div class="den" id="denBox">
+      <canvas id="snow" aria-hidden="true"></canvas>
+      <div class="art"><img id="heroImg" alt="A pixel bear from the sample set" width="256" height="256"></div>
+      <div class="cap">
+        <span class="lbl" id="heroNo">Bear 01 / 40</span>
+        <h3 id="heroName">Bear</h3>
+        <span class="mono" style="color:var(--mut);font-size:13px" id="heroTr"></span>
+        <span class="meter" id="heroMeter" aria-label="26 of 40 bears claimed"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="sec-h"><span class="lbl">How it works</span><h2>From launch to bear in five steps</h2><p>The same flow the CatHouse prototype uses, with bears in place of cats.</p></div>
+    <div class="flow">
+      <pre class="ascii pane" aria-label="Flow: launch, hold, sign, check, claim">┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│  LAUNCH  │──▶│   HOLD   │──▶│   SIGN   │──▶│  CLAIM   │
+│ coin + N │   │ min amt  │   │ message  │   │ one bear │
+└────┬─────┘   └────┬─────┘   └────┬─────┘   └────┬─────┘
+     │              │              │              │
+     ▼              ▼              ▼              ▼
+ create + dev   balance read   proves you    random free
+ buy, 1 tx      from chain     own wallet    slot, locked
+
+   ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+   no keys leave the wallet · one bear per holder</pre>
+      <ol class="steps pane">
+        <li><span class="k">1</span><div><b>Launch the coin</b><span>Create the coin and the dev buy in one transaction, with the set size you choose.</span></div></li>
+        <li><span class="k">2</span><div><b>Holders connect</b><span>A holder opens the site and connects a wallet.</span></div></li>
+        <li><span class="k">3</span><div><b>Sign a message</b><span>Signing proves the wallet is theirs. It costs no SOL and moves nothing.</span></div></li>
+        <li><span class="k">4</span><div><b>Check the balance</b><span>The server reads the wallet&rsquo;s balance on chain and compares it to the minimum.</span></div></li>
+        <li><span class="k">5</span><div><b>Claim a bear</b><span>A random free slot is assigned and locked to that wallet.</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="den">
+    <div class="sec-h"><span class="lbl">The den &middot; sample set of 40</span><h2>Forty bears, no two alike</h2><p>Eight coats, six pairs of eyes, hats, scarves and snacks. Pick a bear to see its traits.</p></div>
+    <div class="filters" role="group" aria-label="Filter bears">
+      <button class="chip" type="button" data-f="all" aria-pressed="true">All 40</button>
+      <button class="chip" type="button" data-f="claimed" aria-pressed="false">Claimed</button>
+      <button class="chip" type="button" data-f="free" aria-pressed="false">Free</button>
+    </div>
+    <div class="gal">
+      <div class="tiles" id="tiles"></div>
+      <aside class="sel pane" id="sel" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="sets">
+    <div class="sec-h"><span class="lbl">Collections</span><h2>One coin, one species</h2><p>Each launch picks its pet. Sample figures, except where a card says it is built.</p></div>
+    <div class="cards">
+      <article class="card pane"><div class="pic"><img id="cBear" alt="Bear from the Bear Market set"></div><span class="lbl">Concept</span><h3>Bear Market</h3><p>Hibernation cave. Pixel bears that sleep through the dip.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Min hold</span><span class="v">0.10%</span></div><div><span class="lbl">Claimed</span><span class="v">26</span></div></div></article>
+      <article class="card pane"><div class="pic"><img id="cCat" alt="Cat from the CatHouse set"></div><span class="lbl">Built &middot; devnet tested</span><h3>CatHouse</h3><p>Night house with pixel cats. The collect site and the launch page both exist.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Ticker</span><span class="v">$CATS</span></div></div></article>
+      <article class="card pane"><div class="pic"><img id="cFrog" alt="Frog from the Pond set"></div><span class="lbl">Retired concept</span><h3>The Pond</h3><p>The first version, with frogs and toads. Replaced by CatHouse.</p><div class="kv"><div><span class="lbl">Set</span><span class="v">40</span></div><div><span class="lbl">Ticker</span><span class="v">$POND</span></div></div></article>
+      <article class="card next pane"><span class="lbl">Next</span><h3>Your species</h3><p>Dogs, bunnies, owls or something stranger. Pick the pet for your coin and PetPad draws the set.</p><a class="btn" href="#plan">Plan it</a></article>
+    </div>
+  </section>
+
+  <section class="sec" id="plan">
+    <div class="sec-h"><span class="lbl">Planner &middot; sample math</span><h2>How much supply does a set ask holders to hold?</h2><p>If every pet is claimed, holders together must hold the set size times the minimum.</p></div>
+    <div class="plan pane">
+      <div>
+        <div class="fld"><div class="row"><label class="lbl" for="size">Pets in the set</label><output id="sizeO" for="size">40</output></div><input id="size" type="range" min="10" max="200" step="1" value="40"></div>
+        <div class="fld"><div class="row"><label class="lbl" for="minh">Minimum hold, % of supply</label><output id="minhO" for="minh">0.10%</output></div><input id="minh" type="range" min="0.05" max="1" step="0.05" value="0.1"></div>
+        <div class="fld"><div class="row"><label class="lbl" for="claimed">Pets claimed so far</label><output id="claimedO" for="claimed">26</output></div><input id="claimed" type="range" min="0" max="40" step="1" value="26"></div>
+        <p class="note">The server picks a random free slot, so a bigger set means lower odds of any one specific pet. A holder at the minimum gets one pet, never more.</p>
+      </div>
+      <div class="res" aria-live="polite">
+        <div class="fld"><span class="lbl">Asleep</span><div class="meter" id="pBar"></div></div>
+        <div>
+          <div class="r"><span>Free slots left</span><span id="pFree">14</span></div>
+          <div class="r"><span>Supply to claim every pet</span><span id="pNeed">4.0%</span></div>
+          <div class="r"><span>Weight on holders</span><span id="pSt" class="s-light">LIGHT</span></div>
+          <div class="r"><span>Odds of one chosen slot</span><span id="pOdds">7.1%</span></div>
+        </div>
+        <p class="note">Weight bands are sample thresholds: under 5% light, 5 to 15% medium, over 15% heavy.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="feed">
+    <div class="sec-h"><span class="lbl">Feed &middot; sample</span><h2>Bears waking up, one claim at a time</h2></div>
+    <div class="pane">
+      <div class="log-h"><span class="lbl">Claims and checks</span><span class="tag">Sample data</span></div>
+      <div class="log-b" id="logb" role="log" aria-label="Sample claim feed"></div>
+    </div>
+  </section>
+
+  <footer class="foot"><span class="lbl">PetPad &middot; concept page &middot; sample data only</span><span class="lbl">Collectibles carry no promise of value. Not financial advice.</span></footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var D = /*DATA*/null, PETS = D.pets, N = PETS.length;
+  var reduce = false; try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var pad2 = function (n) { return String(n).padStart(2, '0'); };
+  function bar(p, n) { var f = Math.round(Math.max(0, Math.min(1, p)) * n); return '[' + new Array(f + 1).join('█') + new Array(n - f + 1).join('░') + ']'; }
+  function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  var cb = $('connect');
+  cb.addEventListener('click', function () { var o = cb.textContent; cb.textContent = 'Sample only'; setTimeout(function () { cb.textContent = o; }, 1400); });
+
+  /* images used outside the gallery */
+  $('cBear').src = PETS[0].img; $('cCat').src = D.cat; $('cFrog').src = D.frog;
+
+  /* ---------- hero den: cycles through claimed bears ---------- */
+  var claimedList = PETS.filter(function (p) { return p.owner; });
+  var hi = 0;
+  function showHero(p) {
+    $('heroImg').src = p.img;
+    $('heroNo').textContent = 'Bear ' + pad2(p.n) + ' / ' + N;
+    $('heroName').textContent = p.coat;
+    $('heroTr').textContent = p.eyes + ' · ' + p.acc;
+  }
+  showHero(claimedList[0]);
+  $('sClaimed').textContent = String(claimedList.length);
+  $('heroMeter').textContent = bar(claimedList.length / N, 20) + ' ' + claimedList.length + ' of ' + N;
+  if (!reduce) setInterval(function () { hi = (hi + 1) % claimedList.length; showHero(claimedList[hi]); }, 3200);
+
+  /* pixel snow behind the bear */
+  (function snow() {
+    var cv = $('snow'), box = $('denBox'); if (!cv.getContext) return;
+    var g = cv.getContext('2d'), flakes = [], W = 0, H = 0, S = 3;
+    function size() { W = box.clientWidth; H = box.clientHeight; cv.width = Math.ceil(W / S); cv.height = Math.ceil(H / S); flakes = []; for (var i = 0; i < 46; i++) flakes.push({ x: Math.random() * cv.width, y: Math.random() * cv.height, v: 0.12 + Math.random() * 0.22, c: Math.random() < 0.3 ? '#a9cdee' : '#f4e8d4' }); draw(); }
+    function draw() { g.clearRect(0, 0, cv.width, cv.height); flakes.forEach(function (f) { g.fillStyle = f.c; g.fillRect(Math.floor(f.x), Math.floor(f.y), 1, 1); }); }
+    function tick() { flakes.forEach(function (f) { f.y += f.v; f.x += Math.sin(f.y / 7) * 0.08; if (f.y > cv.height) { f.y = -1; f.x = Math.random() * cv.width; } }); draw(); requestAnimationFrame(tick); }
+    cv.style.imageRendering = 'pixelated';
+    size(); if (window.ResizeObserver) new ResizeObserver(size).observe(box);
+    if (!reduce) requestAnimationFrame(tick);
+  })();
+
+  /* ---------- gallery ---------- */
+  var tiles = $('tiles'), sel = $('sel'), filter = 'all', cur = claimedList[0].n - 1, tileEls = [];
+  PETS.forEach(function (p, i) {
+    var b = mk('button', 'tile' + (p.owner ? '' : ' free')); b.type = 'button';
+    b.setAttribute('aria-label', 'Bear ' + pad2(p.n) + ', ' + (p.owner ? 'claimed' : 'free'));
+    var im = document.createElement('img'); im.src = p.owner ? p.img : D.sil; im.alt = ''; im.width = 64; im.height = 64;
+    b.appendChild(im); b.appendChild(mk('span', 'no', pad2(p.n)));
+    b.addEventListener('click', function () { pick(i); });
+    tiles.appendChild(b); tileEls.push(b);
+  });
+  function pick(i) {
+    cur = i;
+    tileEls.forEach(function (t, k) { t.setAttribute('aria-pressed', String(k === i)); });
+    var p = PETS[i];
+    sel.textContent = '';
+    var big = mk('div', 'big'); var im = document.createElement('img'); im.src = p.owner ? p.img : D.sil; im.alt = p.owner ? 'Bear ' + pad2(p.n) : 'Unclaimed slot ' + pad2(p.n); big.appendChild(im);
+    var head = mk('div'); head.appendChild(mk('span', 'lbl', 'Bear ' + pad2(p.n) + ' / ' + N));
+    var h = mk('h3', null, p.owner ? p.coat : 'Still asleep'); h.style.margin = '4px 0 8px'; head.appendChild(h);
+    if (p.owner) head.appendChild(mk('span', 'rar r-' + p.rarity, p.rarity));
+    sel.appendChild(big); sel.appendChild(head);
+    if (p.owner) {
+      var dl = mk('dl', 'tr');
+      [['Eyes', p.eyes], ['Mouth', p.mouth], ['Extras', p.acc], ['Room', p.bg], ['Held by', p.owner + ' (sample)']].forEach(function (r) { dl.appendChild(mk('dt', null, r[0])); dl.appendChild(mk('dd', r[0] === 'Held by' ? 'mono' : null, r[1])); });
+      sel.appendChild(dl);
+    } else {
+      sel.appendChild(mk('p', 'note', 'This slot is free. Hold the coin, sign with your wallet and a random free slot is yours. The picture stays hidden until then.'));
+    }
+  }
+  function applyFilter() {
+    tileEls.forEach(function (t, k) { var own = !!PETS[k].owner; t.classList.toggle('dim', (filter === 'claimed' && !own) || (filter === 'free' && own)); });
+  }
+  [].forEach.call(document.querySelectorAll('[data-f]'), function (c) {
+    c.addEventListener('click', function () {
+      filter = c.getAttribute('data-f');
+      [].forEach.call(document.querySelectorAll('[data-f]'), function (x) { x.setAttribute('aria-pressed', String(x === c)); });
+      applyFilter();
+    });
+  });
+  pick(cur);
+
+  /* ---------- planner ---------- */
+  function plan() {
+    var size = +$('size').value, minh = +$('minh').value, cl = $('claimed');
+    cl.max = size; if (+cl.value > size) cl.value = size;
+    var claimed = +cl.value, free = size - claimed, need = size * minh;
+    $('sizeO').textContent = String(size); $('minhO').textContent = minh.toFixed(2) + '%'; $('claimedO').textContent = String(claimed);
+    $('pBar').textContent = bar(claimed / size, 20) + ' ' + claimed + ' of ' + size;
+    $('pFree').textContent = String(free);
+    $('pNeed').textContent = need.toFixed(1) + '%';
+    var st = $('pSt');
+    if (need < 5) { st.textContent = 'LIGHT'; st.className = 's-light'; } else if (need <= 15) { st.textContent = 'MEDIUM'; st.className = 's-mid'; } else { st.textContent = 'HEAVY'; st.className = 's-heavy'; }
+    $('pOdds').textContent = free ? (100 / free).toFixed(1) + '%' : 'none left';
+  }
+  ['size', 'minh', 'claimed'].forEach(function (id) { $(id).addEventListener('input', plan); }); plan();
+
+  /* ---------- feed ---------- */
+  var logb = $('logb');
+  var W8 = ['7xKp…q9Rt', '9TbF…c4Wz', '5HnR…p8Jx', '3QmV…h2Ld', '8WcY…t3Vn', '4RjK…d9Ps', 'Hn2d…Lk8a', 'Q4vB…z7Me'];
+  function ts(d) { return [d.getHours(), d.getMinutes(), d.getSeconds()].map(pad2).join(':'); }
+  function row(d, tag, cls, text) {
+    var r = mk('div'); r.appendChild(mk('span', 't', ts(d) + '  ')); r.appendChild(mk('span', cls, tag.padEnd(7, ' '))); r.appendChild(mk('span', null, text));
+    logb.appendChild(r); while (logb.children.length > 60) logb.removeChild(logb.firstChild); logb.scrollTop = logb.scrollHeight;
+  }
+  var rp = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+  function ev(d) {
+    var r = Math.random(), w = rp(W8);
+    if (r < 0.5) { var p = rp(PETS); row(d, 'CLAIM', 'c-claim', 'Bear ' + pad2(p.n) + ' / ' + N + '  ' + w + '  ' + p.coat + ', ' + p.eyes); }
+    else if (r < 0.72) row(d, 'SIGN', 'c-mut', w + ' signed the challenge');
+    else if (r < 0.88) row(d, 'CHECK', 'c-mut', w + ' holds ' + (0.1 + Math.random() * 0.9).toFixed(2) + '%, needs 0.10%');
+    else row(d, 'DENIED', 'c-deny', w + ' holds ' + (Math.random() * 0.09).toFixed(2) + '%, needs 0.10%');
+  }
+  (function seed() { var n = Date.now(); for (var i = 7; i >= 1; i--) ev(new Date(n - i * 3200)); })();
+  setInterval(function () { ev(new Date()); }, 3200);
+})();
+</script>
