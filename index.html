@@ -55,6 +55,14 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .bear.held{cursor:default}
 .bear.held img{filter:grayscale(.85) brightness(.55)}
 .facts{font:500 13px var(--mono);color:var(--dim)}
+.recent{display:flex;gap:10px;flex-wrap:wrap}
+.recent a{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:5px 14px 5px 5px;color:var(--fg);text-decoration:none;min-width:0}
+.recent a:hover{border-color:var(--gold)}
+.recent img{width:36px;height:36px;border-radius:50%;image-rendering:pixelated;flex:none}
+.recent b{font-weight:800;font-size:14px;display:block;line-height:1.2;overflow-wrap:anywhere}
+.recent small{font:500 12px var(--mono);color:var(--dim)}
+.feerow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#150e0a}
+.feerow span{font-size:14px;overflow-wrap:anywhere}
 .msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
 .log{font:500 13px var(--mono);display:grid;gap:4px;overflow-wrap:anywhere}
 .log .ok{color:var(--good)}.log .err{color:var(--bad)}.log .warn{color:var(--gold)}
@@ -102,6 +110,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 <h1>Launch a coin. <span>Keep a bear.</span></h1>
 <p class="lede">Every coin launched here takes one of the Den's pixel bears as its logo, and that bear is locked to the coin for good. Connect your wallet, pick a bear or let the Den choose, name your coin, and launch on pump.fun.</p>
 
+<div id="recent" hidden><h2>Recent launches</h2><div class="recent" id="recentlist"></div></div>
+
 <h2>The bears</h2>
 <div class="bears" id="bears"></div>
 <div class="row" style="margin-top:12px"><button class="btn" id="rand" type="button">Random bear</button><span class="facts" id="count"></span></div>
@@ -125,6 +135,14 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   <div class="row"><button class="btn go" id="go" type="button">Launch</button><button class="btn" id="air" type="button" hidden>Get 1 devnet SOL</button><span class="msg" id="msg"></span></div>
   <div class="log" id="log"></div>
   <div class="result" id="result"></div>
+</div>
+
+<h2>Creator fees</h2>
+<div class="panel">
+  <div class="note">Every trade on your coin earns creator fees. Connect the wallet you launched from to see what is waiting. Coins with the Den fee split are paid out to you and the Den together; the payout asks for your approval and you pay its small network fee.</div>
+  <div class="row"><button class="btn" id="feechk" type="button">Check my fees</button></div>
+  <div class="log" id="feelog"></div>
+  <div id="feelist" style="display:grid;gap:8px"></div>
 </div>
 
 <p class="fine">Launching creates a real coin on Solana's <span id="fnet">devnet</span>. You sign every transaction in your own wallet and pay its fees; the Den never holds your SOL. Your first buy goes in the same transaction as the launch, so nobody can buy before you. A coin can lose all of its value, and its bear has no promised value. The Den does not vouch for any coin launched here. Nothing here is financial advice.</p>
@@ -196,6 +214,19 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     if(pickSlot&&!st.bears.some(function(b){return b.n===pickSlot&&b.state==='open'}))pickSlot=null;
   }
   function showPick(){$('pick').textContent=pickSlot?('Bear #'+String(pickSlot).padStart(2,'0')+' is yours if you launch now.'):'Random bear, chosen when you launch.'}
+  function ago(at){var s=Math.max(0,Math.round((Date.now()-at)/1000));if(s<45)return 'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';return Math.round(s/86400)+' d ago'}
+  function drawRecent(list){
+    var box=$('recent'),l=$('recentlist');l.textContent='';
+    if(!list||!list.length){box.hidden=true;return}
+    list.forEach(function(r){
+      if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(r.mint||''))return;
+      var a=document.createElement('a');a.href='/coin/'+r.mint;
+      var im=document.createElement('img');im.src='/api/preview/'+r.bear+'.svg';im.alt='';a.appendChild(im);
+      var d=document.createElement('div'),b=document.createElement('b'),sm=document.createElement('small');
+      b.textContent=r.name||('$'+r.symbol);sm.textContent='$'+r.symbol+' · '+ago(r.at);d.appendChild(b);d.appendChild(sm);a.appendChild(d);l.appendChild(a);
+    });
+    box.hidden=!l.firstChild;
+  }
   function refresh(){
     return fetch('/api/bears').then(function(r){return r.json()}).then(function(j){
       st=j;
@@ -206,7 +237,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       if(j.platform){var pct=j.platform.bps/100;var nb=document.createElement('b');nb.textContent=(100-pct)+'% to you';$('feenote').appendChild(document.createTextNode('Creator fees from trading: '));$('feenote').appendChild(nb);$('feenote').appendChild(document.createTextNode(' and '+pct+'% to the Den. You approve the split in your wallet right after the launch.'))}
       else $('feenote').textContent='Creator fees from trading all go to your wallet.';
       if(!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette||[],'#ffb347'));
-      drawBears();
+      drawBears();drawRecent(j.recent);
     }).catch(function(){$('count').textContent='Could not load the bears. Refresh in a minute.'});
   }
   refresh();setInterval(function(){if(!running)refresh()},20000);
@@ -238,6 +269,62 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var s=step('Faucet');
     try{await window.SparkLaunch.airdrop('devnet',pubkey,1);s('ok','1 devnet SOL requested')}catch(e){s('err','The faucet did not answer. Try https://faucet.solana.com')}
   });
+
+
+  /* ---------- creator fees ---------- */
+  function feeStepper(){
+    var list=[],el=$('feelog');
+    function draw(){el.textContent='';list.forEach(function(s){var d=document.createElement('div');d.className=s.st==='ok'?'ok':s.st==='err'?'err':s.st==='warn'?'warn':'';d.appendChild(document.createTextNode(s.t+(s.d?': '+s.d:(s.st==='run'?'…':''))));if(s.href&&/^https:\/\//.test(s.href)){var a=document.createElement('a');a.href=s.href;a.target='_blank';a.rel='noopener';a.textContent=' view';d.appendChild(a)}el.appendChild(d)})}
+    list.length=0;draw();
+    return function(t){var s={t:t,d:'',st:'run'};list.push(s);draw();return function(stt,d,href){s.st=stt;s.d=d||'';s.href=href||'';draw()}};
+  }
+  function feeRow(text,btnLabel,enabled,onClick){
+    var row=document.createElement('div');row.className='feerow';
+    var sp=document.createElement('span');sp.textContent=text;row.appendChild(sp);
+    if(btnLabel){var b=document.createElement('button');b.type='button';b.className='btn'+(enabled?' go':'');b.textContent=btnLabel;b.disabled=!enabled;b.addEventListener('click',onClick);row.appendChild(b)}
+    $('feelist').appendChild(row);return row;
+  }
+  var feeBusy=false;
+  $('feechk').addEventListener('click',async function(){
+    if(feeBusy||!st)return;
+    if(!window.SparkLaunch){$('feelog').textContent='The launch code is missing.';return}
+    if(!pubkey)await connect();if(!pubkey)return;
+    feeBusy=true;$('feechk').disabled=true;$('feelist').textContent='';
+    var keep=keepFeeLog;keepFeeLog=false;
+    var stp=keep?function(){return function(){}}:feeStepper(),d=stp('Reading your fees');
+    try{
+      var mine=st.bears.filter(function(b){return b.state==='launched'&&b.dev===pubkey});
+      var split=mine.filter(function(b){return b.split}),plain=mine.filter(function(b){return !b.split});
+      var vault=0;try{vault=await window.SparkLaunch.creatorFees(st.cluster,pubkey)}catch(e){console.error(e)}
+      d('ok',mine.length?mine.length+' coin'+(mine.length>1?'s':'')+' launched here':'no coins launched here from this wallet');
+      for(var i=0;i<split.length;i++){
+        (function(b){
+          var info=null;
+          window.SparkLaunch.distributableFees(st.cluster,b.mint).then(function(r){info=r;show()}).catch(function(){info=false;show()});
+          var row=null;
+          function show(){
+            if(row)row.remove();
+            var label='$'+b.symbol+' (split): '+(info?info.sol.toFixed(6)+' SOL waiting':info===false?'could not read':'reading…');
+            row=feeRow(label,'Pay out',!!(info&&info.canDistribute&&!feeBusy2),async function(){
+              if(feeBusy2)return;feeBusy2=true;
+              var s2=feeStepper();
+              try{await window.SparkLaunch.distributeCoinFees({cluster:st.cluster,wallet:phantom(),user:pubkey,mint:b.mint},s2)}catch(e){console.error(e)}
+              feeBusy2=false;keepFeeLog=true;$('feechk').click();
+            });
+          }
+          show();
+        })(split[i]);
+      }
+      if(plain.length||vault>0){feeRow('Fees from coins without a split: '+vault.toFixed(6)+' SOL','Claim',vault>0,async function(){
+        if(feeBusy2)return;feeBusy2=true;var s3=feeStepper();
+        try{await window.SparkLaunch.claimCreatorFees({cluster:st.cluster,wallet:phantom(),user:pubkey},s3)}catch(e){console.error(e)}
+        feeBusy2=false;keepFeeLog=true;$('feechk').click();
+      })}
+      if(!mine.length&&!(vault>0))feeRow('Nothing to collect yet. Fees build up as people trade your coins.');
+    }catch(e){console.error(e);d('err','Could not read your fees. Try again.')}
+    feeBusy=false;$('feechk').disabled=false;
+  });
+  var feeBusy2=false,keepFeeLog=false;
 
   $('go').addEventListener('click',async function(){
     if(running||!st)return;

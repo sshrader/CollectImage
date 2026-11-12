@@ -230,6 +230,43 @@ export async function claimCreatorFees({ cluster, wallet, user }, step) {
   return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Approve claim in Phantom', send: 'Send claim' } });
 }
 
+// For a coin with a fee split, trading fees wait in the coin's vault until someone pays them out to the shareholders.
+// This reads how much is waiting and whether the pump program will pay it out right now.
+export async function distributableFees(cluster, mint) {
+  const cfg = config(cluster);
+  const online = new OnlinePumpSdk(new Connection(cfg.rpc, 'confirmed'));
+  if (typeof online.getMinimumDistributableFee !== 'function') throw new Error('This version of the pump SDK cannot read split fees.');
+  const r = await online.getMinimumDistributableFee(new PublicKey(mint));
+  const sol = (v) => Number(v.toString()) / LAMPORTS_PER_SOL;
+  return { sol: sol(r.distributableFees), min: sol(r.minimumRequired), canDistribute: !!r.canDistribute };
+}
+
+// Pays a coin's waiting fees out to its shareholders by their shares (for example 95% to the launcher, 5% to the Den).
+export async function distributeCoinFees({ cluster, wallet, user, mint }, step) {
+  const cfg = config(cluster);
+  const conn = new Connection(cfg.rpc, 'confirmed');
+  const userKey = new PublicKey(user);
+  await phase(step, 'Network check', async (done) => {
+    await checkNetwork(conn, cfg);
+    done('ok', cfg.label);
+  });
+  const tx = await phase(step, 'Build payout', async (done) => {
+    const online = new OnlinePumpSdk(conn);
+    if (typeof online.buildDistributeCreatorFeesInstructions !== 'function') throw new Error('This version of the pump SDK cannot pay out split fees.');
+    const mintKey = new PublicKey(mint);
+    const info = await distributableFees(cluster, mint);
+    if (!info.canDistribute) throw new Error('Not enough fees to pay out yet (' + info.sol.toFixed(6) + ' SOL waiting, ' + info.min.toFixed(6) + ' needed).');
+    const built = await online.buildDistributeCreatorFeesInstructions(mintKey);
+    const ixs = Array.isArray(built) ? built : built.instructions;
+    const t = new Transaction().add(...ixs);
+    t.feePayer = userKey;
+    t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+    done('ok', 'Paying out about ' + info.sol.toFixed(6) + ' SOL to the shareholders');
+    return t;
+  });
+  return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (payout)', sign: 'Approve payout in Phantom', send: 'Send payout' } });
+}
+
 // ---------- One-transaction launch: create + the creator's first buy ----------
 // Create and buy together are 1501 bytes, over the 1232 byte limit for a normal transaction. A version 0 transaction
 // with an address lookup table swaps the shared addresses for one-byte indexes, so both fit in one transaction.

@@ -157,10 +157,12 @@ function bearsState(res) {
   const bears = [];
   for (let i = 0; i < c.total; i++) {
     const L = d.launched[i], H = d.holds[i];
-    bears.push({ n: i + 1, state: L ? 'launched' : H ? 'held' : 'open', symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null });
+    bears.push({ n: i + 1, state: L ? 'launched' : H ? 'held' : 'open', symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null, dev: L ? L.wallet : null, split: L ? !!L.split : false });
   }
+  const recent = Object.keys(d.launched).map((k) => ({ bear: Number(k) + 1, name: d.launched[k].name, symbol: d.launched[k].symbol, mint: d.launched[k].mint, at: d.launched[k].at }))
+    .sort((x, y) => y.at - x.at).slice(0, 8);
   send(res, 200, {
-    cluster: c.cluster, total: c.total, maxBuy: c.maxBuy, silhouette: art.silhouette(), bears,
+    cluster: c.cluster, total: c.total, maxBuy: c.maxBuy, silhouette: art.silhouette(), bears, recent,
     open: bears.filter((b) => b.state === 'open').length,
     platform: c.platformWallet ? { wallet: c.platformWallet, bps: PLATFORM_BPS } : null,
   });

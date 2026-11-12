@@ -154,6 +154,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await (await fetch(base + '/api/bears')).json();
   const locked = r.bears.find((x) => x.n === SL);
   check('the bear shows its coin', locked.state === 'launched' && locked.symbol === 'HONEY' && locked.mint === mint);
+  check('recent launches lists the new coin, and the bear knows its dev', r.recent.length === 1 && r.recent[0].mint === mint && r.recent[0].symbol === 'HONEY' && locked.dev === a.address && locked.split === true);
 
   // the coin's own page
   const chainMod = require('../chain.js');
