@@ -22,7 +22,7 @@ rendered.map((r, i) => i).sort((a, b) => rendered[a].traits.p - rendered[b].trai
   .forEach((idx, rank) => { pets[idx].rarity = rank < 2 ? 'Legendary' : rank < 8 ? 'Rare' : rank < 22 ? 'Uncommon' : 'Common'; });
 
 const data = { pets, sil: puri(art.silhouette().png), cat: puri(fs.readFileSync(path.join(dir, 'samples/cat.png'))), frog: puri(fs.readFileSync(path.join(dir, 'samples/frog.png'))) };
-const tpl = fs.readFileSync(path.join(dir, 'template.html'), 'utf8').replace('/*DATA*/null', JSON.stringify(data));
+const tpl = fs.readFileSync(path.join(dir, 'template.html'), 'utf8').replace('/*DATA*/null', JSON.stringify(data)).replace('/*BUILD*/', 'pixel-png-2');
 // The template starts with <title>, <meta>, <link> and a <style> block, then the page body.
 const cut = tpl.indexOf('</style>') + '</style>'.length;
 const html = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
