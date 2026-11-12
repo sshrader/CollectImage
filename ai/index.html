@@ -216,7 +216,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   /* ---------- the launchpad ---------- */
   var st=null,pubkey=null,pickSlot=null,running=false,steps=[];
   function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
-  function prev(n){return n==='F'?'/api/founder.svg':'/api/preview/'+n+'.svg'}
+  function prev(n){return n==='F'?'/api/founder.png':'/api/preview/'+n+'.png'}
   function bearName(n){if(n==='founder'||n==='F')return 'PRIME';var a=st&&st.bears&&st.bears.filter(function(b){return b.n===n})[0];return a&&a.agent?a.agent.name:'Agent #'+String(n).padStart(2,'0')}
   function phantom(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:(window.solana&&window.solana.isPhantom?window.solana:null)}
   function say(t,cls){var m=$('msg');m.textContent=t||'';m.className='msg'+(cls?' '+cls:'')}
@@ -237,7 +237,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
         el.href='/coin/'+b.mint;el.title='Open the page for '+(b.name||b.symbol);
       }
       el.className='bear '+b.state+(pickSlot===b.n?' sel':'');
-      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.svg';im.alt=(b.agent?b.agent.name+', '+b.agent.role.toLowerCase()+' agent':'Agent '+b.n)+(b.state==='launched'&&b.name?', claimed by '+b.name:'');im.loading='lazy';el.appendChild(im);
+      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.png';im.alt=(b.agent?b.agent.name+', '+b.agent.role.toLowerCase()+' agent':'Agent '+b.n)+(b.state==='launched'&&b.name?', claimed by '+b.name:'');im.loading='lazy';el.appendChild(im);
       var t=document.createElement('b');t.textContent=b.state==='launched'&&b.name?b.name:(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));el.appendChild(t);
       var sm=document.createElement('small');
       if(b.state==='launched')sm.textContent='$'+b.symbol+' · '+(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));
@@ -257,7 +257,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var f=st&&st.founder,box=$('founder');
     box.hidden=!f;[].slice.call(document.querySelectorAll('h2')).forEach(function(h){if(h.textContent==='PRIME')h.hidden=!f});
     if(!f)return;box.textContent='';
-    var im=document.createElement('img');im.src='/api/founder.svg';im.alt='PRIME, the flagship agent: a graphite robot with a gold crown and an amber visor';box.appendChild(im);
+    var im=document.createElement('img');im.src='/api/founder.png';im.alt='PRIME, the flagship agent: a graphite robot with a gold crown and an amber visor';box.appendChild(im);
     var d=document.createElement('div'),tg=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');
     tg.className='tag';tg.textContent='Flagship · one of one';d.appendChild(tg);
     if(f.state==='launched'){

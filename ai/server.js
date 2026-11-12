@@ -5,7 +5,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const art = require('./art');
+const art = require('./mech');
 const chain = require('./chain');
 const { statusReport } = require('./report');
 
@@ -110,6 +110,7 @@ async function rpc(c, method, params) {
 }
 
 function send(res, status, body, headers) {
+  if (Buffer.isBuffer(body)) { res.writeHead(status, Object.assign({ 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' }, headers || {})); return res.end(body); }
   const isStr = typeof body === 'string';
   res.writeHead(status, Object.assign({
     'Content-Type': isStr ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8',
@@ -262,7 +263,7 @@ async function createMetadata(req, res) {
   if (website === null) return send(res, 400, { error: 'Website must be a link starting with https://.' });
   const id = crypto.randomBytes(8).toString('hex');
   const base = baseUrl(req);
-  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), a.slot === 'F' ? art.founderPng(8) : art.png(a.slot, imageSecret(), 8));
+  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), a.slot === 'F' ? art.founderPng(512) : art.png(a.slot, imageSecret(), 512));
   const imageUrl = base + '/images/' + id + '.png';
   const doc = { name, symbol, description, image: imageUrl, external_url: base };
   if (twitter) doc.twitter = twitter;
@@ -515,8 +516,8 @@ const server = http.createServer(async (req, res) => {
     { const m = /^\/api\/agent\/(\d+)\/voxels\.json$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return sendVoxels(req, res, n - 1); } }
     if (p === '/cave.js') return serveStatic(res, path.join(__dirname, 'cave.js'), 'application/javascript; charset=utf-8', { 'Cache-Control': 'no-cache' });
     if (p === '/api/health') return send(res, 200, { ok: true });
-    if (p === '/api/founder.svg') { if (!cfg().founderWallet) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.founderSvg('', true), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); }
-    { const m = /^\/api\/preview\/(\d+)\.svg$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.render(n - 1, c.total, '', imageSecret(), { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); } }
+    if (p === '/api/founder.png') { if (!cfg().founderWallet) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.founderPng(384), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' }); }
+    { const m = /^\/api\/preview\/(\d+)\.png$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.png(n - 1, imageSecret(), 384), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' }); } }
     if (p === '/assets/cave.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
     if (p === '/launch.js') {
       if (!fs.existsSync(LAUNCH_JS)) return send(res, 404, 'Not built yet. Run npm run build.');

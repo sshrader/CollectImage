@@ -2,8 +2,10 @@
 // The 3D intro: voxel agents walk a lit data highway through scanning gates, under falling code.
 // Plain WebGL2, no libraries. Intro3D.create(canvas, { agents: [voxelData, ...] }) -> { start, stop, renderAt(t) } or null.
 (function(){
-  var VS='#version 300 es\nin vec3 pos;in vec3 nrm;in vec4 aCell;in vec3 aCol;uniform mat4 uVP;uniform mat4 uModel;uniform mat3 uRot;out vec3 vCol;out vec3 vN;out float vE;out float vW;\n'
-   +'void main(){vec3 p=vec3(aCell.x-31.5,31.5-aCell.y,0.0)+pos*vec3(1.0,1.0,aCell.z);gl_Position=uVP*(uModel*vec4(p,1.0));vN=uRot*nrm;vCol=aCol;vE=aCell.w;vW=gl_Position.w;}';
+  var VS='#version 300 es\nin vec3 pos;in vec3 nrm;in vec4 aCell;in vec3 aCol;uniform mat4 uVP;uniform mat4 uModel;uniform mat3 uRot;uniform vec3 uOrg;uniform vec2 uPivot;uniform vec2 uSwing;out vec3 vCol;out vec3 vN;out float vE;out float vW;\n'
+   +'void main(){float e=mod(aCell.w,2.0);float g=floor(aCell.w/2.0);vec3 q=aCell.xyz;'
+   +'if(g>.5){float pv=g<2.5?uPivot.x:uPivot.y;float sg=(g<1.5||g>3.5)?1.0:-1.0;float a=sin(uSwing.x)*uSwing.y*sg;float c=cos(a),s=sin(a);float dy=q.y-pv,dz=q.z-16.0;q.y=pv+dy*c-dz*s;q.z=16.0+dy*s+dz*c;}'
+   +'vec3 p=q-uOrg+pos;gl_Position=uVP*(uModel*vec4(p,1.0));vN=uRot*nrm;vCol=aCol;vE=e;vW=gl_Position.w;}';
   var FS='#version 300 es\nprecision mediump float;in vec3 vCol;in vec3 vN;in float vE;in float vW;uniform vec3 uCol;uniform float uOver;uniform float uEmit;uniform float uBoost;uniform vec3 uTint;uniform vec3 uFog;uniform vec2 uFogR;out vec4 o;\n'
    +'void main(){vec3 base=uOver>.5?uCol:vCol;vec3 n=normalize(vN);float d=max(dot(n,normalize(vec3(-.35,.7,.6))),0.0);float rim=pow(1.0-max(n.z,0.0),2.0)*.12;'
    +'vec3 c=base*(.4+.8*d)+rim*vec3(.4,1.0,.7);if(vE>.5||uEmit>.5)c=base*(1.0+.5*uBoost)+.05*uBoost;c*=uTint;'
@@ -35,7 +37,7 @@
     var L=function(n){return gl.getAttribLocation(pr,n)},U=function(n){return gl.getUniformLocation(pr,n)};
     var vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,CUBE.v,gl.STATIC_DRAW);
     var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,CUBE.i,gl.STATIC_DRAW);
-    var uVP=U('uVP'),uModel=U('uModel'),uRot=U('uRot'),uCol=U('uCol'),uOver=U('uOver'),uEmit=U('uEmit'),uBoost=U('uBoost');
+    var uOrg=U('uOrg'),uPivot=U('uPivot'),uSwing=U('uSwing'),uVP=U('uVP'),uModel=U('uModel'),uRot=U('uRot'),uCol=U('uCol'),uOver=U('uOver'),uEmit=U('uEmit'),uBoost=U('uBoost');
     gl.uniform3f(U('uTint'),.86,1,.93);gl.uniform3f(U('uFog'),0,.01,.005);gl.uniform2f(U('uFogR'),40,125);
     // an object is a set of instances (cells) in its own vertex array
     function obj(data,max,dynamic){
@@ -47,18 +49,18 @@
       gl.enableVertexAttribArray(L('aCol'));gl.vertexAttribPointer(L('aCol'),3,gl.FLOAT,false,28,16);gl.vertexAttribDivisor(L('aCol'),1);
       return{vao:vao,buf:buf,n:data?data.length/7:0};
     }
-    function voxObj(d){var pal=d.palette.map(hex),a=new Float32Array(d.cells.length*7);d.cells.forEach(function(c,i){var k=pal[c[4]];a.set([c[0],c[1],c[2],c[3],k[0],k[1],k[2]],i*7)});return obj(a)}
-    var box=obj(new Float32Array([31.5,31.5,1,0,1,1,1]));
+    function voxObj(d){var pal=d.palette.map(hex),a=new Float32Array(d.cells.length*7);d.cells.forEach(function(c,i){var k=pal[c[4]];a.set([c[0],c[1],c[2],c[3],k[0],k[1],k[2]],i*7)});var o=obj(a);o.org=[d.cx==null?15.5:d.cx,0,d.cz==null?16:d.cz];o.pivot=d.pivot||[8,28];return o}
+    var box=obj(new Float32Array([0,0,0,0,1,1,1]));box.org=[0,0,0];box.pivot=[0,0];
     function draw(o,T,fx){fx=fx||{};gl.bindVertexArray(o.vao);gl.uniformMatrix4fv(uModel,false,T.m);gl.uniformMatrix3fv(uRot,false,T.r);
       if(fx.col){gl.uniform1f(uOver,1);gl.uniform3f(uCol,fx.col[0],fx.col[1],fx.col[2])}else gl.uniform1f(uOver,0);
-      gl.uniform1f(uEmit,fx.emit?1:0);gl.uniform1f(uBoost,fx.boost||0);gl.drawElementsInstanced(gl.TRIANGLES,36,gl.UNSIGNED_SHORT,0,o.n)}
+      gl.uniform1f(uEmit,fx.emit?1:0);gl.uniform1f(uBoost,fx.boost||0);var og=o.org||[0,0,0],pv=o.pivot||[0,0];gl.uniform3f(uOrg,og[0],og[1],og[2]);gl.uniform2f(uPivot,pv[0],pv[1]);gl.uniform2f(uSwing,fx.sw?fx.sw[0]:0,fx.sw?fx.sw[1]:0);gl.drawElementsInstanced(gl.TRIANGLES,36,gl.UNSIGNED_SHORT,0,o.n)}
     function bx(x,y,z,sx,sy,sz,col,boost){draw(box,trs(x,y,z,0,0,sx,sy,sz),{col:col,emit:true,boost:boost||0})}
 
     var agents=opts.agents.slice(0,4).map(function(d){return voxObj(d)});
-    var LANES=[-4,1,6],DIV=[-6.5,-1.5,3.5,8.5],GATES=[-5,9],S=.09;
+    var LANES=[-4,1,6],DIV=[-6.5,-1.5,3.5,8.5],GATES=[-5,9],S=.135;
     var rd=rnd(7),st=[];
     var CFG=[[0,-12,3.4],[1,-3,3.0],[2,3,3.8],[1,12,3.2]];
-    function reset(){st=agents.map(function(o,i){var c=CFG[i%CFG.length];return{o:o,z:LANES[c[0]],x:c[1],v:c[2],ok:c[1]>GATES[0],ph:i*1.7}});gates=[0,0];time=0;
+    function reset(){st=agents.map(function(o,i){var c=CFG[i%CFG.length];return{o:o,z:LANES[c[0]],x:c[1],v:c[2],ok:c[1]>GATES[0],ph:i*1.7,gait:i*1.3}});gates=[0,0];time=0;
       var r=rnd(3);rain=[{z:-26,k:.6,n:64,top:30,a:[]},{z:-17,k:.45,n:36,top:26,a:[]}];
       rain.forEach(function(l){for(var i=0;i<l.n;i++)l.a.push({x:(r()-.5)*84*(l.z<-20?1:.8),sp:3+r()*6,off:r()*40})});
       pk=[];for(var i=0;i<26;i++)pk.push({lane:Math.floor(r()*4),x:(r()-.5)*70,v:6+r()*7,c:r()<.5?0:1,s:.3+r()*.25})}
@@ -69,7 +71,7 @@
       time+=dt;
       st.forEach(function(a){
         var slow=1,i;for(i=0;i<2;i++){var d=Math.abs(a.x-GATES[i]);slow=Math.min(slow,.12+.88*smooth(d/2.4));if(d<.7)gates[i]=1}
-        var px=a.x;a.x+=a.v*slow*dt;if(px<=GATES[0]&&a.x>GATES[0])a.ok=true;if(a.x>30){a.x=-30;a.ok=false}a.slow=slow;
+        var px=a.x;a.x+=a.v*slow*dt;if(px<=GATES[0]&&a.x>GATES[0])a.ok=true;if(a.x>30){a.x=-30;a.ok=false}a.slow=slow;a.gait+=a.v*slow*dt*1.9;
       });
       gates[0]=Math.max(0,gates[0]-dt*1.6);gates[1]=Math.max(0,gates[1]-dt*1.6);
       pk.forEach(function(p){p.x+=p.v*dt;if(p.x>38)p.x-=76});
@@ -96,15 +98,15 @@
       // falling code, two layers, rebuilt each frame
       rain.forEach(function(l,li){var a=rainObj[li].n=0,arr=new Float32Array(l.n*9*7),q=0;
         l.a.forEach(function(c){var hd=l.top-((t*c.sp+c.off)%(l.top+8));for(var j=0;j<9;j++){var y=hd+j*.9;if(y<0||y>l.top)continue;var fd=1-j/9,col=j===0?[.85,1,.9]:[.05,.35+.5*fd,.18+.2*fd];
-          arr.set([c.x/l.k+31.5,31.5-y/l.k,1,1,col[0]*(j?fd+.25:1),col[1]*(j?fd+.25:1),col[2]*(j?fd+.25:1)],q*7);q++}});
+          arr.set([c.x/l.k,y/l.k,0,1,col[0]*(j?fd+.25:1),col[1]*(j?fd+.25:1),col[2]*(j?fd+.25:1)],q*7);q++}});
         rainObj[li].n=q;gl.bindBuffer(gl.ARRAY_BUFFER,rainObj[li].buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,arr.subarray(0,q*7));
         draw(rainObj[li],trs(0,0,l.z,0,0,l.k,l.k,l.k),{emit:true,boost:0})});
       // agents, each carrying a packet that turns green once it clears the first gate
       st.forEach(function(a,i){
-        var bob=Math.abs(Math.sin(t*7+a.ph))*.28*Math.min(1,a.slow*1.5+.2),yaw=.35,roll=Math.sin(t*7+a.ph)*.035*a.slow;
-        draw(a.o,trs(a.x,29.5*S+bob+.02,a.z,yaw,roll,S,S,S));
+        var bob=Math.abs(Math.sin(a.gait))*.22*Math.min(1,a.slow*1.5+.2),yaw=.35,roll=Math.sin(t*7+a.ph)*.035*a.slow;
+        draw(a.o,trs(a.x,.5*S+bob+.02,a.z,yaw,roll,S,S,S),{sw:[a.gait,.5*Math.min(1,a.slow*1.6)]});
         var fx=Math.sin(yaw),fz=Math.cos(yaw),pc=a.ok?[.2,1,.55]:[1,.7,.25],sp=Math.sin(t*3+i);
-        draw(box,trs(a.x+fx*2.5,2.5+bob+sp*.1,a.z+fz*2.5,t*2+i,0,.8,.8,.8),{col:pc,emit:true,boost:.6+.4*sp});
+        draw(box,trs(a.x+fx*2.6,3.1+bob+sp*.1,a.z+fz*2.6,t*2+i,0,.8,.8,.8),{col:pc,emit:true,boost:.6+.4*sp});
       });
     }
     function start(){var t0=performance.now();last=t0;

@@ -140,7 +140,7 @@ td .mini>div{height:100%;background:var(--gold)}
     var main=j.cluster==='mainnet',oc=j.onchain||{},cv=oc.curve;
     document.title=j.name+' ($'+j.symbol+') · Agent Bay';
     var n=$('net');n.textContent=main?'mainnet':'devnet · test';n.className='net'+(main?' main':'');
-    $('pic').src=j.bear==='F'?'/api/founder.svg':'/api/preview/'+j.bear+'.svg';$('pic').alt=j.name;
+    $('pic').src=j.bear==='F'?'/api/founder.png':'/api/preview/'+j.bear+'.png';$('pic').alt=j.name;
     $('name').textContent=j.name;$('tick').textContent='$'+j.symbol;
     var chips=$('chips');chips.textContent='';
     chips.appendChild(el('span','chip'+(j.founder?' good':''),j.founder?'PRIME · flagship, one of one':((j.agent?j.agent.name+' · '+j.agent.role.toLowerCase():'Agent #'+String(j.bear).padStart(2,'0'))+' · '+String(j.bear).padStart(2,'0')+' of '+j.total)));

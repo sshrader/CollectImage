@@ -76,10 +76,13 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   process.env.PLATFORM_WALLET = platformWallet;
   r = await (await fetch(base + '/api/bears')).json();
   check('platform wallet and 5% are shown when set', r.platform && r.platform.wallet === platformWallet && r.platform.bps === 500);
-  r = await fetch(base + '/api/preview/1.svg');
-  const sv = await r.text();
-  check('every bear can be previewed', r.status === 200 && sv.startsWith('<svg') && !sv.includes('<text'));
-  check('preview out of range is a 404', (await fetch(base + '/api/preview/5.svg')).status === 404);
+  r = await fetch(base + '/api/preview/1.png');
+  const sv = Buffer.from(await r.arrayBuffer());
+  check('every agent can be previewed', r.status === 200 && sv.subarray(1, 4).toString() === 'PNG');
+  check('preview out of range is a 404', (await fetch(base + '/api/preview/5.png')).status === 404);
+  r = await fetch(base + '/api/agent/1/voxels.json');
+  const vj = await r.json();
+  check('agent voxel model is served', r.status === 200 && vj.cells.length > 300 && vj.cells[0].length === 5 && Array.isArray(vj.palette) && (await fetch(base + '/api/agent/9/voxels.json')).status === 404);
   check('the old admin launch page is gone', (await fetch(base + '/launch')).status === 404);
   const home = await fetch(base + '/');
   check('home page is Agent Bay', home.status === 200 && (await home.text()).includes('Agent Bay'));
@@ -212,12 +215,12 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   // the Founder bear: one special bear that only FOUNDER_WALLET can launch
   const f = newWallet();
-  check('the founder bear is hidden until a founder wallet is set', (await fetch(base + '/api/founder.svg')).status === 404 && (await (await fetch(base + '/api/bears')).json()).founder === null);
+  check('the founder bear is hidden until a founder wallet is set', (await fetch(base + '/api/founder.png')).status === 404 && (await (await fetch(base + '/api/bears')).json()).founder === null);
   process.env.FOUNDER_WALLET = f.address;
   let fs0 = await (await fetch(base + '/api/bears')).json();
   check('the founder bear shows as reserved, without the full wallet', fs0.founder.state === 'reserved' && fs0.founder.short === f.address.slice(0, 4) + '…' + f.address.slice(-4) && !JSON.stringify(fs0).includes(f.address));
-  const fsvg = await fetch(base + '/api/founder.svg');
-  check('the founder bear image is served', fsvg.status === 200 && (await fsvg.text()).startsWith('<svg'));
+  const fsvg = await fetch(base + '/api/founder.png');
+  check('the founder image is served', fsvg.status === 200 && Buffer.from(await fsvg.arrayBuffer()).subarray(1, 4).toString() === 'PNG');
   r = await reserve(e, 'founder');
   check('another wallet cannot take the founder bear', r.status === 403);
   r = await reserve(f, 'founder');
@@ -281,15 +284,15 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   server.close(); fakeRpc.close();
   // agent art and the agent report, no server needed
   {
-    const artM = require('../art.js'), { statusReport } = require('../report.js');
+    const artM = require('../mech.js'), { statusReport } = require('../report.js');
     const names = new Set(), looks = new Set();
-    for (let n = 0; n < 24; n++) { const t = artM.traitsFor(n, 'unit-secret'); names.add(t.name); looks.add(artM.render(n, 24, '', 'unit-secret', { bare: true })); }
+    for (let n = 0; n < 24; n++) { const t = artM.traitsFor(n, 'unit-secret'); names.add(t.name); looks.add(JSON.stringify(artM.agentVoxels(n, 'unit-secret').cells.slice(0, 400))); }
     check('agents in a set each have their own name and their own picture', names.size === 24 && looks.size === 24);
     const ag = artM.agentFor(0, 'unit-secret'), ag2 = artM.agentFor(0, 'unit-secret'), ag3 = artM.agentFor(0, 'other-secret');
     check('an agent is the same every time for the same secret', JSON.stringify(ag) === JSON.stringify(ag2) && ag.name && ag.role && ag.blurb);
     check('a different secret gives a different set', [0, 1, 2, 3].some((n) => JSON.stringify(artM.agentFor(n, 'unit-secret')) !== JSON.stringify(artM.agentFor(n, 'other-secret'))) && ag3.name);
-    const pngB = artM.png(3, 'unit-secret', 8), prime = artM.founderPng(8);
-    check('agent and PRIME logos are 512px PNGs', pngB.subarray(1, 4).toString() === 'PNG' && pngB.readUInt32BE(16) === 512 && prime.readUInt32BE(16) === 512 && artM.founderSvg('', true).includes('PRIME'));
+    const pngB = artM.png(3, 'unit-secret'), prime = artM.founderPng();
+    check('agent and PRIME logos are 512px PNGs', pngB.subarray(1, 4).toString() === 'PNG' && pngB.readUInt32BE(16) === 512 && prime.readUInt32BE(16) === 512);
     check('the outline for locked tiles has rows of runs', artM.silhouette().length > 40 && artM.silhouette().every((r) => r.length === 3));
     const calm = statusReport({ name: 'NOVA', role: 'ANALYST' }, { launchedAt: 1000 }, { curve: { complete: false, progress: 52, raisedSol: 30, marketCapSol: 80 }, devHoldPct: 3, top10Pct: 20, holderCount: 41, errors: [] }, 1000 + 5 * 60000);
     check('a calm coin gets a steady report with no flags', calm.status === 'steady' && /sees nothing to flag/.test(calm.headline) && calm.lines.every((l) => l.level !== 'warn') && calm.lines[0].kind === 'cap' && calm.lines.some((l) => /passed the 50% mark/.test(l.text)) && calm.lines.some((l) => /5 minutes ago/.test(l.text)), JSON.stringify(calm).slice(0, 300));
