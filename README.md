@@ -42,6 +42,7 @@ npm test
 | `SLOTS` | How many images exist, 1 to 100. Default 40. |
 | `REQUIRE_HOLD_ON_DOWNLOAD` | `0` lets a wallet that already collected keep its image after selling. Default checks every time. |
 | `IMAGE_SECRET` | Optional. Decides how each image looks. If unset, one is created in the data folder. |
+| `SHOW_ALL_BEARS` | On by default: the page shows every bear in the set. Set `0` to hide them until each is collected. |
 | `ADMIN_TOKEN` | Password for the `/launch` tools. They stay off while it is unset. |
 | `PUBLIC_URL` | Your domain, used in the coin's metadata links. |
 | `DATA_DIR` | Where claims are stored. Defaults to `/data` if it exists, otherwise `./data`. On Railway, attach a volume at `/data` or claims are lost on every deploy. |

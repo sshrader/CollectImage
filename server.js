@@ -30,6 +30,8 @@ const cfg = () => ({
   total: Math.min(100, Math.max(1, parseInt(process.env.SLOTS, 10) || 40)),
   minHold: Math.max(0, Number(process.env.MIN_HOLD) || 1),
   requireHold: process.env.REQUIRE_HOLD_ON_DOWNLOAD !== '0',
+  // On by default while the set is being reviewed. Set SHOW_ALL_BEARS=0 to hide every bear again until it is collected.
+  showAll: process.env.SHOW_ALL_BEARS !== '0',
   coinName: (process.env.COIN_NAME || '').trim().slice(0, 40),
 });
 const rpcUrl = (c) => (/^https?:\/\//.test(c.rpc) ? c.rpc : c.cluster === 'devnet' ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com');
@@ -145,7 +147,7 @@ function status(res) {
   const slots = [];
   const secret = imageSecret();
   for (let i = 0; i < c.total; i++) slots.push({ n: i + 1, owner: owners[i] ? owners[i].slice(0, 4) + '…' + owners[i].slice(-4) : null, tint: owners[i] ? art.SKINS[art.traitsFor(i, secret).skin].base : null });
-  send(res, 200, { silhouette: art.silhouette(), configured: !!c.mint, mint: c.mint || null, cluster: c.cluster, coinName: c.coinName || null, total: c.total, claimed: Object.keys(map).length, minHold: c.minHold, requireHold: c.requireHold, slots });
+  send(res, 200, { silhouette: art.silhouette(), configured: !!c.mint, mint: c.mint || null, cluster: c.cluster, coinName: c.coinName || null, total: c.total, claimed: Object.keys(map).length, minHold: c.minHold, requireHold: c.requireHold, showAll: c.showAll, slots });
 }
 
 async function challenge(req, res) {
@@ -363,6 +365,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/status') return status(res);
     if (p === '/api/health') return send(res, 200, { ok: true });
+    { const m = /^\/api\/preview\/(\d+)\.svg$/.exec(p); if (m) { const c = cfg(), n = Number(m[1]); if (!c.showAll || n < 1 || n > c.total) return send(res, 404, { error: 'Not found' }); return send(res, 200, art.render(n - 1, c.total, '', imageSecret(), { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' }); } }
     if (p === '/api/mascot.svg') return send(res, 200, art.render(0, 1, '', 'bearden-public-mascot', { bare: true }), { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' });
     if (p === '/assets/cave.svg' || p === '/assets/moon.svg') return serveStatic(res, path.join(__dirname, p), 'image/svg+xml', { 'Cache-Control': 'public, max-age=86400' });
     if (p === '/launch') { res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' }); return res.end(fs.readFileSync(LAUNCH)); }

@@ -38,6 +38,7 @@ h1 span{color:var(--gold)}
 .slot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 6px;display:grid;gap:4px;justify-items:center;text-align:center;min-width:0}
 .slot svg,.slot img{width:100%;max-width:72px;height:auto;image-rendering:pixelated}
 .slot svg{opacity:.9}
+.slot img{border-radius:6px}
 .slot.free svg{opacity:.5}
 .slot.mine{border-color:var(--gold)}
 .slot b{font-family:var(--display);font-size:11px}
@@ -128,6 +129,7 @@ h2{font-family:var(--display);font-size:18px;margin:36px 0 0}
       var d=document.createElement('div');
       d.className='slot'+(s.owner?' taken':' free')+(mySlot===s.n?' mine':'');
       if(mine){var im=document.createElement('img');im.src=myImg;im.alt='Your bear';d.appendChild(im)}
+      else if(st.showAll){var pv=document.createElement('img');pv.src='/api/preview/'+s.n+'.svg';pv.alt='Bear '+s.n;pv.loading='lazy';d.appendChild(pv)}
       else d.appendChild(bearIcon(st.silhouette||[],s.owner&&s.tint?s.tint:'#3a2a1d'));
       var b=document.createElement('b');b.textContent='#'+String(s.n).padStart(2,'0');
       var sm=document.createElement('small');sm.textContent=mySlot===s.n?'Yours':(s.owner?s.owner:'Open');
