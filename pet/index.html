@@ -16,6 +16,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-
 padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 /* the dim petpad behind the page */
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;image-rendering:pixelated;opacity:.8;pointer-events:none}
+[hidden]{display:none!important}
 .veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(14,10,8,.55) 0%,rgba(14,10,8,.25) 45%,rgba(14,10,8,.05) 100%)}
 .wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding-block:28px 160px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}

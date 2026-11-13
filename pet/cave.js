@@ -1,93 +1,104 @@
 'use strict';
-// The pixel petpad and its power core, shared by the home page and the coin pages.
+// The pixel pet room (the page background), shared by the home page and the coin pages.
 // The class keeps the name Cave so the pages need no wiring change: same options (bears, ambient, glow, fps).
 (function(){
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function rng(seed){var a=seed>>>0;return function(){a=(a+0x6d2b79f5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
-  // four standby agents round the core: body, light, shade, glow
-  var UNITS=[{b:'#8a98a8',l:'#b4c0cf',d:'#5f6c7c',a:[79,243,255]},{b:'#c0713a',l:'#e39a62',d:'#8c4c22',a:[255,179,71]},{b:'#8a6bd8',l:'#b79cf5',d:'#5f45a8',a:[255,95,208]},{b:'#4fd1a5',l:'#8cf0cc',d:'#2c9a74',a:[157,255,79]}];
-
+  // The page background: a cosy pixel room at night. A sleeping dog in its bed, a cat on its tree, a lamp, a moonlit window.
   function Cave(canvas,opts){
-    var scale=0,w=0,h=0,ctx=canvas.getContext('2d'),base=null,fall=null,sp=[],leds=[],fx=0,fy=0,fw=0,fh=0,t0=0,raf=0,last=0,self=this;
-    function pix(c,x,y,col){c.fillStyle=col;c.fillRect(x|0,y|0,1,1)}
+    var scale=0,w=0,h=0,ctx=canvas.getContext('2d'),base=null,fall=null,hearts=[],stars=[],fx=0,fy=0,ly=0,floorY=0,t0=0,raf=0,last=0,self=this;
+    function R(c,x,y,ww,hh,col){c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)))}
     function ell(c,cx,cy,rx,ry,col){c.fillStyle=col;for(var y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++){var dy=(y+.5-cy)/ry;if(dy*dy>1)continue;var dx=Math.sqrt(1-dy*dy)*rx;c.fillRect(Math.round(cx-dx),y,Math.max(1,Math.round(dx*2)),1)}}
+    function paw(c,x,y,col){R(c,x,y+2,3,2,col);R(c,x-1,y,1,1,col);R(c,x+1,y-1,1,1,col);R(c,x+3,y,1,1,col)}
     function size(){
       var vw=canvas.clientWidth||window.innerWidth,vh=canvas.clientHeight||window.innerHeight;
-      scale=vw>900?4:3;w=Math.max(80,Math.ceil(vw/scale));h=Math.max(80,Math.ceil(vh/scale));
-      canvas.width=w;canvas.height=h;
-      fx=Math.round(w*.5);fy=Math.round(h*(opts.bears?.80:.88));fw=Math.max(6,Math.round(Math.min(w,h*1.5)*.05));fh=Math.round(fw*2.7);
+      scale=vw>900?4:3;w=Math.max(80,Math.ceil(vw/scale));h=Math.max(80,Math.ceil(vh/scale));canvas.width=w;canvas.height=h;
+      floorY=Math.round(h*.74);fx=Math.round(w*.5);var tableTop=floorY-Math.round(h*.09);fy=tableTop;ly=tableTop-Math.round(h*.11);
       var oc=document.createElement('canvas');oc.width=w;oc.height=h;var c=oc.getContext('2d'),r=rng(11);
-      var floorY=Math.round(h*(opts.bears?.66:.74));leds=[];
-      // back wall: dark steel with panel seams, then rows of server racks
-      for(var y=0;y<h;y++){for(var x=0;x<w;x++){var n=r(),shade=y<floorY?(.7+.18*Math.sin(x/11+y/17)+.12*n):(.75+.2*n);var b0=y<floorY?[44,56,74]:[40,48,62];c.fillStyle='rgb('+(b0[0]*shade|0)+','+(b0[1]*shade|0)+','+(b0[2]*shade|0)+')';c.fillRect(x,y,1,1)}}
-      var rw=Math.max(14,Math.round(w/14)),top=Math.round(h*.12);
-      for(var rx=Math.round(rw*.3);rx+rw-2<w;rx+=rw+Math.round(rw*.25)){
-        c.fillStyle='#0b1018';c.fillRect(rx-1,top-1,rw,floorY-top+1);c.fillStyle='#151c28';c.fillRect(rx,top,rw-2,floorY-top);
-        for(var uy=top+2;uy<floorY-3;uy+=4){c.fillStyle='#1d2636';c.fillRect(rx+1,uy,rw-4,3);c.fillStyle='#0f1520';c.fillRect(rx+1,uy+3,rw-4,1);
-          for(var k=0;k<3;k++)if(r()<.8)leds.push({x:rx+2+k*2,y:uy+1,ph:r()*6.28,sp:.4+r()*2.2,c:r()<.7?0:r()<.5?1:2})}
-      }
-      // ceiling and side walls close in
-      for(var x2=0;x2<w;x2++){var ceil=Math.round(top*.8);for(var y2=0;y2<ceil;y2++)pix(c,x2,y2,'#0a0e15')}
-      for(var x3=Math.round(w*.02);x3<w;x3+=Math.round(w/7)){c.fillStyle='#0a0e15';c.fillRect(x3,0,2,top)}
-      for(var y3=0;y3<h;y3++){var edge=Math.round(w*.05*(1+Math.sin(y3/9)*.15));for(var x4=0;x4<edge;x4++){pix(c,x4,y3,'#080b11');pix(c,w-1-x4,y3,'#080b11')}}
-      // floor: tiles
-      for(var x5=0;x5<w;x5++)pix(c,x5,floorY,'#2a3446');
-      for(var gy=floorY+6;gy<h;gy+=6)for(var gx=0;gx<w;gx++)pix(c,gx,gy,'#222b3a');
-      for(var gx2=(fx%10);gx2<w;gx2+=10)for(var gy2=floorY+1;gy2<h;gy2++)pix(c,gx2,gy2,'#222b3a');
-      // the core's pedestal
-      c.fillStyle='#0b1018';c.fillRect(fx-fw-2,fy-2,fw*2+4,5);c.fillStyle='#2a3446';c.fillRect(fx-fw-1,fy-1,fw*2+2,2);c.fillStyle='#3f4d66';c.fillRect(fx-fw-1,fy-1,fw*2+2,1);
+      // wallpaper: soft stripes with little paw prints
+      for(var y=0;y<floorY;y++)for(var x=0;x<w;x++){var st=((x/6)|0)%2,n=r()*.08;var k=1+n+(st?.04:0);c.fillStyle='rgb('+(70*k|0)+','+(52*k|0)+','+(84*k|0)+')';c.fillRect(x,y,1,1)}
+      for(var gy=8,row=0;gy<floorY-20;gy+=20,row++)for(var gx=(row%2?14:4);gx<w;gx+=28)paw(c,gx,gy,'#5a4468');
+      // wooden panelling and skirting
+      var wt=floorY-Math.round(h*.13);R(c,0,wt,w,floorY-wt,'#5c3e2c');for(var px=0;px<w;px+=Math.round(w/12)+4){R(c,px,wt+3,1,floorY-wt-5,'#4a3022')}
+      R(c,0,wt,w,2,'#8a6240');R(c,0,floorY-3,w,3,'#8f6a46');
+      // floor boards
+      for(var fy2=floorY;fy2<h;fy2++){for(var fx2=0;fx2<w;fx2++){var pl=Math.floor((fy2-floorY)/9),sm=((fx2+pl*37)%53)===0,nn=r()*.1;var kk=(sm?.7:1)*(1+nn);c.fillStyle='rgb('+(118*kk|0)+','+(80*kk|0)+','+(50*kk|0)+')';c.fillRect(fx2,fy2,1,1)}if((fy2-floorY)%9===0)R(c,0,fy2,w,1,'#5a3a24')}
+      // the rug
+      var ryc=floorY+Math.round((h-floorY)*.52),rrx=Math.round(w*.3),rry=Math.round((h-floorY)*.36);
+      ell(c,fx,ryc,rrx,rry,'#6e2f3c');ell(c,fx,ryc,rrx*.92,rry*.88,'#a3475a');ell(c,fx,ryc,rrx*.7,rry*.66,'#e0b98a');ell(c,fx,ryc,rrx*.6,rry*.56,'#b86a5c');
+      // moonlit window with curtains
+      var wx=Math.round(w*.07),wy=Math.round(h*.11),ww=Math.round(w*.17),wh=Math.round(h*.3);
+      R(c,wx-3,wy-3,ww+6,wh+6,'#8a6240');
+      for(var sy=0;sy<wh;sy++){var q=sy/wh;R(c,wx,wy+sy,ww,1,'rgb('+(14+30*q|0)+','+(22+30*q|0)+','+(58+40*q|0)+')')}
+      ell(c,wx+ww*.72,wy+wh*.3,Math.max(4,ww*.09),Math.max(4,ww*.09),'#fff4c8');ell(c,wx+ww*.72+2,wy+wh*.3-1,Math.max(3,ww*.07),Math.max(3,ww*.07),'#14204a');
+      ell(c,wx+ww*.72,wy+wh*.3,Math.max(4,ww*.085),Math.max(4,ww*.085),'#fff4c8');
+      R(c,wx+ww/2-1,wy,2,wh,'#8a6240');R(c,wx,wy+wh*.55,ww,2,'#8a6240');
+      R(c,wx-3,wy+wh-1,ww+6,4,'#a67a52');
+      R(c,wx-6,wy-4,Math.round(ww*.22),wh+10,'#9a3f55');R(c,wx+ww-Math.round(ww*.22)+6,wy-4,Math.round(ww*.22),wh+10,'#9a3f55');R(c,wx-8,wy-6,ww+16,3,'#6a5a48');
+      stars=[];for(var s=0;s<14;s++)stars.push({x:wx+3+r()*(ww-6),y:wy+3+r()*(wh*.5),p:r()*6,s:.8+r()*2});
+      // picture frames: a bone and a fish
+      var f1x=Math.round(w*.34),f1y=Math.round(h*.13);R(c,f1x,f1y,20,15,'#8a6240');R(c,f1x+2,f1y+2,16,11,'#e8d9b5');R(c,f1x+5,f1y+7,10,2,'#fffaf0');R(c,f1x+4,f1y+5,2,2,'#fffaf0');R(c,f1x+4,f1y+9,2,2,'#fffaf0');R(c,f1x+14,f1y+5,2,2,'#fffaf0');R(c,f1x+14,f1y+9,2,2,'#fffaf0');
+      var f2x=Math.round(w*.63),f2y=Math.round(h*.17);R(c,f2x,f2y,16,13,'#8a6240');R(c,f2x+2,f2y+2,12,9,'#7fb5c9');R(c,f2x+5,f2y+5,6,3,'#ffb347');R(c,f2x+11,f2y+4,2,5,'#ffb347');R(c,f2x+6,f2y+5,1,1,'#222');
+      // shelf with a plant
+      var shx=Math.round(w*.43),shy=Math.round(h*.4);R(c,shx,shy,Math.round(w*.15),3,'#8a6240');R(c,shx+4,shy-7,8,7,'#b4573a');R(c,shx+3,shy-14,3,7,'#4fa35a');R(c,shx+7,shy-17,3,10,'#6bc274');R(c,shx+11,shy-13,3,6,'#4fa35a');R(c,shx+Math.round(w*.15)-12,shy-6,9,6,'#e8d9b5');R(c,shx+Math.round(w*.15)-11,shy-5,7,1,'#7fb5c9');
+      // the cat tree: a carpeted base, a sisal post and two perches
+      var tx=Math.round(w*.84),top1=Math.round(h*.36),top2=Math.round(h*.56);
+      R(c,tx-14,floorY-4,28,8,'#9a7a55');R(c,tx-14,floorY-4,28,1,'#bb9a70');
+      R(c,tx-2,top1,5,floorY-top1,'#c9a56e');for(var sy2=top1;sy2<floorY-4;sy2+=3)R(c,tx-2,sy2,5,1,'#a3824f');
+      R(c,tx-12,top1-3,24,4,'#9a7a55');R(c,tx-12,top1-3,24,1,'#bb9a70');R(c,tx-9,top2,18,4,'#9a7a55');R(c,tx-9,top2,18,1,'#bb9a70');
+      // the dog's bed
+      var bx=Math.round(w*.27),by=floorY+Math.round((h-floorY)*.5),bw2=Math.round(w*.14),bh2=Math.round(w*.05);
+      ell(c,bx,by+3,bw2+2,bh2+2,'#1b2447');ell(c,bx,by,bw2,bh2,'#3f58a0');ell(c,bx,by+1,bw2*.8,bh2*.7,'#2a3a72');
+      // bowls
+      var bwx=Math.round(w*.63),bwy=floorY+Math.round((h-floorY)*.7);
+      ell(c,bwx,bwy+2,9,4,'#3a2a22');ell(c,bwx,bwy,9,4,'#c4453f');ell(c,bwx,bwy-1,7,2.6,'#6a4630');
+      ell(c,bwx+22,bwy+2,9,4,'#3a2a22');ell(c,bwx+22,bwy,9,4,'#3f7fc4');ell(c,bwx+22,bwy-1,7,2.6,'#9fd6ff');
+      // a side table and the lamp
+      R(c,fx-12,fy,24,3,'#8a6240');R(c,fx-10,fy+3,3,floorY-fy,'#6e4a2f');R(c,fx+7,fy+3,3,floorY-fy,'#6e4a2f');R(c,fx-9,fy+Math.round((floorY-fy)*.6),18,2,'#6e4a2f');
+      R(c,fx-1,fy-Math.round(h*.06),3,Math.round(h*.06),'#6a5a48');R(c,fx-4,fy-3,9,3,'#6a5a48');
+      var sw=Math.round(w*.05);for(var sy3=0;sy3<Math.round(h*.06);sy3++){var half=sw*.5+sy3*.55;R(c,fx-half,ly+sy3,half*2,1,'#ffe9b0')}
       base=oc;
-      // how far the core's light reaches
       fall=new Float32Array(w*h);var sig=Math.max(w,h)*.5;
-      for(var yy=0;yy<h;yy++)for(var xx=0;xx<w;xx++){var dx=(xx-fx)/(sig*1.1),dy=(yy-(fy-fh*.5))/(sig*.85);fall[yy*w+xx]=Math.exp(-(dx*dx+dy*dy)*2.2)}
+      for(var yy=0;yy<h;yy++)for(var xx=0;xx<w;xx++){var dx=(xx-fx)/(sig*1.1),dy=(yy-ly)/(sig*.9);fall[yy*w+xx]=Math.exp(-(dx*dx+dy*dy)*2.0)}
     }
-    function agent(c,i,t){
-      var u=UNITS[i],left=i<2,dir=left?1:-1,bw=Math.max(18,Math.min(46,Math.round(w*.12)));
-      var pos=[[.27,.73],[.36,.87],[.64,.87],[.73,.73]][i],cx=Math.round(w*pos[0]),cy=Math.round(h*pos[1]);
-      var ol='#05080d',tw=Math.round(bw*.62),th=Math.round(bw*.44),hw=Math.round(bw*.52),hh=Math.round(bw*.38),gy=cy+Math.round(bw*.3),bob=Math.sin(t*1.5+i*1.7)>0?1:0;
-      var tx=cx-(tw>>1),ty=gy-th-2,hx=cx-(hw>>1)+dir,hy=ty-hh+2+bob;
-      // feet and arms
-      c.fillStyle=ol;c.fillRect(tx-1,gy-3,Math.round(tw*.4)+2,4);c.fillRect(tx+tw-Math.round(tw*.4)-1,gy-3,Math.round(tw*.4)+2,4);
-      c.fillStyle=u.d;c.fillRect(tx,gy-2,Math.round(tw*.4),2);c.fillRect(tx+tw-Math.round(tw*.4),gy-2,Math.round(tw*.4),2);
-      c.fillStyle=ol;c.fillRect(tx-4,ty+1,4,th-2);c.fillRect(tx+tw,ty+1,4,th-2);c.fillStyle=u.d;c.fillRect(tx-3,ty+2,2,th-4);c.fillRect(tx+tw+1,ty+2,2,th-4);
-      // torso
-      c.fillStyle=ol;c.fillRect(tx-1,ty-1,tw+2,th+2);c.fillStyle=u.b;c.fillRect(tx,ty,tw,th);c.fillStyle=u.l;c.fillRect(tx,ty,tw,1);c.fillStyle=u.d;c.fillRect(tx,ty+th-2,tw,2);
-      var pulse=.55+.45*Math.sin(t*1.2+i*2.1),a=u.a;
-      c.fillStyle='rgb('+(a[0]*pulse|0)+','+(a[1]*pulse|0)+','+(a[2]*pulse|0)+')';c.fillRect(cx-1,ty+(th>>1)-1,2,2);
-      // head: screen dim, eyes shut to a pair of dashes
-      c.fillStyle=ol;c.fillRect(hx-1,hy-1,hw+2,hh+2);c.fillStyle=u.b;c.fillRect(hx,hy,hw,hh);c.fillStyle=u.l;c.fillRect(hx,hy,hw,1);
-      c.fillStyle='#070d14';c.fillRect(hx+2,hy+2,hw-4,hh-4);
-      var ew=Math.max(2,Math.round(hw*.22)),ey=hy+(hh>>1)+1;
-      c.fillStyle='rgb('+(a[0]*.45*pulse|0)+','+(a[1]*.45*pulse|0)+','+(a[2]*.45*pulse|0)+')';
-      c.fillRect(hx+Math.round(hw*.25)+dir,ey,ew,1);c.fillRect(hx+hw-Math.round(hw*.25)-ew+dir,ey,ew,1);
-      // antenna with a slow standby blink
-      c.fillStyle=ol;c.fillRect(hx+(hw>>1)-1,hy-5,3,5);c.fillStyle=u.d;c.fillRect(hx+(hw>>1),hy-4,1,4);
-      c.fillStyle=Math.sin(t*2.2+i)>.3?'rgb('+a[0]+','+a[1]+','+a[2]+')':'#1a2230';c.fillRect(hx+(hw>>1)-1,hy-6,3,2);
-      // a z or two drifting up
-      for(var z=0;z<2;z++){var ph=((t*.35+i*.27+z*.5)%1),zx=Math.round(hx+hw*.7+ph*dir*6+z*dir*2),zy=Math.round(hy-hh*.6-ph*14),sz=z?4:5;
-        var al=1-ph;if(al<.15)continue;c.fillStyle=al>.55?'#d8f6ff':'#6a8fa8';
+    // the sleeping dog: a curled orange body that rises and falls, with an ear, a nose and a tail round the front
+    function dog(c,t){
+      var bx=Math.round(w*.27),by=floorY+Math.round((h-floorY)*.5)-1,u=Math.max(6,Math.round(w*.05)),br=Math.sin(t*1.5)>0?1:0;
+      ell(c,bx,by,u*1.9,u*.9+br*.5,'#d98a3d');ell(c,bx,by-u*.35,u*1.6,u*.55,'#e9a65a');
+      ell(c,bx-u*1.6,by+u*.15,u*.85,u*.7,'#d98a3d');ell(c,bx-u*2.1,by+u*.45,u*.45,u*.3,'#f3dcb5');R(c,bx-u*2.45,by+u*.2,2,2,'#1c1416');
+      ell(c,bx-u*1.25,by-u*.45,u*.35,u*.55,'#a85d1d');R(c,bx-u*1.95,by-u*.05,3,1,'#3a2214');
+      ell(c,bx+u*1.5,by+u*.25,u*.9,u*.3,'#f3dcb5'); // the tail curled in front
+      for(var z=0;z<2;z++){var ph=((t*.3+z*.5)%1),zx=Math.round(bx-u*2+ph*7+z*3),zy=Math.round(by-u*1.4-ph*16),sz=z?4:5,al=1-ph;if(al<.15)continue;c.fillStyle=al>.55?'#fff4d8':'#9a8a78';
         c.fillRect(zx,zy,sz,1);for(var zd=1;zd<sz-1;zd++)c.fillRect(zx+sz-1-zd,zy+zd,1,1);c.fillRect(zx,zy+sz-1,sz,1)}
+      if(hearts.length<4&&Math.random()<.03)hearts.push({x:bx-u*.5+Math.random()*u,y:by-u*.8,l:1});
+    }
+    // the cat on the top perch: tabby, ears up, a tail that swishes, and a slow blink
+    function cat(c,t){
+      var tx=Math.round(w*.84),gy=Math.round(h*.36)-3,u=Math.max(5,Math.round(w*.035)),sw=Math.round(Math.sin(t*1.7)*u*.6);
+      // tail hangs down off the perch
+      for(var k=0;k<7;k++)R(c,tx+u*1.1+Math.round(Math.sin(t*1.7+k*.4)*k*.5)+(k>4?1:0),gy-u*.3+k*2,2,2,k>4?'#4a4f58':'#8f959d');
+      ell(c,tx,gy-u*.7,u*1.1,u*.9,'#8f959d');R(c,tx-u*.6,gy-u*.8,u*1.2,u*.2,'#6b7078');R(c,tx-u*.3,gy-u*1.2,u*.6,u*.2,'#6b7078');
+      ell(c,tx-u*.2,gy-u*2,u*.78,u*.62,'#8f959d');
+      R(c,tx-u*.9,gy-u*2.9,2,u*.6,'#8f959d');R(c,tx+u*.4,gy-u*2.9,2,u*.6,'#8f959d');R(c,tx-u*.9+1,gy-u*2.7,1,u*.3,'#e8a8b0');R(c,tx+u*.4+1,gy-u*2.7,1,u*.3,'#e8a8b0');
+      var blink=(t%5)>4.8;R(c,tx-u*.6,gy-u*2.05,2,blink?1:2,blink?'#3a3f48':'#ffe066');R(c,tx+u*.1,gy-u*2.05,2,blink?1:2,blink?'#3a3f48':'#ffe066');
+      R(c,tx-u*.25,gy-u*1.65,2,1,'#e8a8b0');
     }
     function frame(ts){
       if(!ctx)return;
       var t=(ts-t0)/1000;
       if(!frame.buf||frame.buf.width!==w||frame.buf.height!==h){frame.buf=document.createElement('canvas');frame.buf.width=w;frame.buf.height=h}
       var bc=frame.buf.getContext('2d');bc.drawImage(base,0,0);
-      if(opts.bears)for(var i=0;i<4;i++)agent(bc,i,t);
+      dog(bc,t);cat(bc,t);
+      stars.forEach(function(s){if(Math.sin(t*s.s+s.p)>-.2)R(bc,s.x,s.y,1,1,'#fff')});
       var img=bc.getImageData(0,0,w,h),d=img.data;
-      var fl=.88+.07*Math.sin(t*2.1)+.04*Math.sin(t*7.3+1.3)+(Math.random()-.5)*.04,amb=opts.ambient;
+      var fl=.92+.05*Math.sin(t*2.1)+.03*Math.sin(t*5.3+1.3)+(Math.random()-.5)*.02,amb=opts.ambient*1.15;
       for(var p=0,n=w*h;p<n;p++){var g=fall[p]*fl*opts.glow,o=p*4;
-        d[o]=Math.min(255,d[o]*(amb*.85+g*.6));d[o+1]=Math.min(255,d[o+1]*(amb*1+g*1.1));d[o+2]=Math.min(255,d[o+2]*(amb*1.3+g*1.35))}
+        d[o]=Math.min(255,d[o]*(amb*1.05+g*1.35));d[o+1]=Math.min(255,d[o+1]*(amb+g*1.05));d[o+2]=Math.min(255,d[o+2]*(amb*1.05+g*.75))}
       ctx.putImageData(img,0,0);
-      // rack lights, at full brightness
-      var pal=['#4ff3ff','#3ddc84','#ffb347'];
-      for(var k=0;k<leds.length;k++){var L=leds[k];if(Math.sin(t*L.sp+L.ph)>-.1){ctx.fillStyle=pal[L.c];ctx.fillRect(L.x,L.y,1,1)}}
-      // the core: an orb in a pulsing beam, with data bits rising off it
-      var cy=fy-fh*.55,pr=fw*(.85+.1*Math.sin(t*2.4)),i2;
-      for(i2=0;i2<fh;i2++){var bx=Math.round(fx+Math.sin(t*3+i2*.5)*1.2),bwid=Math.max(1,Math.round(fw*.35*(1-i2/fh)));ctx.fillStyle=i2%3===0?'#c8fbff':'#2aa6c0';ctx.fillRect(bx-(bwid>>1),fy-2-i2,bwid,1)}
-      ell(ctx,fx,cy,pr+1.5,pr+1.5,'#0b3a4a');ell(ctx,fx,cy,pr,pr,'#1a8fb0');ell(ctx,fx,cy,pr*.7,pr*.7,'#4ff3ff');ell(ctx,fx,cy,pr*.35,pr*.35,'#eaffff');
-      if(sp.length<22&&Math.random()<.5)sp.push({x:fx+(Math.random()-.5)*fw*1.4,y:cy,vx:(Math.random()-.5)*.2,vy:-.2-Math.random()*.4,l:1});
-      for(var s=sp.length-1;s>=0;s--){var q=sp[s];q.x+=q.vx+Math.sin(t*4+s)*.06;q.y+=q.vy;q.l-=.012;if(q.l<=0){sp.splice(s,1);continue}ctx.fillStyle=q.l>.6?'#d8ffff':q.l>.3?'#4ff3ff':'#1a6f88';ctx.fillRect(q.x|0,q.y|0,1,1)}
+      // the lamp bulb glow, and hearts drifting up from the sleeping dog
+      ell(ctx,fx,ly+Math.round(h*.03),Math.round(w*.03),Math.round(h*.03),'rgba(255,240,190,.5)');
+      for(var q=hearts.length-1;q>=0;q--){var hq=hearts[q];hq.y-=.25;hq.x+=Math.sin(t*3+q)*.15;hq.l-=.012;if(hq.l<=0){hearts.splice(q,1);continue}
+        ctx.fillStyle=hq.l>.5?'#ff7aa8':'#b84a74';var hx=hq.x|0,hy=hq.y|0;ctx.fillRect(hx,hy,1,1);ctx.fillRect(hx+2,hy,1,1);ctx.fillRect(hx,hy+1,3,1);ctx.fillRect(hx+1,hy+2,1,1)}
     }
     function loop(ts){raf=requestAnimationFrame(loop);if(ts-last<(opts.fps?1000/opts.fps:33))return;last=ts;frame(ts)}
     this.start=function(){size();t0=performance.now();if(reduce){frame(t0+1500);return}
