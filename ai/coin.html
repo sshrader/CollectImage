@@ -74,6 +74,9 @@ td .mini>div{height:100%;background:var(--gold)}
 .agentbox li i{font-style:normal;font-family:var(--mono);color:var(--dim)}
 .agentbox li.warn i,.agentbox li.warn{color:#ffcf6b}
 .agentbox li.good i{color:var(--good)}
+.agentbox .abil{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.agentbox .abil h3{margin:0 0 2px;font:700 16px var(--display);color:var(--gold)}
+.agentbox .abil .does{margin:0 0 10px;color:var(--dim);font-size:14px}
 .agentbox .stamp{margin:10px 0 0;font-size:12px;color:var(--dim)}
 </style>
 </head>
@@ -151,10 +154,15 @@ td .mini>div{height:100%;background:var(--gold)}
     if(j.agent){
       var wh=el('div','who');wh.appendChild(el('b',null,j.agent.name));wh.appendChild(el('span','role',j.agent.role));ab.appendChild(wh);
       if(j.agent.blurb)ab.appendChild(el('p','blurb',j.agent.blurb));
+      if(j.agent.weapon)ab.appendChild(el('p','blurb','Armed with: '+j.agent.weapon+'.'));
     }
     if(j.report){
       ab.appendChild(el('p','head'+(j.report.status==='attention'?' attention':''),j.report.headline));
       var ul=el('ul');j.report.lines.forEach(function(l){var li=el('li',l.level);li.appendChild(el('i',null,l.level==='warn'?'!':l.level==='good'?'+':'>'));li.appendChild(el('span',null,l.text));ul.appendChild(li)});ab.appendChild(ul);
+      if(j.report.ability){var A=j.report.ability,ad=el('div','abil');ad.appendChild(el('h3',null,'Special ability: '+A.name));ad.appendChild(el('p','does',A.does));
+        var au=el('ul');A.lines.forEach(function(l){var li=el('li',l.level);li.appendChild(el('i',null,l.level==='warn'?'!':l.level==='good'?'+':'>'));li.appendChild(el('span',null,l.text));au.appendChild(li)});ad.appendChild(au);
+        if(j.agent&&j.agent.role==='SCRIBE'&&A.lines[0]){var cb=el('button','cp','Copy brief');cb.type='button';cb.style.marginTop='10px';cb.onclick=function(){try{navigator.clipboard.writeText(A.lines[0].text).then(function(){cb.textContent='Copied'},function(){cb.textContent='Select and copy'})}catch(e){cb.textContent='Select and copy'}};ad.appendChild(cb)}
+        ab.appendChild(ad)}
       ab.appendChild(el('p','stamp',j.report.note+' Updated '+new Date(j.report.at).toLocaleTimeString()+'.'));
     }
     var L=$('links');L.textContent='';

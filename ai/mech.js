@@ -50,6 +50,19 @@ const ROLES = {
   MECHANIC: 'Checks the coin’s numbers and says what looks off.',
   SCRIBE: 'Writes the coin’s plain-language status report.',
 };
+// Each class has one special ability. Every one is real: it is worked out from the coin's public chain numbers, and from what
+// the agent has seen on earlier visits to the coin page. None of them trades, moves funds or predicts a price.
+const ABILITIES = {
+  SCOUT: { name: 'Holder Radar', does: 'Tracks how many wallets hold the coin and how that count has changed since the agent first looked.' },
+  ANALYST: { name: 'Cap Tracker', does: 'Follows market cap against where it started and where it peaked, and shows how far it is from the high.' },
+  SENTRY: { name: 'Dev Watch', does: 'Watches the dev wallet and the top ten holders, and sounds the alarm if the dev’s share drops.' },
+  COURIER: { name: 'Record Board', does: 'Keeps the coin’s records: its highest market cap, most holders and furthest curve progress, with when each was seen.' },
+  ARCHIVIST: { name: 'Milestone Log', does: 'Writes down the moment the coin first passes 25%, 50%, 75% and 90% of the curve, and when it graduates.' },
+  NAVIGATOR: { name: 'Graduation Pace', does: 'Works out how much SOL is still needed to finish the curve and the average pace so far. Arithmetic only, not a forecast.' },
+  MECHANIC: { name: 'Self-Check', does: 'Audits the agent’s own readings: what the chain returned, what failed, and whether the numbers add up.' },
+  SCRIBE: { name: 'Plain Brief', does: 'Turns the numbers into a short plain-English summary you can copy and share.' },
+  FLAGSHIP: { name: 'Command Sweep', does: 'Runs every other agent’s ability on the coin at once and reports the headline from each.' },
+};
 const ROLE_KEYS = Object.keys(ROLES);
 
 function prng(seedBytes) {
@@ -98,7 +111,7 @@ function traitsFor(slot, secret) {
   }
   return list.items[slot];
 }
-function agentFor(slot, secret) { const t = traitsFor(slot, secret); return { name: t.name, role: t.role, blurb: ROLES[t.role], chassis: SCHEMES[t.skin].name, weapon: WEAPON_LABEL[t.weapon] + (t.twin ? ' (twin)' : '') + (t.mount !== 'none' ? ' + ' + ({ pods: 'missile pods', backgun: 'back guns', rail: 'rail gun', cannon: 'shoulder cannons' })[t.mount] : '') }; }
+function agentFor(slot, secret) { const t = traitsFor(slot, secret); return { name: t.name, role: t.role, blurb: ROLES[t.role], ability: ABILITIES[t.role], chassis: SCHEMES[t.skin].name, weapon: WEAPON_LABEL[t.weapon] + (t.twin ? ' (twin)' : '') + (t.mount !== 'none' ? ' + ' + ({ pods: 'missile pods', backgun: 'back guns', rail: 'rail gun', cannon: 'shoulder cannons' })[t.mount] : '') }; }
 
 // ---- the voxel grid ----
 class Vox {
@@ -401,4 +414,4 @@ function silhouette() {
   return runs;
 }
 
-module.exports = { png, founderPng, silhouette, traitsFor, agentFor, agentVoxels, founderVoxels, ROLES, SCHEMES, GLOWS, W, H, D };
+module.exports = { png, founderPng, silhouette, traitsFor, agentFor, agentVoxels, founderVoxels, ROLES, ABILITIES, SCHEMES, GLOWS, W, H, D };

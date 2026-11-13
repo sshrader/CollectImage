@@ -243,7 +243,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       var t=document.createElement('b');t.textContent=b.state==='launched'&&b.name?b.name:(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));el.appendChild(t);
       var sm=document.createElement('small');
       if(b.state==='launched')sm.textContent='$'+b.symbol+' · '+(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));
-      else sm.textContent=b.state==='held'?'Being launched…':(pickSlot===b.n?'Selected':(b.agent?b.agent.role.toLowerCase():'Open'));
+      else sm.textContent=b.state==='held'?'Being launched…':(pickSlot===b.n?'Selected':(b.agent?b.agent.role.toLowerCase()+(b.agent.ability?' · '+b.agent.ability.name:''):'Open'));
+      if(b.agent&&b.agent.ability)el.title=b.agent.name+' · '+b.agent.ability.name+': '+b.agent.ability.does+(b.agent.weapon?' Armed with: '+b.agent.weapon+'.':'');
       el.appendChild(sm);g.appendChild(el);
     });
     $('count').textContent=open+' of '+st.total+' agents open';
@@ -269,6 +270,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       h.textContent='PRIME';
       p.textContent=f.state==='held'?'The flagship coin is being launched right now.':'A graphite flagship agent with a gold crown and an amber visor. Not in the numbered set, and reserved for Mechpad’s founder wallet ('+f.short+').';
       d.appendChild(h);d.appendChild(p);
+      if(f.agent&&f.agent.ability){var pa=document.createElement('p');pa.style.cssText='margin:6px 0 0;font-size:14px;color:var(--dim)';var pb=document.createElement('b');pb.style.color='var(--gold)';pb.textContent='Special ability: '+f.agent.ability.name+'. ';pa.appendChild(pb);pa.appendChild(document.createTextNode(f.agent.ability.does));d.appendChild(pa)}
       if(f.state==='reserved'&&pubkey&&short(pubkey)===f.short){var b=document.createElement('button');b.type='button';b.className='btn go';b.textContent=pickSlot==='founder'?'PRIME selected':'Launch the PRIME coin';
         b.addEventListener('click',function(){pickSlot='founder';drawBears();drawFounder();showPick();say('PRIME selected. Fill in the coin details below and launch.','ok');$('nm').scrollIntoView({behavior:'smooth',block:'center'})});d.appendChild(b)}
     }

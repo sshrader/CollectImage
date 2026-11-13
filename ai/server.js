@@ -161,7 +161,7 @@ function loadBears(c) {
 function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', JSON.stringify(d)); fs.renameSync(f + '.tmp', f); }
 const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
 const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
-const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. Reserved for Mechpad’s founder wallet.' };
+const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. Reserved for Mechpad’s founder wallet.', ability: art.ABILITIES.FLAGSHIP };
 // The 3D views fetch an agent's voxels. They only depend on the image secret, so they are cached and gzipped.
 const voxCache = new Map();
 function sendVoxels(req, res, slot) {
@@ -181,7 +181,7 @@ function bearsState(res) {
   for (let i = 0; i < c.total; i++) {
     const L = d.launched[i], H = d.holds[i];
     const ag = art.agentFor(i, imageSecret());
-    bears.push({ n: i + 1, agent: { name: ag.name, role: ag.role, blurb: ag.blurb }, state: L ? 'launched' : H ? 'held' : 'open', symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null, dev: L ? L.wallet : null, split: L ? !!L.split : false });
+    bears.push({ n: i + 1, agent: { name: ag.name, role: ag.role, blurb: ag.blurb, ability: ag.ability, weapon: ag.weapon }, state: L ? 'launched' : H ? 'held' : 'open', symbol: L ? L.symbol : null, name: L ? L.name : null, mint: L ? L.mint : null, dev: L ? L.wallet : null, split: L ? !!L.split : false });
   }
   const recent = Object.keys(d.launched).map((k) => ({ bear: k === 'F' ? 'F' : Number(k) + 1, agent: k === 'F' ? PRIME.name : art.agentFor(Number(k), imageSecret()).name, name: d.launched[k].name, symbol: d.launched[k].symbol, mint: d.launched[k].mint, at: d.launched[k].at }))
     .sort((x, y) => y.at - x.at).slice(0, 8);
@@ -322,6 +322,24 @@ function findLaunched(c, mint) {
   for (const k of Object.keys(d.launched)) if (d.launched[k].mint === mint) return { slot: k === 'F' ? 'F' : Number(k), rec: d.launched[k] };
   return null;
 }
+// What the agents have seen on earlier visits to a coin's page: first look, highs and the times it crossed milestones.
+// Kept per coin in a small file, so the abilities that compare "now" with "before" have something real to compare.
+const watchFile = (c) => path.join(DATA_DIR, 'watch-' + c.cluster + '.json');
+const watchMem = new Map();
+function watchLoad(c) { if (!watchMem.has(c.cluster)) { let d; try { d = JSON.parse(fs.readFileSync(watchFile(c), 'utf8')); } catch (e) { d = {}; } watchMem.set(c.cluster, { d, saved: 0 }); } return watchMem.get(c.cluster); }
+function watchUpdate(c, mint, oc, now) {
+  const st = watchLoad(c), cv = oc && oc.curve;
+  if (!cv && oc.holderCount == null && oc.devHoldPct == null) return st.d[mint] || null;
+  const r = { at: now, cap: cv ? cv.marketCapSol : null, curve: cv ? cv.progress : null, holders: oc.holderCount == null ? null : oc.holderCount, dev: oc.devHoldPct == null ? null : oc.devHoldPct, top10: oc.top10Pct == null ? null : oc.top10Pct };
+  let w = st.d[mint];
+  if (!w) { w = st.d[mint] = { first: r, peak: {}, marks: {}, devMax: null, n: 0 }; const keys = Object.keys(st.d); if (keys.length > 600) delete st.d[keys[0]]; }
+  w.n++; w.last = r;
+  for (const [k, v] of [['cap', r.cap], ['holders', r.holders], ['curve', r.curve]]) if (v != null && (!w.peak[k] || v > w.peak[k].v)) w.peak[k] = { v, at: now };
+  if (r.dev != null && (w.devMax == null || r.dev > w.devMax)) w.devMax = r.dev;
+  if (cv) { for (const m of [25, 50, 75, 90]) if (cv.progress >= m && !w.marks[m]) w.marks[m] = now; if (cv.complete && !w.marks.grad) w.marks.grad = now; }
+  if (now - st.saved > 5000) { st.saved = now; try { fs.writeFileSync(watchFile(c) + '.tmp', JSON.stringify(st.d)); fs.renameSync(watchFile(c) + '.tmp', watchFile(c)); } catch (e) { /* the memory copy still works */ } }
+  return w;
+}
 async function coinInfo(res, mint) {
   const c = cfg();
   if (!B58_RE.test(mint)) return send(res, 404, { error: 'No such coin.' });
@@ -333,17 +351,18 @@ async function coinInfo(res, mint) {
   else {
     onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, f.rec.wallet, rpcUrl(c));
     coinCache.set(key, { at: Date.now(), data: onchain });
+    watchUpdate(c, mint, onchain, Date.now());
     if (coinCache.size > 200) coinCache.delete(coinCache.keys().next().value);
   }
   let meta = {};
   const mm = /\/metadata\/([a-f0-9]{16})\.json$/.exec(f.rec.uri || '');
   if (mm) { try { meta = JSON.parse(fs.readFileSync(path.join(META_DIR, mm[1] + '.json'), 'utf8')); } catch (e) { /* no metadata file */ } }
-  const agent = f.slot === 'F' ? { name: PRIME.name, role: PRIME.role, blurb: PRIME.blurb } : (({ name, role, blurb }) => ({ name, role, blurb }))(art.agentFor(f.slot, imageSecret()));
+  const agent = f.slot === 'F' ? { name: PRIME.name, role: PRIME.role, blurb: PRIME.blurb, ability: PRIME.ability } : (({ name, role, blurb, ability, weapon }) => ({ name, role, blurb, ability, weapon }))(art.agentFor(f.slot, imageSecret()));
   send(res, 200, {
     cluster: c.cluster, mint, bear: f.slot === 'F' ? 'F' : f.slot + 1, founder: !!f.rec.founder, total: c.total, name: f.rec.name, symbol: f.rec.symbol, dev: f.rec.wallet,
     launchedAt: f.rec.at, signature: f.rec.signature, feeSplit: !!f.rec.split, platformBps: c.platformWallet ? PLATFORM_BPS : 0,
     description: meta.description || '', twitter: meta.twitter || '', website: meta.website || '', onchain,
-    agent, report: statusReport(agent, { launchedAt: f.rec.at, symbol: f.rec.symbol }, onchain, Date.now()),
+    agent, report: statusReport(agent, { launchedAt: f.rec.at, symbol: f.rec.symbol }, onchain, Date.now(), watchLoad(c).d[mint] || null),
   });
 }
 
