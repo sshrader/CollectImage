@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin · PetPad</title>
+<style>
+:root{--bg:#14100f;--surface:#0e141e;--surface2:#241b18;--line:#4a3a30;--fg:#fbf1e6;--dim:#d9c6b4;--ember:#ff7a59;--gold:#ffb347;--good:#9be29b;--bad:#ff8a7a;--sans:system-ui,-apple-system,'Segoe UI',sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto;padding-block:28px 80px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--dim);margin:0 0 20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input,select{flex:1;min-width:200px;font:15px var(--sans);color:var(--fg);background:#1a1412;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+button{font:700 14px var(--sans);border-radius:99px;padding:9px 18px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
+button.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#2a1608;border:0}
+button.warn{border-color:var(--bad);color:var(--bad)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.net{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--gold);color:var(--gold);padding:2px 8px;margin-left:8px}
+.net.main{color:var(--bad);border-color:var(--bad)}
+.bear{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.bear:first-child{border-top:0}
+.bear b{font-size:16px}
+.st{font:600 12px var(--mono);margin-left:8px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.st.launched{color:var(--good);border-color:var(--good)}.st.held{color:var(--gold);border-color:var(--gold)}
+.meta{font:13px var(--mono);color:var(--dim);overflow-wrap:anywhere;grid-column:1/-1}
+.msg{min-height:1.4em;font-size:14px}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PetPad admin <span class="net" id="net" hidden></span></h1>
+  <p class="sub">Free an agent so it can be launched again, for example after a test. The password is the <code>ADMIN_TOKEN</code> set in Railway. It is kept only on this page and is never saved.</p>
+  <div class="panel">
+    <div class="row"><input type="password" id="tok" placeholder="Admin password" autocomplete="off"><button class="go" id="go" type="button">Load agents</button></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="panel" id="list" hidden></div>
+  <div class="panel" id="attach" hidden>
+    <b>Attach a coin to an agent</b>
+    <p class="sub" style="margin:4px 0 12px">Use this if a coin launched but its agent did not lock. The server checks the launch transaction on the chain before it saves anything.</p>
+    <div class="row" style="margin-bottom:10px"><select id="aslot"></select><input id="aname" placeholder="Coin name" maxlength="32"><input id="asym" placeholder="Ticker" maxlength="10" style="min-width:110px;flex:0 1 130px"></div>
+    <div class="row" style="margin-bottom:10px"><input id="amint" placeholder="Coin (mint) address"></div>
+    <div class="row" style="margin-bottom:10px"><input id="asig" placeholder="Launch transaction signature"></div>
+    <div class="row"><button class="go" id="agoBtn" type="button">Attach</button><span class="msg" id="amsg"></span></div>
+  </div>
+</div>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)},token='',cluster='devnet';
+  function say(t,c){var m=$('msg');m.textContent=t||'';m.className='msg'+(c?' '+c:'')}
+  function call(path,body){return fetch(path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body||{})}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok,status:r.status,json:j}})})}
+  function short(a){return a?a.slice(0,4)+'…'+a.slice(-4):''}
+  function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+  function drawAttach(j){
+    var sel=$('aslot');sel.textContent='';
+    j.bears.filter(function(b){return b.state!=='launched'}).forEach(function(b){var o=document.createElement('option');o.value=b.slot;o.textContent=b.label;sel.appendChild(o)});
+    $('attach').hidden=!sel.firstChild;
+  }
+  $('agoBtn').addEventListener('click',function(){
+    var m=$('amsg');m.className='msg';m.textContent='';
+    var body={slot:$('aslot').value,name:$('aname').value.trim(),symbol:$('asym').value.trim().toUpperCase().replace(/^\$/,''),mint:$('amint').value.trim(),signature:$('asig').value.trim()};
+    if(body.slot!=='founder')body.slot=Number(body.slot);
+    $('agoBtn').disabled=true;
+    call('/api/admin/attach',body).then(function(r){
+      $('agoBtn').disabled=false;
+      if(r.ok){m.className='msg ok';m.textContent='Attached.';load()}else{m.className='msg err';m.textContent=r.json.error||('Failed ('+r.status+')')}
+    }).catch(function(){$('agoBtn').disabled=false;m.className='msg err';m.textContent='Could not reach the server.'});
+  });
+  function draw(j){
+    drawAttach(j);
+    cluster=j.cluster;var n=$('net');n.hidden=false;n.textContent=j.cluster;n.className='net'+(j.cluster==='mainnet'?' main':'');
+    var box=$('list');box.hidden=false;box.textContent='';
+    j.bears.forEach(function(b){
+      var row=el('div','bear'),left=el('div');
+      left.appendChild(el('b',null,b.label));left.appendChild(el('span','st '+b.state,b.state==='held'?'held '+Math.ceil(b.holdSeconds/60)+' min':b.state));
+      row.appendChild(left);
+      var btn=el('button',b.state==='launched'?'warn':'',b.state==='launched'?'Free this agent':'Clear hold');btn.type='button';btn.disabled=b.state==='open';
+      btn.addEventListener('click',function(){
+        var msg=b.state==='launched'?'Free '+b.label+'? It will no longer show its coin on the home page. The coin itself stays on-chain.':'Clear the hold on '+b.label+'?';
+        if(btn.dataset.sure!=='1'){btn.dataset.sure='1';btn.textContent='Press again to confirm';setTimeout(function(){btn.dataset.sure='';btn.textContent=b.state==='launched'?'Free this agent':'Clear hold'},4000);say(msg);return}
+        btn.disabled=true;
+        call('/api/admin/release',{slot:b.slot}).then(function(r){if(r.ok){say(b.label+' is open again.','ok');load()}else{say(r.json.error||'Failed ('+r.status+')','err');btn.disabled=false}});
+      });
+      row.appendChild(btn);
+      var meta=[];if(b.symbol)meta.push('$'+b.symbol+(b.name?' · '+b.name:''));if(b.dev)meta.push('wallet '+short(b.dev));if(b.at)meta.push(new Date(b.at).toLocaleString());
+      if(meta.length)row.appendChild(el('div','meta',meta.join('  ·  ')));
+      if(b.mint){var m=el('div','meta');var a=el('a',null,b.mint);a.href='/coin/'+b.mint;m.appendChild(a);row.appendChild(m)}
+      box.appendChild(row);
+    });
+  }
+  function load(){
+    token=$('tok').value.trim();if(!token){say('Enter the admin password.','err');return}
+    call('/api/admin/state').then(function(r){
+      if(r.status===401){say('Wrong password.','err');$('list').hidden=true;return}
+      if(r.status===503){say(r.json.error||'Admin tools are off. Set ADMIN_TOKEN in Railway.','err');return}
+      if(r.status===429){say(r.json.error,'err');return}
+      if(!r.ok){say(r.json.error||'Failed ('+r.status+')','err');return}
+      if(!$('msg').classList.contains('ok'))say('');draw(r.json);
+    }).catch(function(){say('Could not reach the server.','err')});
+  }
+  $('go').addEventListener('click',load);
+  $('tok').addEventListener('keydown',function(e){if(e.key==='Enter')load()});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Coin · PetPad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14100f;--surface:rgba(14,20,30,.92);--surface2:#241b18;--line:#4a3a30;--fg:#fbf1e6;--dim:#d9c6b4;--ember:#ff7a59;--gold:#ffb347;--good:#9be29b;--bad:#ff8a7a;
+--display:'Space Grotesk',Inter,system-ui,sans-serif;--sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
+padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;image-rendering:pixelated;opacity:.7;pointer-events:none}
+.veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(14,10,8,.7) 0%,rgba(14,10,8,.4) 50%,rgba(14,10,8,.15) 100%)}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding-block:24px 120px}
+a{color:var(--gold)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:20px;color:var(--fg);text-decoration:none}
+.net{font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
+.net.main{color:var(--bad);border-color:var(--bad)}
+.back{font:600 14px var(--sans);color:var(--dim);text-decoration:none}
+.hero{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;margin-top:28px;align-items:start}
+@media(max-width:700px){.hero{grid-template-columns:minmax(0,1fr)}.hero .pic{max-width:280px}}
+.pic{border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--surface)}
+.pic img{display:block;width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:6px}
+h1{font-family:var(--sans);font-weight:800;font-size:clamp(30px,6vw,48px);line-height:1.08;margin:0 0 4px;text-wrap:balance;text-shadow:0 2px 0 #000;overflow-wrap:anywhere}
+.tick{font:500 18px var(--mono);color:var(--gold);margin-bottom:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{font:600 13px var(--mono);border:1px solid var(--line);border-radius:99px;padding:3px 10px;color:var(--dim);background:var(--surface2)}
+.chip.good{color:var(--good);border-color:var(--good)}
+.desc{color:var(--dim);max-width:60ch;margin:8px 0 14px;overflow-wrap:anywhere}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:700 14px var(--sans);border-radius:99px;padding:10px 18px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer;text-decoration:none;display:inline-block}
+.btn.go{background:linear-gradient(135deg,var(--gold),var(--ember));color:#2a1608;border:0}
+h2{font-family:var(--sans);font-weight:800;font-size:22px;margin:34px 0 12px;text-shadow:0 1px 0 #000}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.tile small{display:block;font:500 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.tile b{font:800 22px var(--sans);overflow-wrap:anywhere}
+.tile i{display:block;font:500 13px var(--sans);font-style:normal;color:var(--dim);margin-top:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.bar{height:16px;border:1px solid var(--line);border-radius:3px;background:#1a1412;overflow:hidden}
+.bar>div{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold))}
+.kv{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:8px 14px;font-size:14px}
+@media(max-width:560px){.kv{grid-template-columns:minmax(0,1fr)}.kv dt{margin-top:6px}}
+.kv dt{color:var(--dim)}.kv dd{margin:0;font-family:var(--mono);font-size:14px;overflow-wrap:anywhere}
+.cp{font:500 13px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:1px 9px;cursor:pointer;margin-left:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font:500 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid rgba(77,56,38,.5);vertical-align:middle}
+td.n{font-family:var(--mono);width:34px;color:var(--dim)}
+td.p{font-family:var(--mono);width:84px;text-align:right}
+td.b{width:34%}
+td .mini{height:8px;background:#1a1412;border-radius:2px;overflow:hidden}
+td .mini>div{height:100%;background:var(--gold)}
+.tag{font:600 13px var(--mono);border:1px solid var(--line);border-radius:99px;padding:1px 7px;margin-left:6px;color:var(--dim)}
+.tag.dev{color:var(--gold);border-color:var(--gold)}
+.scroll{overflow-x:auto}
+.note{font-size:13px;color:var(--dim)}
+.fine{font-size:12px;color:var(--dim);max-width:72ch;margin-top:28px}
+#err{display:none;margin-top:40px}
+.agentbox .who{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
+.agentbox .who b{font:700 18px var(--display)}
+.agentbox .role{font:600 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.agentbox .blurb{margin:0 0 10px;color:var(--dim);font-size:14px}
+.agentbox .head{font-weight:700;margin:0 0 8px}
+.agentbox .head.attention{color:#ffcf6b}
+.agentbox ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.agentbox li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:8px;font-size:14px;overflow-wrap:anywhere}
+.agentbox li i{font-style:normal;font-family:var(--mono);color:var(--dim)}
+.agentbox li.warn i,.agentbox li.warn{color:#ffcf6b}
+.agentbox li.good i{color:var(--good)}
+.agentbox .abil{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.agentbox .abil h3{margin:0 0 2px;font:700 16px var(--display);color:var(--gold)}
+.agentbox .abil .does{margin:0 0 10px;color:var(--dim);font-size:14px}
+.agentbox .stamp{margin:10px 0 0;font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+<div class="wrap">
+<header>
+  <a class="logo" href="/">PetPad<span class="net" id="net">devnet</span></a>
+  <a class="back" href="/">← All pets</a>
+</header>
+
+<div id="err" class="panel"><b>That coin is not in PetPad.</b><p class="note">Only coins launched here have a page. <a href="/">Back to the pets</a>.</p></div>
+
+<div id="page" hidden>
+  <section class="hero">
+    <div class="pic"><img id="pic" alt=""></div>
+    <div>
+      <h1 id="name"></h1>
+      <div class="tick" id="tick"></div>
+      <div class="chips" id="chips"></div>
+      <p class="desc" id="desc"></p>
+      <div class="row" id="links"></div>
+    </div>
+  </section>
+
+  <h2>Agent report</h2>
+  <div class="panel agentbox" id="agentbox"></div>
+
+  <h2>Market</h2>
+  <div class="tiles" id="tiles"></div>
+  <div class="panel" style="margin-top:12px" id="curvebox">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><b>Bonding curve</b><span class="note" id="curvetxt"></span></div>
+    <div class="bar"><div id="curvebar" style="width:0"></div></div>
+  </div>
+
+  <h2>Top holders</h2>
+  <div class="panel scroll"><table><thead><tr><th>#</th><th>Wallet</th><th></th><th style="text-align:right">Share</th></tr></thead><tbody id="holders"></tbody></table></div>
+  <p class="note" id="holdnote"></p>
+
+  <h2>Dev and launch</h2>
+  <div class="panel"><dl class="kv" id="dev"></dl></div>
+
+  <p class="fine">Numbers are read from the chain and refresh every minute. They describe this coin now and do not predict anything. A coin can lose all of its value, and its pet has no promised value. The agent only reads and reports public numbers: it does not trade, hold funds or predict anything. PetPad does not vouch for any coin launched here. Nothing here is financial advice.</p>
+</div>
+</div>
+
+<script src="/cave.js"></script>
+<script src="/vox.js"></script>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var mint=location.pathname.split('/').pop();
+  var cave=new Cave($('bg'),{bears:false,ambient:.2,glow:1.0,fps:12});cave.start();
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+  function short(a){return a?a.slice(0,4)+'…'+a.slice(-4):'unknown'}
+  function fmt(n,d){if(n==null||!isFinite(n))return '–';var a=Math.abs(n);if(a>=1e9)return (n/1e9).toFixed(2)+'B';if(a>=1e6)return (n/1e6).toFixed(2)+'M';if(a>=1e3)return (n/1e3).toFixed(1)+'K';return n.toFixed(d==null?2:d)}
+  function pct(n){return n==null?'–':n.toFixed(n<10?2:1)+'%'}
+  function tile(label,value,sub){var t=el('div','tile');t.appendChild(el('small',null,label));t.appendChild(el('b',null,value));if(sub)t.appendChild(el('i',null,sub));return t}
+  function copy(btn,text){btn.onclick=function(){try{navigator.clipboard.writeText(text).then(function(){btn.textContent='Copied'},function(){btn.textContent='Select and copy'})}catch(e){btn.textContent='Select and copy'}}}
+  function ext(a,href,label,cls){var x=el('a',cls||'btn',label);x.href=href;x.target='_blank';x.rel='noopener';a.appendChild(x)}
+  function addr(c,a){return 'https://explorer.solana.com/address/'+a+(c==='mainnet'?'':'?cluster=devnet')}
+
+  function draw(j){
+    var main=j.cluster==='mainnet',oc=j.onchain||{},cv=oc.curve;
+    document.title=j.name+' ($'+j.symbol+') · PetPad';
+    var n=$('net');n.textContent=main?'mainnet':'devnet · test';n.className='net'+(main?' main':'');
+    $('pic').src=j.bear==='F'?'/api/founder.png':'/api/preview/'+j.bear+'.png';$('pic').alt=j.name;if(window.VoxelView)VoxelView.card($('pic'),j.bear==='F'?'/api/founder/voxels.json':'/api/agent/'+j.bear+'/voxels.json',{radius:'6px'});
+    $('name').textContent=j.name;$('tick').textContent='$'+j.symbol;
+    var chips=$('chips');chips.textContent='';
+    chips.appendChild(el('span','chip'+(j.founder?' good':''),j.founder?'PRIME · flagship, one of one':((j.agent?j.agent.name+' · '+j.agent.role.toLowerCase():'Agent #'+String(j.bear).padStart(2,'0'))+' · '+String(j.bear).padStart(2,'0')+' of '+j.total)));
+    chips.appendChild(el('span','chip'+(cv&&cv.complete?' good':''),cv?(cv.complete?'Graduated':'On the bonding curve'):'Curve not read'));
+    $('desc').textContent=j.description||'';
+    var ab=$('agentbox');ab.textContent='';
+    if(j.agent){
+      var wh=el('div','who');wh.appendChild(el('b',null,j.agent.name));wh.appendChild(el('span','role',j.agent.role));ab.appendChild(wh);
+      if(j.agent.blurb)ab.appendChild(el('p','blurb',j.agent.blurb));
+      
+    }
+    if(j.report){
+      ab.appendChild(el('p','head'+(j.report.status==='attention'?' attention':''),j.report.headline));
+      var ul=el('ul');j.report.lines.forEach(function(l){var li=el('li',l.level);li.appendChild(el('i',null,l.level==='warn'?'!':l.level==='good'?'+':'>'));li.appendChild(el('span',null,l.text));ul.appendChild(li)});ab.appendChild(ul);
+      if(j.report.ability){var A=j.report.ability,ad=el('div','abil');ad.appendChild(el('h3',null,'Special ability: '+A.name));ad.appendChild(el('p','does',A.does));
+        var au=el('ul');A.lines.forEach(function(l){var li=el('li',l.level);li.appendChild(el('i',null,l.level==='warn'?'!':l.level==='good'?'+':'>'));li.appendChild(el('span',null,l.text));au.appendChild(li)});ad.appendChild(au);
+        if(j.agent&&j.agent.role==='SCRIBE'&&A.lines[0]){var cb=el('button','cp','Copy brief');cb.type='button';cb.style.marginTop='10px';cb.onclick=function(){try{navigator.clipboard.writeText(A.lines[0].text).then(function(){cb.textContent='Copied'},function(){cb.textContent='Select and copy'})}catch(e){cb.textContent='Select and copy'}};ad.appendChild(cb)}
+        ab.appendChild(ad)}
+      ab.appendChild(el('p','stamp',j.report.note+' Updated '+new Date(j.report.at).toLocaleTimeString()+'.'));
+    }
+    var L=$('links');L.textContent='';
+    ext(L,main?'https://pump.fun/coin/'+j.mint:addr(j.cluster,j.mint),main?'Trade on pump.fun':'Open on Solana Explorer (devnet)','btn go');
+    if(j.twitter)ext(L,j.twitter,'X / Twitter');
+    if(j.website)ext(L,j.website,'Website');
+    var cp=el('button','btn','Copy mint');cp.type='button';copy(cp,j.mint);L.appendChild(cp);
+
+    var T=$('tiles');T.textContent='';
+    T.appendChild(tile('Market cap',cv&&cv.marketCapSol!=null?fmt(cv.marketCapSol)+' SOL':'–',cv&&cv.priceSol!=null?'price '+cv.priceSol.toExponential(2)+' SOL':''));
+    T.appendChild(tile('Raised',cv?cv.raisedSol.toFixed(2)+' SOL':'–','in the bonding curve'));
+    T.appendChild(tile('Supply',oc.supply!=null?fmt(oc.supply,0):'–','total tokens'));
+    T.appendChild(tile('Holders',oc.holderCount!=null?(oc.holderCount+(oc.holderCountCapped?'+':'')):(oc.holders?oc.holders.filter(function(h){return !h.isCurve}).length+'+':'–'),oc.holderCount!=null?'wallets with a balance':'top 20 accounts only'));
+    T.appendChild(tile('Dev holds',pct(oc.devHoldPct),'of supply, now'));
+    T.appendChild(tile('Top 10',pct(oc.top10Pct),'of supply, curve excluded'));
+    $('curvebox').hidden=!cv;
+    if(cv){$('curvebar').style.width=cv.progress+'%';$('curvetxt').textContent=cv.complete?'Complete: moved to a DEX':cv.progress.toFixed(1)+'% filled'}
+
+    var H=$('holders');H.textContent='';
+    (oc.holders||[]).forEach(function(h,i){
+      var tr=el('tr');tr.appendChild(el('td','n',String(i+1)));
+      var w=el('td');
+      if(h.owner&&!h.isCurve){var a=el('a',null,h.short);a.href=addr(j.cluster,h.owner);a.target='_blank';a.rel='noopener';a.style.fontFamily='var(--mono)';w.appendChild(a)}
+      else w.appendChild(el('span',null,h.isCurve?'Bonding curve':h.short));
+      if(h.isCurve)w.appendChild(el('span','tag','Curve'));if(h.isDev)w.appendChild(el('span','tag dev','Dev'));
+      tr.appendChild(w);
+      var b=el('td','b'),m=el('div','mini'),f=el('div');f.style.width=Math.min(100,h.pct)+'%';m.appendChild(f);b.appendChild(m);tr.appendChild(b);
+      tr.appendChild(el('td','p',pct(h.pct)));H.appendChild(tr);
+    });
+    $('holdnote').textContent=(oc.holders&&oc.holders.length)?(oc.holderCount==null?'Shows the 20 largest token accounts. A full holder count needs a Helius RPC.':''):'No holder data yet.'+(oc.errors&&oc.errors.length?' Some chain reads failed just now; try again in a minute.':'');
+
+    var D=$('dev');D.textContent='';
+    function row(k,fn){D.appendChild(el('dt',null,k));var dd=el('dd');fn(dd);D.appendChild(dd)}
+    row('Dev wallet',function(dd){var a=el('a',null,short(j.dev));a.href=addr(j.cluster,j.dev);a.target='_blank';a.rel='noopener';dd.appendChild(a);var b=el('button','cp','Copy');b.type='button';copy(b,j.dev);dd.appendChild(b)});
+    row('Dev holding',function(dd){dd.textContent=oc.devHoldPct==null?'not read':pct(oc.devHoldPct)+' of supply'});
+    row('Launched',function(dd){dd.textContent=new Date(j.launchedAt).toLocaleString()});
+    row('Launch transaction',function(dd){var a=el('a',null,j.signature.slice(0,8)+'…');a.href='https://explorer.solana.com/tx/'+j.signature+(main?'':'?cluster=devnet');a.target='_blank';a.rel='noopener';dd.appendChild(a)});
+    row('Creator fee split',function(dd){dd.textContent=j.founder?'Founder coin: all creator fees go to the founder wallet':j.platformBps?(j.feeSplit?'Signed: '+(100-j.platformBps/100)+'% to the dev, '+(j.platformBps/100)+'% to PetPad':'Not signed by the dev. All creator fees go to the dev.'):'All creator fees go to the dev'});
+    row('Mint',function(dd){dd.textContent=j.mint});
+    $('page').hidden=false;
+  }
+  function load(){
+    fetch('/api/coin/'+encodeURIComponent(mint)).then(function(r){if(r.status===404){$('err').style.display='block';$('page').hidden=true;return null}return r.json()}).then(function(j){if(j&&j.mint)draw(j)}).catch(function(){})
+  }
+  load();setInterval(load,60000);
+})();
+</script>
+</body>
+</html>
