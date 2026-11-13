@@ -102,7 +102,8 @@ function agentFor(slot, secret) { const t = traitsFor(slot, secret); return { na
 
 // ---- the voxel grid ----
 class Vox {
-  constructor() { this.m = new Map(); this.g = 0; this.pv = { leg: 8, arm: 28 }; }
+  constructor() { this.m = new Map(); this.g = 0; this.pv = { leg: 8, arm: 28 }; this.info = { gun: null, muz: [] }; }
+  muz(x, y, z, dx, dy, dz, mirror) { this.info.muz.push({ x, y, z, dx, dy, dz }); if (mirror) this.info.muz.push({ x: W - 1 - x, y, z, dx, dy, dz }); }
   set(x, y, z, c, e) {
     x = Math.round(x); y = Math.round(y); z = Math.round(z);
     if (x < 0 || x >= W || y < 0 || y >= H || z < 0 || z >= D) return;
@@ -125,8 +126,8 @@ class Vox {
   }
 }
 
-Vox.prototype.sb = function (side, x0, y0, z0, x1, y1, z1, c, e) { const g = this.g; this.g = side === 'R' ? 3 : 4; if (side === 'R') this.box(x0, y0, z0, x1, y1, z1, c, e); else this.box(W - 1 - x1, y0, z0, W - 1 - x0, y1, z1, c, e); this.g = g; };
-Vox.prototype.sl = function (side, a, b, t, c, e) { const g = this.g, X = (x) => (side === 'R' ? x : W - 1 - x); this.g = side === 'R' ? 3 : 4; this.line([X(a[0]), a[1], a[2]], [X(b[0]), b[1], b[2]], t, c, e); this.g = g; };
+Vox.prototype.sb = function (side, x0, y0, z0, x1, y1, z1, c, e) { const g = this.g; this.g = side === 'R' ? 5 : 6; if (side === 'R') this.box(x0, y0, z0, x1, y1, z1, c, e); else this.box(W - 1 - x1, y0, z0, W - 1 - x0, y1, z1, c, e); this.g = g; };
+Vox.prototype.sl = function (side, a, b, t, c, e) { const g = this.g, X = (x) => (side === 'R' ? x : W - 1 - x); this.g = side === 'R' ? 5 : 6; this.line([X(a[0]), a[1], a[2]], [X(b[0]), b[1], b[2]], t, c, e); this.g = g; };
 // what a mech holds: h is the hand (x range, the front of the hand, and the hand's height)
 function armWeapon(v, P, A, side, kind, h) {
   const { ax0, ax1, az0, az1, hy } = h, xm = ax0 + ((ax1 - ax0) >> 1), zf = az1;
@@ -221,8 +222,13 @@ function biped(v, P, A, r, o) {
   ay -= fa; v.mb(ax0 - 1, ay - 2, az0 - 1, ax1 + 1, ay, az1 + 1, P.dark, 0, 3, 4);
   if (o.cannon) { v.mb(sx + 1, tt, cz - 1, sx + 3, tt + 2, cz + 6, P.dark, 0, 3, 4); v.mb(sx + 1, tt + 1, cz + 6, sx + 3, tt + 1, cz + 6, A, 1, 3, 4); v.mb(sx + 1, tt, cz - 1, sx + 3, tt, cz - 1, P.trim, 0, 3, 4); }
   else if (o.mount && o.mount !== 'none') shoulderMount(v, P, A, o.mount, { sx, tt, tz0, cz });
+  if (o.cannon) v.muz(sx + 2, tt + 1, cz + 7, 0, 0, 1, true);
+  else if (o.mount === 'pods') { for (const x of [sx, sx + 2]) v.muz(x, tt + 2, cz + 3, 0, .2, 1, true); }
+  else if (o.mount === 'backgun') v.muz(sx, tt + 1, cz + 11, 0, 0, 1, true);
+  else if (o.mount === 'rail') v.muz(sx, tt + 2, cz + 12, 0, 0, 1, false);
   if (o.weapon && o.weapon !== 'none') {
     const hand = { ax0, ax1, az0, az1, hy: ay - 1 }, ws = o.wside || 'R', os = ws === 'R' ? 'L' : 'R';
+    v.info.gun = { kind: o.weapon, side: ws, twin: !!o.twin, len: { rifle: 14, gatling: 10, cannon: 9 }[o.weapon] || 0, hand: [ax0 + ((ax1 - ax0) >> 1), ay - 1, az1] };
     armWeapon(v, P, A, ws, o.weapon, hand); if (o.twin) armWeapon(v, P, A, os, o.weapon, hand); else if (o.shield) armWeapon(v, P, A, os, 'shield', hand);
   }
   // backpack
@@ -248,10 +254,10 @@ function quad(v, P, A, r, o) {
   const ey = by + bh - hh + 1;
   v.mb(16, ey - 1, hz0 + 3, 16 + hw - 2, ey + 2, hz0 + 3, P.dark, 0);
   if (o.visor === 'slit') v.mb(16, ey, hz0 + 3, 16 + hw - 2, ey, hz0 + 3, A, 1); else if (o.visor === 'cyclops') v.box(15, ey, hz0 + 3, 16, ey + 1, hz0 + 3, A, 1); else v.mb(17, ey, hz0 + 3, 17, ey + 1, hz0 + 3, A, 1);
-  if (o.weapon === 'turret') { v.box(13, top, cz - 2, 18, top + 2, cz + 2, P.joint, 0); v.box(14, top + 1, cz + 3, 15, top + 2, cz + 10, P.dark, 0); v.box(16, top + 1, cz + 3, 17, top + 2, cz + 10, P.dark, 0); v.box(14, top + 1, cz + 11, 14, top + 1, cz + 11, A, 1); v.box(17, top + 1, cz + 11, 17, top + 1, cz + 11, A, 1); v.box(15, top + 3, cz - 1, 16, top + 3, cz, A, 1); }
-  else if (o.weapon === 'twin') { v.mb(16 + hw, by + bh - 4, hz0, 16 + hw + 1, by + bh - 3, hz0 + 8, P.dark, 0); v.mb(16 + hw, by + bh - 4, hz0 + 9, 16 + hw + 1, by + bh - 3, hz0 + 9, A, 1); v.mb(16 + hw, by + bh - 2, hz0, 16 + hw + 1, by + bh - 2, hz0 + 3, P.trim, 0); }
-  else if (o.weapon === 'rack') { v.mb(16 + bw, by + 1, z0 + 2, 16 + bw + 1, top - 1, z1 - 2, P.dark, 0); v.mb(16 + bw, top - 1, z0 + 2, 16 + bw + 1, top - 1, z1 - 2, P.trim, 0); for (let y = by + 2; y < top - 1; y += 2) v.mb(16 + bw, y, z1 - 2, 16 + bw + 1, y, z1 - 2, A, 1); }
-  else if (o.weapon === 'mortar') { v.line([15, top, cz - 1], [15, top + 9, cz - 4], 2, P.dark, 0); v.box(15, top + 9, cz - 5, 16, top + 10, cz - 4, A, 1); v.box(13, top, cz - 3, 18, top + 1, cz + 1, P.joint, 0); }
+  if (o.weapon === 'turret') { v.box(13, top, cz - 2, 18, top + 2, cz + 2, P.joint, 0); v.box(14, top + 1, cz + 3, 15, top + 2, cz + 10, P.dark, 0); v.box(16, top + 1, cz + 3, 17, top + 2, cz + 10, P.dark, 0); v.box(14, top + 1, cz + 11, 14, top + 1, cz + 11, A, 1); v.box(17, top + 1, cz + 11, 17, top + 1, cz + 11, A, 1); v.muz(14, top + 1, cz + 11, 0, 0, 1, false); v.muz(17, top + 1, cz + 11, 0, 0, 1, false); v.box(15, top + 3, cz - 1, 16, top + 3, cz, A, 1); }
+  else if (o.weapon === 'twin') { v.mb(16 + hw, by + bh - 4, hz0, 16 + hw + 1, by + bh - 3, hz0 + 8, P.dark, 0); v.mb(16 + hw, by + bh - 4, hz0 + 9, 16 + hw + 1, by + bh - 3, hz0 + 9, A, 1); v.muz(16 + hw, by + bh - 4, hz0 + 9, 0, 0, 1, true); v.mb(16 + hw, by + bh - 2, hz0, 16 + hw + 1, by + bh - 2, hz0 + 3, P.trim, 0); }
+  else if (o.weapon === 'rack') { v.mb(16 + bw, by + 1, z0 + 2, 16 + bw + 1, top - 1, z1 - 2, P.dark, 0); v.mb(16 + bw, top - 1, z0 + 2, 16 + bw + 1, top - 1, z1 - 2, P.trim, 0); for (let y = by + 2; y < top - 1; y += 2) { v.mb(16 + bw, y, z1 - 2, 16 + bw + 1, y, z1 - 2, A, 1); v.muz(16 + bw, y, z1 - 2, .1, .15, 1, true); } }
+  else if (o.weapon === 'mortar') { v.line([15, top, cz - 1], [15, top + 9, cz - 4], 2, P.dark, 0); v.box(15, top + 9, cz - 5, 16, top + 10, cz - 4, A, 1); v.muz(15, top + 10, cz - 4, 0, 1, -.35, false); v.box(13, top, cz - 3, 18, top + 1, cz + 1, P.joint, 0); }
   // back radiator
   v.mb(16, by + 1, z0 - 2, 16 + bw - 3, top - 2, z0 - 1, P.dark, 0); v.mb(17, by + 2, z0 - 2, 16 + bw - 4, top - 3, z0 - 2, A, 1);
   if (o.antenna !== 'none') { v.mb(16 + bw - 2, top, z0 + 1, 16 + bw - 2, top + 4, z0 + 1, P.dark, 0); v.mb(16 + bw - 2, top + 5, z0 + 1, 16 + bw - 2, top + 5, z0 + 1, A, 1); }
@@ -284,9 +290,9 @@ function spider(v, P, A, r, o) {
   // a scoop or antenna at the back
   v.mb(16, top, z0, 16 + 1, top + 2, z0 + 2, P.base, 0); v.mb(16, top + 3, z0, 16, top + 3, z0 + 1, A, 1);
   if (o.antenna !== 'none') { v.box(15, top + hh, hz0 + 1, 16, top + hh + 3, hz0 + 1, P.dark, 0); v.box(15, top + hh + 4, hz0 + 1, 16, top + hh + 4, hz0 + 1, A, 1); }
-  if (o.weapon === 'mandibles') { for (const dx of [0, 1]) { v.mb(16 + dx, top, hz1 + 1, 16 + dx, top + 1, hz1 + 5, P.trim, 0); v.mb(16 + dx, top + 2, hz1 + 4, 16 + dx, top + 2, hz1 + 5, P.trim, 0); v.mb(16 + dx, top + 2, hz1 + 5, 16 + dx, top + 2, hz1 + 5, A, 1); } }
-  else if (o.weapon === 'mortar') { v.line([15, top, cz - 1], [15, top + 9, cz - 3], 2, P.dark, 0); v.box(15, top + 9, cz - 4, 16, top + 10, cz - 3, A, 1); }
-  else if (o.weapon === 'twin') { v.mb(16 + bw, top - 3, z1 - 4, 16 + bw + 1, top - 2, z1 + 3, P.dark, 0); v.mb(16 + bw, top - 3, z1 + 4, 16 + bw + 1, top - 2, z1 + 4, A, 1); v.mb(16 + bw, top - 1, z1 - 4, 16 + bw + 1, top - 1, z1, P.trim, 0); }
+  if (o.weapon === 'mandibles') { for (const dx of [0, 1]) { v.mb(16 + dx, top, hz1 + 1, 16 + dx, top + 1, hz1 + 5, P.trim, 0); v.mb(16 + dx, top + 2, hz1 + 4, 16 + dx, top + 2, hz1 + 5, P.trim, 0); v.mb(16 + dx, top + 2, hz1 + 5, 16 + dx, top + 2, hz1 + 5, A, 1); } v.muz(16, top + 2, hz1 + 5, 0, 0, 1, true); }
+  else if (o.weapon === 'mortar') { v.line([15, top, cz - 1], [15, top + 9, cz - 3], 2, P.dark, 0); v.box(15, top + 9, cz - 4, 16, top + 10, cz - 3, A, 1); v.muz(15, top + 10, cz - 3, 0, 1, -.3, false); }
+  else if (o.weapon === 'twin') { v.mb(16 + bw, top - 3, z1 - 4, 16 + bw + 1, top - 2, z1 + 3, P.dark, 0); v.mb(16 + bw, top - 3, z1 + 4, 16 + bw + 1, top - 2, z1 + 4, A, 1); v.muz(16 + bw, top - 3, z1 + 4, 0, 0, 1, true); v.mb(16 + bw, top - 1, z1 - 4, 16 + bw + 1, top - 1, z1, P.trim, 0); }
   // legs: out from the body, up to a knee, then down to the floor
   v.pv.leg = by + 2;
   const zs = o.legs === 6 ? [z1 - 1, cz, z0 + 1] : [z1 - 1, z0 + 1];
@@ -348,7 +354,7 @@ function finish(v) {
     cells.push([q.x, q.y, q.z, q.e + 2 * q.g, pi]);
   }
   cells.sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[0] - b[0]);
-  return { w: W, h: H, d: D, cx: CX, cz: CZ, pivot: [v.pv.leg, v.pv.arm], palette, cells };
+  return { w: W, h: H, d: D, cx: CX, cz: CZ, pivot: [v.pv.leg, v.pv.arm], gun: v.info.gun, muz: v.info.muz, palette, cells };
 }
 const modelCache = new Map();
 function agentVoxels(slot, secret) {
