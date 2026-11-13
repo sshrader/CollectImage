@@ -60,12 +60,12 @@
     var S=.135,AX=17,AZ=9.5; // arena half-sizes
     // work stations the agents run between; each one pulses while an agent is on it
     var PADS=[[-12,-5.5],[-1,-7],[11,-5],[-9,5],[3,4.5],[13,5.5],[-1,-0.5]];
-    var st=[],pads=[],pk=[],time=0,raf=0,last=0,rr=rnd(11);
+    var st=[],pads=[],pk=[],pulses=[],chainT=-9,time=0,raf=0,last=0,rr=rnd(11);
     function pickPad(a){var best=-1,tries=0;while(tries++<20){var k=Math.floor(rr()*PADS.length);if(k===a.pad)continue;if(st.some(function(o){return o!==a&&o.pad===k}))continue;best=k;break}return best<0?(a.pad+1)%PADS.length:best}
     function reset(){rr=rnd(11);pads=PADS.map(function(){return 0});
       st=agents.map(function(o,i){var p=PADS[(i*2)%PADS.length];return{o:o,x:p[0]+(i%2?2:-2),z:p[1]+3,yaw:i*1.7,v:0,pad:(i*2)%PADS.length,wait:.2+i*.35,ok:false,gait:i*1.3,ph:i*1.7,top:3.4+(i%3)*.35}});
       st.forEach(function(a){a.pad=pickPad(a);a.wait=0});
-      var r=rnd(3);pk=[];for(var i=0;i<30;i++)pk.push({ax:r()<.5?0:1,line:Math.floor(r()*5),p:(r()-.5)*40,v:(6+r()*7)*(r()<.5?-1:1),c:r()<.5?0:1,s:.3+r()*.22});
+      var r=rnd(3);pulses=[];chainT=-9;pk=[];for(var i=0;i<30;i++)pk.push({ax:r()<.5?0:1,line:Math.floor(r()*5),p:(r()-.5)*40,v:(6+r()*7)*(r()<.5?-1:1),c:r()<.5?0:1,s:.3+r()*.22});
       time=0}
     reset();
     function norm(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a}
@@ -73,7 +73,7 @@
       time+=dt;
       st.forEach(function(a){
         var T=PADS[a.pad],dx=T[0]-a.x,dz=T[1]-a.z,d=Math.hypot(dx,dz);
-        if(a.wait>0){a.wait-=dt;a.v=Math.max(0,a.v-dt*14);pads[a.pad]=1;if(a.wait<=0){a.ok=!a.ok;a.pad=pickPad(a)}}
+        if(a.wait>0){a.wait-=dt;a.v=Math.max(0,a.v-dt*14);pads[a.pad]=1;if(a.wait<=0){a.ok=!a.ok;pulses.push({x:a.x,z:a.z,t:time});a.pad=pickPad(a)}}
         else{
           var want=Math.atan2(dx,dz),da=norm(want-a.yaw);a.yaw+=Math.max(-3.2*dt,Math.min(3.2*dt,da));
           var sp=Math.min(4.2,.9+d*1.2)*Math.max(.15,1-Math.abs(da)/1.6);a.v+=(sp-a.v)*Math.min(1,dt*5);
@@ -85,6 +85,7 @@
         a.x=Math.max(-AX+2,Math.min(AX-2,a.x));a.z=Math.max(-AZ+1.5,Math.min(AZ-1.5,a.z));
         a.gait+=a.v*dt*1.9;
       });
+      pulses=pulses.filter(function(q){if(time-q.t>1.2){chainT=time;return false}return true});
       for(var i=0;i<pads.length;i++)pads[i]=Math.max(0,pads[i]-dt*1.4);
       st.forEach(function(a){if(a.wait>0)pads[a.pad]=1});
       pk.forEach(function(p){p.p+=p.v*dt;var m=p.ax?AZ:AX;if(p.p>m+2)p.p=-m-2;if(p.p<-m-2)p.p=m+2});
@@ -95,7 +96,7 @@
       gl.viewport(0,0,cw,ch);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(0,.01,.005,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       var t=time,asp=cw/ch,narrow=asp<.9;
       // high camera looking steeply down, drifting slowly
-      var cx=Math.sin(t*.22)*3,eye=[cx,(narrow?50:27),(narrow?24:15.5)+Math.cos(t*.17)*1.2],tgt=[cx,0,-1.5];
+      var cx=Math.sin(t*.22)*3,eye=[cx,(narrow?60:36),(narrow?29:20)+Math.cos(t*.17)*1.2],tgt=[cx,0,-1.5];
       gl.uniformMatrix4fv(uVP,false,mul(persp(narrow?48:40,asp,.5,260),look(eye,tgt)));
       var G=[.12,.75,.42],G2=[.24,1,.6];
       // floor, border and a circuit grid
@@ -107,6 +108,15 @@
       pk.forEach(function(p){var ln=-8+p.line*4,c=p.c?[.3,1,.95]:G2,sgn=p.v<0?-1:1;
         if(p.ax===0){var z=Math.max(-AZ,Math.min(AZ,ln));bx(p.p,.2,z,p.s*2,p.s,p.s,c);bx(p.p-sgn*p.s*3,.18,z,p.s*1.1,p.s*.5,p.s*.5,[c[0]*.5,c[1]*.5,c[2]*.5])}
         else{var x=-16+p.line*8;bx(x,.2,p.p,p.s,p.s,p.s*2,c);bx(x,.18,p.p-sgn*p.s*3,p.s*.5,p.s*.5,p.s*1.1,[c[0]*.5,c[1]*.5,c[2]*.5])}});
+      // the ledger: a chain of linked blocks along the far and near edges; each finished task flies up as a transaction and a new block is minted
+      var cs=smooth((t-chainT)/.7);
+      [-AZ-3.6,AZ+3.6].forEach(function(cz,ci){for(var k=0;k<13;k++){var x=AX-2-k*3.8+(1-cs)*3.8;if(x<-AX-4||x>AX+4)continue;var nw=k===0?1-cs:0,y=1.5+Math.sin(t*1.2+k+ci)*.12,rot=Math.sin(t*.5+k)*.25+.3;
+        bx(x+1.9,y,cz,1.9,.18,.18,[.1,.55,.4],0);
+        draw(box,trs(x,y,cz,rot,0,2.2,2.2,2.2),{col:[.06+.4*nw,.55+.4*nw,.38+.3*nw],emit:true,boost:.25+nw});
+        draw(box,trs(x,y+1.2,cz,-rot*1.3,0,1.05,1.05,1.05),{col:[.3,1,.7],emit:true,boost:.4+nw});
+        if(k===0&&nw>.02)for(var m=0;m<4;m++)bx(x,y+.5+nw*(2+m),cz,.2,.5,.2,[.3,1,.8],nw)}});
+      pulses.forEach(function(q){var u=(t-q.t)/1.2,ex=AX-2+(1-cs)*0,ez=-AZ-3.6;if(u<0||u>1)return;var uu=smooth(u),x=q.x+(AX-2-q.x)*uu,z=q.z+(ez-q.z)*uu,y=.8+Math.sin(Math.PI*u)*6;
+        draw(box,trs(x,y,z,t*4,t*3,.7,.7,.7),{col:[.9,1,.6],emit:true,boost:.8})});
       // work stations: a pad with a ring and rising beams that light while an agent works there
       PADS.forEach(function(p,i){var f=pads[i],c=[.08+.2*f,.6+.4*f,.32+.25*f],R=2.6;
         bx(p[0],.03,p[1],R*2,.06,R*2,[.02,.09,.05]);

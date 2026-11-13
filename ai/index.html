@@ -198,13 +198,13 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     });
   }
   var introTok=0,logT=0;
-  var LOGS=['> boot agent bay','> link pump.fun ... ok','> agent.01 carrying block','> gate.01 scan ... ok','> verify holders ... ok','> route block #4821','> gate.02 scan ... ok','> all agents online'];
+  var LOGS=['> boot agent bay','> sync pump.fun ledger ... ok','> validator.01 online','> agent.01 verify holders ... ok','> block #4821 mined 0x9f3a..c21e','> agent.03 sign tx ... ok','> chain height 4822','> all agents online'];
   function freshCanvas(){var c=document.createElement('canvas');c.id='sc';c.setAttribute('aria-hidden','true');var o=$('sc');o.parentNode.replaceChild(c,o);return c}
   function begun(withLog){
     clearTimeout(startIntro.t);
     var el=$('slog');el.textContent='';clearInterval(logT);
     if(!withLog)return;var i=0,lines=[];
-    logT=setInterval(function(){var l=i<LOGS.length?LOGS[i]:'> agent.0'+(1+Math.floor(Math.random()*4))+' task #'+(4800+Math.floor(Math.random()*900))+' ... ok';i++;lines.push(l);if(lines.length>40)lines.shift();el.textContent=lines.slice(-5).join('\n')},700);
+    logT=setInterval(function(){var hx=function(){return Math.floor(Math.random()*65536).toString(16).padStart(4,'0')};var l=i<LOGS.length?LOGS[i]:(i%2?'> block #'+(4822+i)+' mined 0x'+hx()+'..'+hx():'> agent.0'+(1+Math.floor(Math.random()*4))+' sign tx 0x'+hx()+' ... ok');i++;lines.push(l);if(lines.length>40)lines.shift();el.textContent=lines.slice(-5).join('\n')},700);
   }
   function startMatrix(){splashCave=new Matrix(freshCanvas(),{fps:24});splashCave.start();begun(false)}
     $('enter').addEventListener('click',function(e){e.stopPropagation();endIntro()});
