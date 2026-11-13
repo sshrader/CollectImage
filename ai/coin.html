@@ -6,10 +6,10 @@
 <title>Coin · Agent Bay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c12;--surface:rgba(14,20,30,.92);--surface2:#141d2b;--line:#2a3a52;--fg:#e6f0fa;--dim:#8ea3ba;--ember:#2aa6c0;--gold:#4ff3ff;--good:#9be29b;--bad:#ff8a7a;
---display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+:root{--bg:#080c12;--surface:rgba(14,20,30,.92);--surface2:#141d2b;--line:#2a3a52;--fg:#e6f0fa;--dim:#aec0d4;--ember:#2aa6c0;--gold:#4ff3ff;--good:#9be29b;--bad:#ff8a7a;
+--display:'Space Grotesk',Inter,system-ui,sans-serif;--sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
 padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -19,7 +19,7 @@ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(
 a{color:var(--gold)}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{font-family:var(--display);font-weight:700;font-size:20px;color:var(--fg);text-decoration:none}
-.net{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
+.net{font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
 .net.main{color:var(--bad);border-color:var(--bad)}
 .back{font:600 14px var(--sans);color:var(--dim);text-decoration:none}
 .hero{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;margin-top:28px;align-items:start}
@@ -29,7 +29,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 h1{font-family:var(--sans);font-weight:800;font-size:clamp(30px,6vw,48px);line-height:1.08;margin:0 0 4px;text-wrap:balance;text-shadow:0 2px 0 #000;overflow-wrap:anywhere}
 .tick{font:500 18px var(--mono);color:var(--gold);margin-bottom:12px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-.chip{font:600 12px var(--mono);border:1px solid var(--line);border-radius:99px;padding:3px 10px;color:var(--dim);background:var(--surface2)}
+.chip{font:600 13px var(--mono);border:1px solid var(--line);border-radius:99px;padding:3px 10px;color:var(--dim);background:var(--surface2)}
 .chip.good{color:var(--good);border-color:var(--good)}
 .desc{color:var(--dim);max-width:60ch;margin:8px 0 14px;overflow-wrap:anywhere}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -39,25 +39,25 @@ h2{font-family:var(--sans);font-weight:800;font-size:22px;margin:34px 0 12px;tex
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media(max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
-.tile small{display:block;font:500 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.tile small{display:block;font:500 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
 .tile b{font:800 22px var(--sans);overflow-wrap:anywhere}
-.tile i{display:block;font:500 12px var(--sans);font-style:normal;color:var(--dim);margin-top:2px}
+.tile i{display:block;font:500 13px var(--sans);font-style:normal;color:var(--dim);margin-top:2px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
 .bar{height:16px;border:1px solid var(--line);border-radius:3px;background:#0a1018;overflow:hidden}
 .bar>div{height:100%;background:linear-gradient(90deg,var(--ember),var(--gold))}
 .kv{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:8px 14px;font-size:14px}
 @media(max-width:560px){.kv{grid-template-columns:minmax(0,1fr)}.kv dt{margin-top:6px}}
-.kv dt{color:var(--dim)}.kv dd{margin:0;font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
-.cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:1px 9px;cursor:pointer;margin-left:6px}
+.kv dt{color:var(--dim)}.kv dd{margin:0;font-family:var(--mono);font-size:14px;overflow-wrap:anywhere}
+.cp{font:500 13px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:1px 9px;cursor:pointer;margin-left:6px}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th{font:500 12px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font:500 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 td{padding:8px;border-bottom:1px solid rgba(77,56,38,.5);vertical-align:middle}
 td.n{font-family:var(--mono);width:34px;color:var(--dim)}
 td.p{font-family:var(--mono);width:84px;text-align:right}
 td.b{width:34%}
 td .mini{height:8px;background:#0a1018;border-radius:2px;overflow:hidden}
 td .mini>div{height:100%;background:var(--gold)}
-.tag{font:600 11px var(--mono);border:1px solid var(--line);border-radius:99px;padding:1px 7px;margin-left:6px;color:var(--dim)}
+.tag{font:600 13px var(--mono);border:1px solid var(--line);border-radius:99px;padding:1px 7px;margin-left:6px;color:var(--dim)}
 .tag.dev{color:var(--gold);border-color:var(--gold)}
 .scroll{overflow-x:auto}
 .note{font-size:13px;color:var(--dim)}
@@ -65,7 +65,7 @@ td .mini>div{height:100%;background:var(--gold)}
 #err{display:none;margin-top:40px}
 .agentbox .who{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
 .agentbox .who b{font:700 18px var(--display)}
-.agentbox .role{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.agentbox .role{font:600 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 .agentbox .blurb{margin:0 0 10px;color:var(--dim);font-size:14px}
 .agentbox .head{font-weight:700;margin:0 0 8px}
 .agentbox .head.attention{color:#ffcf6b}

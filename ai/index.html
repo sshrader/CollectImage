@@ -6,10 +6,10 @@
 <title>Agent Bay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c12;--surface:rgba(14,20,30,.9);--surface2:#141d2b;--line:#2a3a52;--fg:#e6f0fa;--dim:#8ea3ba;--ember:#2aa6c0;--gold:#4ff3ff;--good:#9be29b;--bad:#ff8a7a;
---display:'Pixelify Sans','Arial Black',Impact,sans-serif;--sans:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+:root{--bg:#080c12;--surface:rgba(14,20,30,.9);--surface2:#141d2b;--line:#2a3a52;--fg:#e6f0fa;--dim:#aec0d4;--ember:#2aa6c0;--gold:#4ff3ff;--good:#9be29b;--bad:#ff8a7a;
+--display:'Space Grotesk',Inter,system-ui,sans-serif;--sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
@@ -21,7 +21,7 @@ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:20px}
 .logo svg{width:28px;height:28px}
-.net{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
+.net{font:500 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;color:var(--gold);margin-left:6px}
 .net.main{color:var(--bad);border-color:var(--bad)}
 .wallet{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:99px;padding:8px 16px;font-family:var(--mono);font-size:13px;cursor:pointer}
 .wallet.on{border-color:var(--good)}
@@ -58,7 +58,7 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .founder{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:18px;align-items:center;background:var(--surface);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(79,243,255,.12)}
 @media(max-width:560px){.founder{grid-template-columns:minmax(0,1fr);justify-items:start}.founder img{max-width:200px}}
 .founder img{width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:8px;display:block}
-.founder .tag{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.founder .tag{font:600 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 .founder h3{font:800 22px var(--sans);margin:2px 0 4px;overflow-wrap:anywhere}
 .founder p{margin:0 0 10px;color:var(--dim);font-size:14px;max-width:54ch}
 .founder a.btn{text-decoration:none;display:inline-block}
@@ -67,7 +67,7 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .recent a:hover{border-color:var(--gold)}
 .recent img{width:36px;height:36px;border-radius:50%;image-rendering:pixelated;flex:none}
 .recent b{font-weight:800;font-size:14px;display:block;line-height:1.2;overflow-wrap:anywhere}
-.recent small{font:500 12px var(--mono);color:var(--dim)}
+.recent small{font:500 13px var(--mono);color:var(--dim)}
 .feerow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#0a1018}
 .feerow span{font-size:14px;overflow-wrap:anywhere}
 .msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
@@ -76,7 +76,7 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .log a{color:var(--gold)}
 .result{display:none;border:1px solid var(--good);border-radius:10px;padding:14px;font-size:14px;overflow-wrap:anywhere}
 .result.on{display:block}
-.cp{font:500 12px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer}
+.cp{font:500 13px var(--mono);color:var(--gold);background:none;border:1px solid var(--line);border-radius:99px;padding:2px 10px;cursor:pointer}
 .fine{font-size:12px;color:var(--dim);max-width:72ch;margin-top:28px}
 .note{font-size:13px;color:var(--dim)}
 .note b{color:var(--fg)}
@@ -88,10 +88,10 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 #splash.out{opacity:0;pointer-events:none}
 #splash canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
 #splash .cap{position:relative;text-align:center;padding:max(7vh,28px) 16px 0;color:var(--fg);text-shadow:0 2px 0 #000;animation:rise 2.4s ease both}
-#splash .cap h2{font-family:var(--display);font-size:clamp(34px,9vw,72px);margin:0 0 6px;letter-spacing:.02em}
-#splash .cap p{margin:0 0 14px;color:var(--dim);font-size:16px}
+#splash .cap h2{font-family:var(--display);font-weight:700;font-size:clamp(34px,9vw,72px);margin:0 0 6px;letter-spacing:.02em}
+#splash .cap p{margin:0 0 14px;color:#cfe0f0;font-size:17px}
 #splash .cap button{font:700 14px var(--sans);border-radius:99px;padding:10px 20px;border:1px solid var(--line);background:rgba(2,16,9,.85);color:#7dffb4;cursor:pointer}
-#splash .slog{position:absolute;left:max(16px,4vw);bottom:max(16px,5vh);font:500 13px var(--mono);color:#7dffb4;text-shadow:0 0 6px rgba(61,255,154,.6);white-space:pre;pointer-events:none;text-align:left}
+#splash .slog{position:absolute;left:max(16px,4vw);bottom:max(16px,5vh);font:500 14px var(--mono);color:#7dffb4;text-shadow:0 0 6px rgba(61,255,154,.6);white-space:pre;pointer-events:none;text-align:left}
 @keyframes rise{0%{opacity:0;transform:translateY(10px)}35%{opacity:0}100%{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#splash{display:none}#splash .cap{animation:none}}
 </style>
