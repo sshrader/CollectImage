@@ -55,11 +55,29 @@
     function loop(ts){raf=requestAnimationFrame(loop);draw(ts)}
     function pd(e){down=true;lx=e.clientX;ly=e.clientY;try{canvas.setPointerCapture(e.pointerId)}catch(x){}}
     function pm(e){if(!down)return;dragYaw+=(e.clientX-lx)*.012;dragPitch=Math.max(-.5,Math.min(.5,dragPitch+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY}
-    function pu(){down=false;var k=function(){if(down)return;dragYaw*=.92;dragPitch*=.92;if(Math.abs(dragYaw)>.002||Math.abs(dragPitch)>.002)requestAnimationFrame(k);else{dragYaw=0;dragPitch=0}};k()}
+    function pu(){down=false;if(opts.hold)return;var k=function(){if(down)return;dragYaw*=.92;dragPitch*=.92;if(Math.abs(dragYaw)>.002||Math.abs(dragPitch)>.002)requestAnimationFrame(k);else{dragYaw=0;dragPitch=0}};k()}
     canvas.addEventListener('pointerdown',pd);canvas.addEventListener('pointermove',pm);canvas.addEventListener('pointerup',pu);canvas.addEventListener('pointercancel',pu);
     canvas.style.touchAction='pan-y';
     if(reduce&&!opts.animate)draw(performance.now());else raf=requestAnimationFrame(loop);
-    return{setYaw:function(a,p){manual=a;if(p!=null)pitch=p;draw(performance.now())},destroy:function(){cancelAnimationFrame(raf)}};
+    return{setYaw:function(a,p){manual=a;if(p!=null)pitch=p;draw(performance.now())},pause:function(){cancelAnimationFrame(raf);raf=0},resume:function(){if(!raf)raf=requestAnimationFrame(loop)},destroy:function(){cancelAnimationFrame(raf);raf=0;try{var x=gl.getExtension('WEBGL_lose_context');if(x)x.loseContext()}catch(e){}}};
   }
+  // A live 3D card: swaps an <img> for a canvas you can drag to turn. Falls back to the image if WebGL or the fetch fails.
+  var cards={},live=0;
+  function card(img,url,o){
+    o=o||{};if(cards[url]){if(img.parentNode)img.parentNode.replaceChild(cards[url].canvas,img);cards[url].view.resume();return cards[url].canvas}
+    if(live>=(o.max||12))return null;
+    live++;
+    fetch(url).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+      var c=document.createElement('canvas');c.className=(o.cls||'')+' vox3d';c.setAttribute('role','img');c.setAttribute('aria-label',(img.alt||'Agent')+' (3D, drag to turn)');
+      c.style.cssText='width:100%;aspect-ratio:1;display:block;border-radius:'+(o.radius||'6px')+';cursor:grab;background:radial-gradient(circle at 50% 62%,'+(d.glow||'#3dffb0')+'33,transparent 58%),'+(d.scheme||'#0a1a12');
+      var v=VoxelView(c,d,{hold:true,swing:.35,gait:3,dist:o.dist||128,fov:27});if(!v){live--;return}
+      cards[url]={canvas:c,view:v};if(img.parentNode)img.parentNode.replaceChild(c,img);
+      var moved=false,sx=0,sy=0;c.addEventListener('pointerdown',function(e){moved=false;sx=e.clientX;sy=e.clientY;c.style.cursor='grabbing'});
+      c.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)>5)moved=true});
+      c.addEventListener('pointerup',function(){c.style.cursor='grab'});
+      c.addEventListener('click',function(e){if(moved){e.stopPropagation();e.preventDefault();moved=false}},true);
+    }).catch(function(){live--});
+    return null}
+  VoxelView.card=card;
   window.VoxelView=VoxelView;
 })();

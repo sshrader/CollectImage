@@ -53,7 +53,7 @@ a.bear.launched:hover,a.bear.launched:focus-visible{border-color:var(--gold)}
 .bear.open:hover{border-color:var(--gold)}
 .bear.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(79,243,255,.25)}
 .bear.held{cursor:default}
-.bear.held img{filter:grayscale(.85) brightness(.55)}
+.bear.held img,.bear.held canvas{filter:grayscale(.85) brightness(.55)}
 .facts{font:500 13px var(--mono);color:var(--dim)}
 .founder{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:18px;align-items:center;background:var(--surface);border:2px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(79,243,255,.12)}
 @media(max-width:560px){.founder{grid-template-columns:minmax(0,1fr);justify-items:start}.founder img{max-width:200px}}
@@ -117,7 +117,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 </header>
 
 <h1>Launch a coin. <span>Claim an agent.</span></h1>
-<p class="lede">Every coin launched here claims one of the Bay's pixel agents as its logo, and that agent is locked to the coin for good. Its agent reports the coin’s public numbers on the coin page: curve progress, holders, dev share and anything worth flagging. Connect your wallet, pick an agent or let the Bay choose, name your coin, and launch on pump.fun.</p>
+<p class="lede">Every coin launched here claims one of the Bay's 3D voxel agents as its logo, and that agent is locked to the coin for good. Its agent reports the coin’s public numbers on the coin page: curve progress, holders, dev share and anything worth flagging. Connect your wallet, pick an agent or let the Bay choose, name your coin, and launch on pump.fun.</p>
 
 <div id="recent" hidden><h2>Recent launches</h2><div class="recent" id="recentlist"></div></div>
 
@@ -164,6 +164,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 <script src="/launch.js"></script>
 <script src="/cave.js"></script>
 <script src="/intro3d.js"></script>
+<script src="/vox.js"></script>
 <script>
 (function(){
   var $=function(id){return document.getElementById(id)};
@@ -236,7 +237,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
         el.href='/coin/'+b.mint;el.title='Open the page for '+(b.name||b.symbol);
       }
       el.className='bear '+b.state+(pickSlot===b.n?' sel':'');
-      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.png';im.alt=(b.agent?b.agent.name+', '+b.agent.role.toLowerCase()+' agent':'Agent '+b.n)+(b.state==='launched'&&b.name?', claimed by '+b.name:'');im.loading='lazy';el.appendChild(im);
+      var im=document.createElement('img');im.src='/api/preview/'+b.n+'.png';im.alt=(b.agent?b.agent.name+', '+b.agent.role.toLowerCase()+' agent':'Agent '+b.n)+(b.state==='launched'&&b.name?', claimed by '+b.name:'');im.loading='lazy';el.appendChild(im);if(window.VoxelView&&b.state!=='held')VoxelView.card(im,'/api/agent/'+b.n+'/voxels.json');
       var t=document.createElement('b');t.textContent=b.state==='launched'&&b.name?b.name:(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));el.appendChild(t);
       var sm=document.createElement('small');
       if(b.state==='launched')sm.textContent='$'+b.symbol+' · '+(b.agent?b.agent.name:'#'+String(b.n).padStart(2,'0'));
@@ -256,7 +257,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var f=st&&st.founder,box=$('founder');
     box.hidden=!f;[].slice.call(document.querySelectorAll('h2')).forEach(function(h){if(h.textContent==='PRIME')h.hidden=!f});
     if(!f)return;box.textContent='';
-    var im=document.createElement('img');im.src='/api/founder.png';im.alt='PRIME, the flagship agent: a graphite robot with a gold crown and an amber visor';box.appendChild(im);
+    var im=document.createElement('img');im.src='/api/founder.png';im.alt='PRIME, the flagship agent: a graphite robot with a gold crown and an amber visor';box.appendChild(im);if(window.VoxelView)VoxelView.card(im,'/api/founder/voxels.json',{radius:'8px',max:14});
     var d=document.createElement('div'),tg=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');
     tg.className='tag';tg.textContent='Flagship · one of one';d.appendChild(tg);
     if(f.state==='launched'){
