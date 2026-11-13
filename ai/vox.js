@@ -67,15 +67,16 @@
     gl.enableVertexAttribArray(lk);gl.vertexAttribPointer(lk,3,gl.FLOAT,false,28,16);gl.vertexAttribDivisor(lk,1);
     var UL=function(k){return gl.getUniformLocation(pr,k)},uArmA=UL('uArmA'),uArmM=UL('uArmM'),uLevel=UL('uLevel'),uHand=UL('uHand'),uLean=UL('uLean'),uOrg=gl.getUniformLocation(pr,'uOrg'),uPivot=gl.getUniformLocation(pr,'uPivot'),uSwing=gl.getUniformLocation(pr,'uSwing'),uM=gl.getUniformLocation(pr,'uMVP'),uR=gl.getUniformLocation(pr,'uRot'),uG=gl.getUniformLocation(pr,'uGlow');
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);
-    var yaw=0,pitch=.1,dragYaw=0,dragPitch=0,down=false,lx=0,ly=0,raf=0,t0=performance.now(),reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches,manual=null;
+    var yaw=0,pitch=.1,dragYaw=0,dragPitch=0,down=false,lx=0,ly=0,raf=0,t0=performance.now()-Math.random()*6000,reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches,manual=null;
     function size(){var dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(2,Math.round(canvas.clientWidth*dpr)),h=Math.max(2,Math.round(canvas.clientHeight*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}gl.viewport(0,0,w,h);return w/h}
-    var cur=null,phase=0,fireT=.4,kick=0,bolts=[],lt=0,gcol=hex(data.glow||'#4ff3ff'),still=reduce||opts.anim===false;
+    var sched=null,speedK=0,rate=.85+Math.random()*.35,cur=null,phase=Math.random()*6,fireT=.4,kick=0,bolts=[],lt=0,gcol=hex(data.glow||'#4ff3ff'),still=reduce||opts.anim===false;
     function draw(ts){
       var asp=size(),t=(ts-t0)/1000,dtm=lt?Math.min(.05,(ts-lt)/1000):0;lt=ts;
-      var cyc=t%8.5,stt=still?'idle':(cyc<3.4?'run':'aim'),tg=MechPose.target(data,stt,t,kick);cur=cur?MechPose.blend(cur,tg,Math.min(1,dtm*7)):tg;
-      if(stt==='run')phase+=dtm*9;
+      if(!sched||t>=sched.end){var pickR=Math.random(),nx=sched&&sched.st==='aim'?(pickR<.7?'run':pickR<.85?'walk':'idle'):(pickR<.5?'aim':pickR<.75?'run':pickR<.9?'walk':'idle');sched={st:nx,end:t+(nx==='aim'?1.8+Math.random()*3.2:nx==='idle'?.8+Math.random()*1.6:1.5+Math.random()*3.5)};if(!sched.first){sched.first=1}}
+      var stt=still?'idle':sched.st;if(stt==='run')speedK=speedK||0;var tg=MechPose.target(data,stt,t,kick);cur=cur?MechPose.blend(cur,tg,Math.min(1,dtm*7)):tg;
+      if(stt==='run')phase+=dtm*9*rate;else if(stt==='walk')phase+=dtm*5*rate;
       kick*=Math.exp(-dtm*10);
-      if(stt==='aim'){fireT-=dtm;if(fireT<=0){fireT=.3;var mz=MechPose.muzzles(data).slice(0,4);mz.forEach(function(m){var l=Math.hypot(m.dx,m.dy,m.dz)||1;bolts.push({x:m.x,y:m.y,z:m.z,dx:m.dx/l,dy:m.dy/l,dz:m.dz/l,age:0})});if(mz.length)kick=1}}
+      if(stt==='aim'){fireT-=dtm;if(fireT<=0){fireT=.2+Math.random()*.3;var mz=MechPose.muzzles(data).slice(0,4);mz.forEach(function(m){var l=Math.hypot(m.dx,m.dy,m.dz)||1;bolts.push({x:m.x,y:m.y,z:m.z,dx:m.dx/l,dy:m.dy/l,dz:m.dz/l,age:0})});if(mz.length)kick=1}}
       else fireT=.25;
       bolts=bolts.filter(function(b){b.age+=dtm;return b.age<.5});
       var nb=0;bolts.slice(0,BM/4|0).forEach(function(b){for(var k=0;k<4;k++){var d=b.age*70-k*1.7,o=(n+nb)*7;inst[o]=b.x+b.dx*d;inst[o+1]=b.y+b.dy*d;inst[o+2]=b.z+b.dz*d;inst[o+3]=1;inst[o+4]=gcol[0];inst[o+5]=gcol[1];inst[o+6]=gcol[2];nb++}});

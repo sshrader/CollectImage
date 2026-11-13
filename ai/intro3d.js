@@ -68,7 +68,7 @@
     var st=[],pads=[],pk=[],pulses=[],bolts=[],chainT=-9,time=0,raf=0,last=0,rr=rnd(11);
     function pickPad(a){var best=-1,tries=0;while(tries++<20){var k=Math.floor(rr()*PADS.length);if(k===a.pad)continue;if(st.some(function(o){return o!==a&&o.pad===k}))continue;best=k;break}return best<0?(a.pad+1)%PADS.length:best}
     function reset(){rr=rnd(11);pads=PADS.map(function(){return 0});
-      st=agents.map(function(o,i){var p=PADS[(i*2)%PADS.length];return{o:o,x:p[0]+(i%2?2:-2),z:p[1]+3,yaw:i*1.7,v:0,pad:(i*2)%PADS.length,wait:.2+i*.35,ok:false,gait:i*1.3,ph:i*1.7,top:3.4+(i%3)*.35,pose:null,kick:0,fireT:.3,run:0}});
+      st=agents.map(function(o,i){var p=PADS[(i*2)%PADS.length];return{o:o,x:p[0]+(i%2?2:-2),z:p[1]+3,yaw:i*1.7,v:0,pad:(i*2)%PADS.length,wait:.2+i*.35,ok:false,gait:i*1.3,ph:i*1.7,top:3.4+(i%3)*.35,pose:null,kick:0,fireT:.2+rr()*.3,run:0,rate:.8+rr()*.45}});
       st.forEach(function(a){a.pad=pickPad(a);a.wait=0});
       var r=rnd(3);pulses=[];bolts=[];chainT=-9;pk=[];for(var i=0;i<30;i++)pk.push({ax:r()<.5?0:1,line:Math.floor(r()*5),p:(r()-.5)*40,v:(6+r()*7)*(r()<.5?-1:1),c:r()<.5?0:1,s:.3+r()*.22});
       time=0}
@@ -81,8 +81,8 @@
         if(a.wait>0){a.wait-=dt;a.v=Math.max(0,a.v-dt*14);pads[a.pad]=1;if(a.wait<=0){a.ok=!a.ok;pulses.push({x:a.x,z:a.z,t:time});a.pad=pickPad(a)}}
         else{
           var want=Math.atan2(dx,dz),da=norm(want-a.yaw);a.yaw+=Math.max(-3.2*dt,Math.min(3.2*dt,da));
-          var sp=Math.min(6,1.2+d*1.5)*Math.max(.15,1-Math.abs(da)/1.6);a.v+=(sp-a.v)*Math.min(1,dt*5);
-          if(d<.6){a.wait=1.1+rr()*.9}
+          var sp=a.rate*Math.min(6,1.2+d*1.5)*Math.max(.15,1-Math.abs(da)/1.6);a.v+=(sp-a.v)*Math.min(1,dt*5);
+          if(d<.6){a.wait=.7+rr()*2.4}
         }
         // keep clear of the others
         st.forEach(function(o){if(o===a)return;var ox=a.x-o.x,oz=a.z-o.z,od=Math.hypot(ox,oz);if(od<4.6&&od>.01){var k=(4.6-od)*dt*2.2;a.x+=ox/od*k;a.z+=oz/od*k}});
@@ -93,7 +93,7 @@
         var aiming=a.wait>0,stt=aiming?'aim':(a.v>1.2?'run':'walk'),dat=a.o.data;
         var tg=MechPose.target(dat,stt,time+a.ph,a.kick);a.pose=a.pose?MechPose.blend(a.pose,tg,Math.min(1,dt*7)):tg;a.run+=((stt==='run'?1:0)-a.run)*Math.min(1,dt*6);
         a.kick*=Math.exp(-dt*10);
-        if(aiming){a.fireT-=dt;if(a.fireT<=0){a.fireT=.28;var mz=MechPose.muzzles(dat).slice(0,4),cy=Math.cos(a.yaw),sy=Math.sin(a.yaw);
+        if(aiming){a.fireT-=dt;if(a.fireT<=0){a.fireT=.18+rr()*.3;var mz=MechPose.muzzles(dat).slice(0,4),cy=Math.cos(a.yaw),sy=Math.sin(a.yaw);
           mz.forEach(function(m){var lx=(m.x-15.5)*S,ly=m.y*S+.5*S,lz=(m.z-16)*S,l=Math.hypot(m.dx,m.dy,m.dz)||1,ddx=m.dx/l,ddy=m.dy/l,ddz=m.dz/l;
             bolts.push({x:a.x+lx*cy+lz*sy,y:ly+.05,z:a.z-lx*sy+lz*cy,dx:ddx*cy+ddz*sy,dy:ddy,dz:-ddx*sy+ddz*cy,age:0,c:a.o.gcol})});
           if(mz.length)a.kick=1}}else a.fireT=.2;
