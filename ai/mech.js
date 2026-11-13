@@ -49,6 +49,9 @@ const ROLES = {
   NAVIGATOR: 'Tracks how close the coin is to graduating.',
   MECHANIC: 'Checks the coin’s numbers and says what looks off.',
   SCRIBE: 'Writes the coin’s plain-language status report.',
+  AUDITOR: 'Checks who can still change the token: new supply and frozen wallets.',
+  HUNTER: 'Looks for wallets that bought in the launch block.',
+  WARDEN: 'Works out what a big sale would do to the curve right now.',
 };
 // Each class has one special ability. Every one is real: it is worked out from the coin's public chain numbers, and from what
 // the agent has seen on earlier visits to the coin page. None of them trades, moves funds or predicts a price.
@@ -61,6 +64,9 @@ const ABILITIES = {
   NAVIGATOR: { name: 'Graduation Pace', does: 'Works out how much SOL is still needed to finish the curve and the average pace so far. Arithmetic only, not a forecast.' },
   MECHANIC: { name: 'Self-Check', does: 'Audits the agent’s own readings: what the chain returned, what failed, and whether the numbers add up.' },
   SCRIBE: { name: 'Plain Brief', does: 'Turns the numbers into a short plain-English summary you can copy and share.' },
+  AUDITOR: { name: 'Authority Audit', does: 'Reads the token itself and says whether its mint authority and freeze authority are revoked, so nobody can print more or freeze wallets.' },
+  HUNTER: { name: 'Launch Block Scan', does: 'Finds the wallets that bought in the same block as the launch or the next, and how much of the supply those wallets hold now.' },
+  WARDEN: { name: 'Sell Impact', does: 'Uses the curve’s real reserves to work out what would happen if the dev or the biggest holder sold everything right now.' },
   FLAGSHIP: { name: 'Command Sweep', does: 'Runs every other agent’s ability on the coin at once and reports the headline from each.' },
 };
 const ROLE_KEYS = Object.keys(ROLES);
@@ -107,6 +113,11 @@ function traitsFor(slot, secret) {
     do { nm = NAMES[Math.floor(list.rnd() * NAMES.length)]; nt++; } while (list.names.has(nm) && nt < 200);
     list.names.add(nm);
     t.name = nm; t.role = ROLE_KEYS[Math.floor(list.rnd() * ROLE_KEYS.length)];
+    // a class shows in the look: the hunter carries a scanner dish, the warden a shield, the auditor a crosshair visor
+    const bip = t.arch !== 'quad' && t.arch !== 'spider';
+    if (t.role === 'HUNTER') t.antenna = 'dish';
+    if (t.role === 'AUDITOR' && bip) t.visor = 'cross';
+    if (t.role === 'WARDEN') { if (bip && t.weapon === 'none') t.weapon = 'rifle'; if (t.weapon !== 'none') { t.twin = false; t.shield = true; } }
     list.items.push(t);
   }
   return list.items[slot];

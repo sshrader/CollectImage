@@ -54,6 +54,40 @@ function readCurve(b64) {
 const pct = (part, whole) => (whole > 0n ? Number((part * 10000n) / whole) / 100 : 0);
 const short = (a) => a.slice(0, 4) + '…' + a.slice(-4);
 
+// The first transactions on a coin, to see who bought in the same block as the launch or the next one. Cached, because history does not change.
+const scanCache = new Map();
+async function launchScan(rpc, mint, dev) {
+  const hit = scanCache.get(mint);
+  if (hit && Date.now() - hit.at < 30 * 60000) return hit.data;
+  let sigs = [], before, complete = false;
+  for (let page = 0; page < 3; page++) {
+    const r = await rpc('getSignaturesForAddress', [mint, before ? { limit: 1000, before } : { limit: 1000 }]);
+    if (!Array.isArray(r) || !r.length) { complete = true; break; }
+    sigs = sigs.concat(r);
+    if (r.length < 1000) { complete = true; break; }
+    before = r[r.length - 1].signature;
+  }
+  let data;
+  if (!complete || !sigs.length) data = { capped: !complete, early: 0, wallets: [], checked: 0 };
+  else {
+    const good = sigs.filter((x) => !x.err), oldest = good[good.length - 1], s0 = oldest.slot;
+    const early = good.filter((x) => x.slot <= s0 + 1 && x.signature !== oldest.signature);
+    const wallets = new Set();
+    let checked = 0;
+    for (const e of early.slice(0, 10)) {
+      checked++;
+      const tx = await rpc('getTransaction', [e.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]).catch(() => null);
+      const keys = tx && tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys;
+      const payer = keys && keys[0] && (keys[0].pubkey || keys[0]);
+      if (payer && payer !== dev) wallets.add(String(payer));
+    }
+    data = { capped: false, early: early.length, wallets: [...wallets], checked };
+  }
+  scanCache.set(mint, { at: Date.now(), data });
+  if (scanCache.size > 300) scanCache.delete(scanCache.keys().next().value);
+  return data;
+}
+
 // rpc(method, params) returns the JSON-RPC result. url is only used to spot a Helius endpoint (it can count holders in one call).
 async function coinChain(rpc, mint, dev, url) {
   const out = { supply: null, decimals: 6, curve: null, holders: null, holderCount: null, devHoldPct: null, top10Pct: null, errors: [] };
@@ -72,7 +106,7 @@ async function coinChain(rpc, mint, dev, url) {
     const total = Number(cv.totalSupply) / dec;
     let progress = cv.complete ? 100 : Number(((INITIAL_REAL_TOKENS - cv.realTokens) * 10000n) / INITIAL_REAL_TOKENS) / 100;
     progress = Math.max(0, Math.min(100, progress));
-    out.curve = { complete: cv.complete, progress, raisedSol: Number(cv.realSol) / 1e9, priceSol, marketCapSol: priceSol == null ? null : priceSol * total, address: curveAddr };
+    out.curve = { complete: cv.complete, progress, raisedSol: Number(cv.realSol) / 1e9, priceSol, marketCapSol: priceSol == null ? null : priceSol * total, address: curveAddr, vSol: Number(cv.virtualSol) / 1e9, vTok: Number(cv.virtualTokens) / dec };
     if (!supply) { supply = cv.totalSupply; out.supply = total; }
   }
 
@@ -106,6 +140,20 @@ async function coinChain(rpc, mint, dev, url) {
       let sum = 0n;
       for (const a of bal.value) { const t = a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info && a.account.data.parsed.info.tokenAmount; if (t) sum += BigInt(t.amount); }
       out.devHoldPct = pct(sum, supply);
+    }
+  }
+
+  // Who can still change the token: the mint authority creates more of it, the freeze authority can lock wallets.
+  const mi = await attempt('authority', () => rpc('getAccountInfo', [mint, { encoding: 'jsonParsed' }]));
+  const info = mi && mi.value && mi.value.data && mi.value.data.parsed && mi.value.data.parsed.info;
+  if (info) out.authority = { mint: info.mintAuthority || null, freeze: info.freezeAuthority || null };
+
+  // Who bought in the launch block. The wallets are looked up once per coin; how much they hold is read from the holder list each time.
+  if (dev) {
+    const sc = await attempt('launch', () => launchScan(rpc, mint, dev));
+    if (sc) {
+      const held = out.holders ? out.holders.filter((h) => h.owner && sc.wallets.includes(h.owner)) : [];
+      out.launch = { capped: !!sc.capped, early: sc.early || 0, wallets: sc.wallets ? sc.wallets.length : 0, checked: sc.checked || 0, heldPct: held.reduce((a, h) => a + h.pct, 0), heldCount: held.length };
     }
   }
 

@@ -20,6 +20,42 @@ const delta = (a, b, d) => (a >= b ? '+' : '−') + fmt(Math.abs(a - b), d);
 const hrs = (ms) => ms / 3600000;
 function span(ms) { const m = Math.round(ms / 60000); if (m < 1) return 'under a minute'; if (m < 90) return m + ' min'; const h = ms / 3600000; return h < 48 ? fmt(h, 1) + ' h' : fmt(h / 24, 1) + ' days'; }
 const ABILITY_FN = {
+  AUDITOR(c) {
+    const a = c.oc.authority;
+    if (!a) return [{ level: 'info', text: 'Authority Audit could not read the token itself just now.' }];
+    return [
+      a.mint ? { level: 'warn', text: 'The mint authority is still held by ' + a.mint.slice(0, 4) + '…' + a.mint.slice(-4) + ', so more of this token could be created.' } : { level: 'good', text: 'The mint authority is revoked, so no new tokens can be created.' },
+      a.freeze ? { level: 'warn', text: 'A freeze authority (' + a.freeze.slice(0, 4) + '…' + a.freeze.slice(-4) + ') exists, so wallets holding the token could be frozen.' } : { level: 'good', text: 'There is no freeze authority, so holders cannot be frozen.' },
+    ];
+  },
+  HUNTER(c) {
+    const l = c.oc.launch;
+    if (!l) return [{ level: 'info', text: 'Launch Block Scan could not read the coin’s first transactions just now.' }];
+    if (l.capped) return [{ level: 'info', text: 'This coin has too much history for a launch block scan.' }];
+    const o = [];
+    if (!l.wallets) o.push({ level: 'good', text: 'No wallet other than the dev bought in the launch block or the one after.' });
+    else {
+      o.push({ level: 'info', text: l.wallets + ' wallet' + (l.wallets === 1 ? '' : 's') + ' besides the dev bought in the launch block or the next' + (l.early > l.checked ? ' (I checked the first ' + l.checked + ' of ' + l.early + ' transactions).' : '.') });
+      o.push({ level: l.heldPct >= 20 ? 'warn' : 'info', text: l.heldCount ? 'Of those, ' + l.heldCount + ' still sit in the top 20 holders with ' + pc(l.heldPct) + ' of the supply.' : 'None of them are in the top 20 holders now, so they have mostly sold or moved on.' });
+      o.push({ level: 'info', text: 'Buying early is not proof of anything. Snipers, bundlers and ordinary fast buyers look the same from here.' });
+    }
+    return o;
+  },
+  WARDEN(c) {
+    const { oc, cv } = c;
+    if (!cv) return [{ level: 'info', text: 'Sell Impact could not read the curve just now.' }];
+    if (cv.complete) return [{ level: 'info', text: 'The coin has graduated, so its liquidity now sits in a pool that this agent cannot read yet.' }];
+    if (cv.vSol == null || !oc.supply) return [{ level: 'info', text: 'Sell Impact needs the curve’s reserves and could not read them.' }];
+    const o = [{ level: 'info', text: 'The curve holds about ' + fmt(cv.raisedSol, 2) + ' SOL of real liquidity.' }];
+    const sell = (pct) => { const amt = pct / 100 * oc.supply, k = cv.vSol * cv.vTok, out = cv.vSol - k / (cv.vTok + amt), after = (cv.vSol - out) / (cv.vTok + amt), drop = (1 - after / (cv.vSol / cv.vTok)) * 100; return { out: Math.min(out, cv.raisedSol), drop }; };
+    const top = (oc.holders || []).find((h) => !h.isCurve && !h.isDev);
+    for (const [who, pct] of [['the dev', oc.devHoldPct], ['the biggest other holder', top ? top.pct : null]]) {
+      if (!pct) continue;
+      const r = sell(pct);
+      o.push({ level: r.drop >= 25 ? 'warn' : 'info', text: 'If ' + who + ' (' + pc(pct) + ' of the supply) sold everything right now, the curve would pay about ' + fmt(r.out, 2) + ' SOL before fees and the price would fall about ' + pc(r.drop) + '. This is today’s arithmetic, not a forecast.' });
+    }
+    return o;
+  },
   SCOUT(c) {
     const o = [], { oc, w, now, launched } = c;
     if (oc.holderCount == null) return [{ level: 'info', text: 'Holder Radar could not read the holder count just now.' }];
@@ -133,7 +169,7 @@ function statusReport(agent, coin, onchain, now, watch) {
   if (!cv && !lines.some((l) => l.kind !== 'age' && l.kind !== 'gap')) add('none', 'info', 'There is nothing to report yet. The chain has not returned this coin’s numbers.');
 
   // Each role leads with what it watches. The rest follow in the usual order.
-  const lead = { SENTRY: ['dev', 'top'], ANALYST: ['cap', 'curve'], NAVIGATOR: ['curve', 'mark'], SCOUT: ['holders', 'top'], ARCHIVIST: ['mark', 'age'], COURIER: ['holders', 'cap'], MECHANIC: ['gap', 'dev'], SCRIBE: [] }[agent && agent.role] || [];
+  const lead = { AUDITOR: ['dev', 'gap'], HUNTER: ['top', 'holders'], WARDEN: ['dev', 'cap'], SENTRY: ['dev', 'top'], ANALYST: ['cap', 'curve'], NAVIGATOR: ['curve', 'mark'], SCOUT: ['holders', 'top'], ARCHIVIST: ['mark', 'age'], COURIER: ['holders', 'cap'], MECHANIC: ['gap', 'dev'], SCRIBE: [] }[agent && agent.role] || [];
   const order = (l) => { const i = lead.indexOf(l.kind); return i < 0 ? 99 : i; };
   const sorted = lines.map((l, i) => ({ l, i })).sort((a, b) => (order(a.l) - order(b.l)) || (a.i - b.i)).map((x) => x.l);
   const warns = sorted.filter((l) => l.level === 'warn').length;

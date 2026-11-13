@@ -298,11 +298,33 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
     check('a calm coin gets a steady report with no flags', calm.status === 'steady' && /sees nothing to flag/.test(calm.headline) && calm.lines.every((l) => l.level !== 'warn') && calm.lines[0].kind === 'cap' && calm.lines.some((l) => /passed the 50% mark/.test(l.text)) && calm.lines.some((l) => /5 minutes ago/.test(l.text)), JSON.stringify(calm).slice(0, 300));
     const risky = statusReport({ name: 'TORQUE', role: 'SENTRY' }, { launchedAt: 1000 }, { curve: { complete: false, progress: 10, raisedSol: 2, marketCapSol: 30 }, devHoldPct: 40, top10Pct: 70, errors: ['holders'] }, 2000);
     check('a concentrated coin gets flags, led by the sentry, plus a gap note', risky.status === 'attention' && /2 things to flag/.test(risky.headline) && risky.lines[0].level === 'warn' && risky.lines[0].kind === 'dev' && risky.lines.some((l) => l.kind === 'gap'));
+    {
+      const chainM = require('../chain.js'), MINT = 'MintMintMintMintMintMintMintMintMint11111', DEV = 'DevDevDevDevDevDevDevDevDevDevDevDev111', SN = 'SniperSniperSniperSniperSniperSniper111';
+      const calls = [];
+      const mock = async (method, params) => {
+        calls.push(method);
+        if (method === 'getTokenSupply') return { value: { amount: '1000000000000000', decimals: 6, uiAmountString: '1000000000' } };
+        if (method === 'getAccountInfo') return params[0] === MINT ? { value: { data: { parsed: { info: { mintAuthority: null, freezeAuthority: 'FreezeFreezeFreeze1111' } } } } } : { value: null };
+        if (method === 'getTokenLargestAccounts') return { value: [{ address: 'a1', amount: '200000000000000' }, { address: 'a2', amount: '50000000000000' }] };
+        if (method === 'getMultipleAccounts') return { value: [{ data: { parsed: { info: { owner: SN } } } }, { data: { parsed: { info: { owner: 'Other' } } } }] };
+        if (method === 'getTokenAccountsByOwner') return { value: [] };
+        if (method === 'getSignaturesForAddress') return [{ signature: 's3', slot: 101, err: null }, { signature: 's2', slot: 100, err: null }, { signature: 's1', slot: 100, err: null }];
+        if (method === 'getTransaction') return { transaction: { message: { accountKeys: [{ pubkey: params[0] === 's2' ? SN : DEV }] } } };
+        return null;
+      };
+      const cc = await chainM.coinChain(mock, MINT, DEV, '');
+      check('the audit reads the mint and freeze authorities', cc.authority && cc.authority.mint === null && cc.authority.freeze === 'FreezeFreezeFreeze1111');
+      check('the launch scan finds early buyers and what they hold', cc.launch && cc.launch.early === 2 && cc.launch.wallets === 1 && cc.launch.heldCount === 1 && cc.launch.heldPct === 20, JSON.stringify(cc.launch));
+      const au = statusReport({ name: 'A', role: 'AUDITOR', ability: require('../mech.js').ABILITIES.AUDITOR }, {}, cc, 1).ability, hu = statusReport({ name: 'H', role: 'HUNTER', ability: require('../mech.js').ABILITIES.HUNTER }, {}, cc, 1).ability;
+      check('auditor and hunter report what they found', au.lines[0].level === 'good' && au.lines[1].level === 'warn' && hu.lines[1].level === 'warn' && /20%/.test(hu.lines[1].text));
+      const wd = statusReport({ name: 'W', role: 'WARDEN', ability: require('../mech.js').ABILITIES.WARDEN }, {}, { supply: 1e9, devHoldPct: 10, holders: [], curve: { complete: false, progress: 40, raisedSol: 30, vSol: 60, vTok: 700e6 } }, 1).ability;
+      check('warden works out a sale from the curve reserves', /sold everything/.test(wd.lines[1].text) && /fall about/.test(wd.lines[1].text), JSON.stringify(wd.lines));
+    }
     const abs = require('../mech.js').ABILITIES, rr = (role, w) => statusReport({ name: 'X', role, ability: abs[role] }, { launchedAt: 1000 }, { curve: { complete: false, progress: 52, raisedSol: 44, marketCapSol: 80 }, devHoldPct: 3, top10Pct: 20, holderCount: 41, errors: [] }, 3 * 3600000, w).ability;
     const hist = { first: { at: 0, cap: 50, holders: 20, dev: 8, top10: 30 }, peak: { cap: { v: 100, at: 1e5 }, holders: { v: 45, at: 2e5 }, curve: { v: 55, at: 2e5 } }, marks: { 25: 6e4 }, devMax: 8, n: 6 };
-    check('every class has its own named ability', Object.keys(abs).length === 9 && new Set(Object.values(abs).map((a) => a.name)).size === 9);
+    check('every class has its own named ability', Object.keys(abs).length === 12 && new Set(Object.values(abs).map((a) => a.name)).size === 12);
     check('abilities compare now with what the agent saw before', /up 21/.test(rr('SCOUT', hist).lines[1].text) && /up 60%/.test(rr('ANALYST', hist).lines[1].text) && rr('SENTRY', hist).lines.some((l) => l.level === 'warn' && /fell from 8%/.test(l.text)) && /25%/.test(rr('ARCHIVIST', hist).lines[0].text) && /40\.6 SOL/.test(rr('NAVIGATOR', null).lines[0].text));
-    check('abilities work with no history and the flagship sweeps them all', Object.keys(abs).every((k) => rr(k, null).lines.length > 0) && rr('FLAGSHIP', hist).lines.length === 8);
+    check('abilities work with no history and the flagship sweeps them all', Object.keys(abs).every((k) => rr(k, null).lines.length > 0) && rr('FLAGSHIP', hist).lines.length === 11);
     const done = statusReport({ name: 'ZED', role: 'NAVIGATOR' }, {}, { curve: { complete: true, progress: 100, raisedSol: 85, marketCapSol: 400 } }, 1);
     check('a graduated coin says so', done.lines[0].level === 'good' && /graduated/.test(done.lines[0].text));
     const empty = statusReport({ name: 'WREN', role: 'SCRIBE' }, {}, { errors: ['supply', 'curve'] }, 1);
