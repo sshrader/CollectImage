@@ -1,5 +1,5 @@
 'use strict';
-// The 3D intro: voxel agents walk a lit data highway through scanning gates, under falling code.
+// The 3D intro: voxel agents run between work stations on a lit circuit floor, seen from above.
 // Plain WebGL2, no libraries. Intro3D.create(canvas, { agents: [voxelData, ...] }) -> { start, stop, renderAt(t) } or null.
 (function(){
   var VS='#version 300 es\nin vec3 pos;in vec3 nrm;in vec4 aCell;in vec3 aCol;uniform mat4 uVP;uniform mat4 uModel;uniform mat3 uRot;uniform vec3 uOrg;uniform vec2 uPivot;uniform vec2 uSwing;out vec3 vCol;out vec3 vN;out float vE;out float vW;\n'
@@ -38,7 +38,7 @@
     var vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,CUBE.v,gl.STATIC_DRAW);
     var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,CUBE.i,gl.STATIC_DRAW);
     var uOrg=U('uOrg'),uPivot=U('uPivot'),uSwing=U('uSwing'),uVP=U('uVP'),uModel=U('uModel'),uRot=U('uRot'),uCol=U('uCol'),uOver=U('uOver'),uEmit=U('uEmit'),uBoost=U('uBoost');
-    gl.uniform3f(U('uTint'),.86,1,.93);gl.uniform3f(U('uFog'),0,.01,.005);gl.uniform2f(U('uFogR'),40,125);
+    gl.uniform3f(U('uTint'),.86,1,.93);gl.uniform3f(U('uFog'),0,.01,.005);gl.uniform2f(U('uFogR'),70,190);
     // an object is a set of instances (cells) in its own vertex array
     function obj(data,max,dynamic){
       var vao=gl.createVertexArray();gl.bindVertexArray(vao);
@@ -57,56 +57,67 @@
     function bx(x,y,z,sx,sy,sz,col,boost){draw(box,trs(x,y,z,0,0,sx,sy,sz),{col:col,emit:true,boost:boost||0})}
 
     var agents=opts.agents.slice(0,4).map(function(d){return voxObj(d)});
-    var LANES=[-4,1,6],DIV=[-6.5,-1.5,3.5,8.5],GATES=[-5,9],S=.135;
-    var rd=rnd(7),st=[];
-    var CFG=[[0,-12,3.4],[1,-3,3.0],[2,3,3.8],[1,12,3.2]];
-    function reset(){st=agents.map(function(o,i){var c=CFG[i%CFG.length];return{o:o,z:LANES[c[0]],x:c[1],v:c[2],ok:c[1]>GATES[0],ph:i*1.7,gait:i*1.3}});gates=[0,0];time=0;
-      var r=rnd(3);rain=[{z:-26,k:.6,n:64,top:30,a:[]},{z:-17,k:.45,n:36,top:26,a:[]}];
-      rain.forEach(function(l){for(var i=0;i<l.n;i++)l.a.push({x:(r()-.5)*84*(l.z<-20?1:.8),sp:3+r()*6,off:r()*40})});
-      pk=[];for(var i=0;i<26;i++)pk.push({lane:Math.floor(r()*4),x:(r()-.5)*70,v:6+r()*7,c:r()<.5?0:1,s:.3+r()*.25})}
-    var gates=[0,0],time=0,rain=[],pk=[],raf=0,last=0;
-    var rainObj=[obj(null,64*9,true),obj(null,36*9,true)];
+    var S=.135,AX=17,AZ=9.5; // arena half-sizes
+    // work stations the agents run between; each one pulses while an agent is on it
+    var PADS=[[-12,-5.5],[-1,-7],[11,-5],[-9,5],[3,4.5],[13,5.5],[-1,-0.5]];
+    var st=[],pads=[],pk=[],time=0,raf=0,last=0,rr=rnd(11);
+    function pickPad(a){var best=-1,tries=0;while(tries++<20){var k=Math.floor(rr()*PADS.length);if(k===a.pad)continue;if(st.some(function(o){return o!==a&&o.pad===k}))continue;best=k;break}return best<0?(a.pad+1)%PADS.length:best}
+    function reset(){rr=rnd(11);pads=PADS.map(function(){return 0});
+      st=agents.map(function(o,i){var p=PADS[(i*2)%PADS.length];return{o:o,x:p[0]+(i%2?2:-2),z:p[1]+3,yaw:i*1.7,v:0,pad:(i*2)%PADS.length,wait:.2+i*.35,ok:false,gait:i*1.3,ph:i*1.7,top:3.4+(i%3)*.35}});
+      st.forEach(function(a){a.pad=pickPad(a);a.wait=0});
+      var r=rnd(3);pk=[];for(var i=0;i<30;i++)pk.push({ax:r()<.5?0:1,line:Math.floor(r()*5),p:(r()-.5)*40,v:(6+r()*7)*(r()<.5?-1:1),c:r()<.5?0:1,s:.3+r()*.22});
+      time=0}
     reset();
+    function norm(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a}
     function step(dt){
       time+=dt;
       st.forEach(function(a){
-        var slow=1,i;for(i=0;i<2;i++){var d=Math.abs(a.x-GATES[i]);slow=Math.min(slow,.12+.88*smooth(d/2.4));if(d<.7)gates[i]=1}
-        var px=a.x;a.x+=a.v*slow*dt;if(px<=GATES[0]&&a.x>GATES[0])a.ok=true;if(a.x>30){a.x=-30;a.ok=false}a.slow=slow;a.gait+=a.v*slow*dt*1.9;
+        var T=PADS[a.pad],dx=T[0]-a.x,dz=T[1]-a.z,d=Math.hypot(dx,dz);
+        if(a.wait>0){a.wait-=dt;a.v=Math.max(0,a.v-dt*14);pads[a.pad]=1;if(a.wait<=0){a.ok=!a.ok;a.pad=pickPad(a)}}
+        else{
+          var want=Math.atan2(dx,dz),da=norm(want-a.yaw);a.yaw+=Math.max(-3.2*dt,Math.min(3.2*dt,da));
+          var sp=Math.min(4.2,.9+d*1.2)*Math.max(.15,1-Math.abs(da)/1.6);a.v+=(sp-a.v)*Math.min(1,dt*5);
+          if(d<.6){a.wait=1.1+rr()*.9}
+        }
+        // keep clear of the others
+        st.forEach(function(o){if(o===a)return;var ox=a.x-o.x,oz=a.z-o.z,od=Math.hypot(ox,oz);if(od<4.6&&od>.01){var k=(4.6-od)*dt*2.2;a.x+=ox/od*k;a.z+=oz/od*k}});
+        a.x+=Math.sin(a.yaw)*a.v*dt;a.z+=Math.cos(a.yaw)*a.v*dt;
+        a.x=Math.max(-AX+2,Math.min(AX-2,a.x));a.z=Math.max(-AZ+1.5,Math.min(AZ-1.5,a.z));
+        a.gait+=a.v*dt*1.9;
       });
-      gates[0]=Math.max(0,gates[0]-dt*1.6);gates[1]=Math.max(0,gates[1]-dt*1.6);
-      pk.forEach(function(p){p.x+=p.v*dt;if(p.x>38)p.x-=76});
+      for(var i=0;i<pads.length;i++)pads[i]=Math.max(0,pads[i]-dt*1.4);
+      st.forEach(function(a){if(a.wait>0)pads[a.pad]=1});
+      pk.forEach(function(p){p.p+=p.v*dt;var m=p.ax?AZ:AX;if(p.p>m+2)p.p=-m-2;if(p.p<-m-2)p.p=m+2});
     }
     function frame(){
       var w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height,dpr=Math.min(window.devicePixelRatio||1,2),cw=Math.max(2,Math.round(w*dpr)),ch=Math.max(2,Math.round(h*dpr));
       if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}
       gl.viewport(0,0,cw,ch);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(0,.01,.005,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       var t=time,asp=cw/ch,narrow=asp<.9;
-      var eye=[Math.sin(t*.35)*2.5-1.5,8.2+Math.sin(t*.5)*.25,(narrow?48:33)-t*.6],tgt=[0,1.4,2];
-      gl.uniformMatrix4fv(uVP,false,mul(persp(narrow?46:38,asp,.5,260),look(eye,tgt)));
+      // high camera looking steeply down, drifting slowly
+      var cx=Math.sin(t*.22)*3,eye=[cx,(narrow?50:27),(narrow?24:15.5)+Math.cos(t*.17)*1.2],tgt=[cx,0,-1.5];
+      gl.uniformMatrix4fv(uVP,false,mul(persp(narrow?48:40,asp,.5,260),look(eye,tgt)));
       var G=[.12,.75,.42],G2=[.24,1,.6];
-      // floor and lane lines
-      bx(0,-.2,6,150,.2,40,[.012,.045,.03]);
-      DIV.forEach(function(z){bx(0,.02,z,150,.07,.16,G,0)});
-      var off=(t*3.2)%4;for(var x=-60;x<=60;x+=4)bx(x+off,.02,1,.12,.05,15.2,[.05,.32,.18],0);
-      // data packets streaming along the lane edges
-      pk.forEach(function(p){var z=DIV[p.lane]+(p.lane%2?.35:-.35),c=p.c?[.3,1,.95]:G2;bx(p.x,.35,z,p.s*1.8,p.s,p.s,c,0);bx(p.x-p.s*3,.3,z,p.s*.9,p.s*.5,p.s*.5,[c[0]*.5,c[1]*.5,c[2]*.5],0)});
-      // gates: two pillars, a beam and a scan grid that lights as an agent passes
-      GATES.forEach(function(gx,i){var f=gates[i],c=[.1+.15*f,.8+.2*f,.4+.2*f];
-        bx(gx,4.6,-8.6,.5,9.2,.5,c,f);bx(gx,4.6,10.6,.5,9.2,.5,c,f);bx(gx,9.2,1,.5,.5,19.7,c,f);
-        for(var k=0;k<9;k++){var z=-7+k*2.3,y=.6+((t*3.5+k*.7)%1)*8;bx(gx,y,z,.08,.12,.9,[.2,1,.6],f*1.2)}
-        if(f>.05)for(var q=0;q<15;q++)bx(gx,4.5,-7.6+q*1.3,.1,8.6,.12,[.2*f+.05,.9*f+.1,.5*f+.05],f)});
-      // falling code, two layers, rebuilt each frame
-      rain.forEach(function(l,li){var a=rainObj[li].n=0,arr=new Float32Array(l.n*9*7),q=0;
-        l.a.forEach(function(c){var hd=l.top-((t*c.sp+c.off)%(l.top+8));for(var j=0;j<9;j++){var y=hd+j*.9;if(y<0||y>l.top)continue;var fd=1-j/9,col=j===0?[.85,1,.9]:[.05,.35+.5*fd,.18+.2*fd];
-          arr.set([c.x/l.k,y/l.k,0,1,col[0]*(j?fd+.25:1),col[1]*(j?fd+.25:1),col[2]*(j?fd+.25:1)],q*7);q++}});
-        rainObj[li].n=q;gl.bindBuffer(gl.ARRAY_BUFFER,rainObj[li].buf);gl.bufferSubData(gl.ARRAY_BUFFER,0,arr.subarray(0,q*7));
-        draw(rainObj[li],trs(0,0,l.z,0,0,l.k,l.k,l.k),{emit:true,boost:0})});
-      // agents, each carrying a packet that turns green once it clears the first gate
+      // floor, border and a circuit grid
+      bx(0,-.2,0,AX*2+30,.2,AZ*2+22,[.012,.045,.03]);
+      bx(0,.04,-AZ,AX*2,.08,.25,G);bx(0,.04,AZ,AX*2,.08,.25,G);bx(-AX,.04,0,.25,.08,AZ*2,G);bx(AX,.04,0,.25,.08,AZ*2,G);
+      for(var gx=-16;gx<=16;gx+=4)bx(gx,.02,0,.07,.04,AZ*2,[.04,.22,.13]);
+      for(var gz=-8;gz<=8;gz+=4)bx(0,.02,gz,AX*2,.04,.07,[.04,.22,.13]);
+      // data packets streaming along the grid lines
+      pk.forEach(function(p){var ln=-8+p.line*4,c=p.c?[.3,1,.95]:G2,sgn=p.v<0?-1:1;
+        if(p.ax===0){var z=Math.max(-AZ,Math.min(AZ,ln));bx(p.p,.2,z,p.s*2,p.s,p.s,c);bx(p.p-sgn*p.s*3,.18,z,p.s*1.1,p.s*.5,p.s*.5,[c[0]*.5,c[1]*.5,c[2]*.5])}
+        else{var x=-16+p.line*8;bx(x,.2,p.p,p.s,p.s,p.s*2,c);bx(x,.18,p.p-sgn*p.s*3,p.s*.5,p.s*.5,p.s*1.1,[c[0]*.5,c[1]*.5,c[2]*.5])}});
+      // work stations: a pad with a ring and rising beams that light while an agent works there
+      PADS.forEach(function(p,i){var f=pads[i],c=[.08+.2*f,.6+.4*f,.32+.25*f],R=2.6;
+        bx(p[0],.03,p[1],R*2,.06,R*2,[.02,.09,.05]);
+        bx(p[0],.08,p[1]-R,R*2,.1,.16,c,f);bx(p[0],.08,p[1]+R,R*2,.1,.16,c,f);bx(p[0]-R,.08,p[1],.16,.1,R*2,c,f);bx(p[0]+R,.08,p[1],.16,.1,R*2,c,f);
+        if(f>.05){var h=1.5+f*7;for(var k=0;k<4;k++){var ax=k%2?R:-R,az=k<2?R:-R;bx(p[0]+ax,h/2,p[1]+az,.16,h,.16,[.2,1,.6],f)}bx(p[0],.14,p[1],R*1.5,.04,R*1.5,[.1+.3*f,.5+.5*f,.3+.3*f],f)}});
+      // agents; each carries a packet that flips colour every time it finishes a task
       st.forEach(function(a,i){
-        var bob=Math.abs(Math.sin(a.gait))*.22*Math.min(1,a.slow*1.5+.2),yaw=.35,roll=Math.sin(t*7+a.ph)*.035*a.slow;
-        draw(a.o,trs(a.x,.5*S+bob+.02,a.z,yaw,roll,S,S,S),{sw:[a.gait,.5*Math.min(1,a.slow*1.6)]});
-        var fx=Math.sin(yaw),fz=Math.cos(yaw),pc=a.ok?[.2,1,.55]:[1,.7,.25],sp=Math.sin(t*3+i);
-        draw(box,trs(a.x+fx*2.6,3.1+bob+sp*.1,a.z+fz*2.6,t*2+i,0,.8,.8,.8),{col:pc,emit:true,boost:.6+.4*sp});
+        var bob=Math.abs(Math.sin(a.gait))*.22*Math.min(1,a.v*.4),roll=Math.sin(t*7+a.ph)*.03*Math.min(1,a.v*.4);
+        draw(a.o,trs(a.x,.5*S+bob+.02,a.z,a.yaw,roll,S,S,S),{sw:[a.gait,.5*Math.min(1,a.v*.45)]});
+        var pc=a.ok?[.2,1,.55]:[1,.7,.25],sp=Math.sin(t*3+i);
+        draw(box,trs(a.x,7.7+bob+sp*.12,a.z,t*2+i,0,.8,.8,.8),{col:pc,emit:true,boost:.6+.4*sp});
       });
     }
     function start(){var t0=performance.now();last=t0;
