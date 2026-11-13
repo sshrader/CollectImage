@@ -28,7 +28,7 @@ let failed = 0;
 function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label + (ok ? '' : ' ' + (extra || ''))); if (!ok) failed++; }
 
 (async () => {
-  process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'agentbay-'));
+  process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mechpad-'));
   process.env.IMAGE_SECRET = 'test-secret';
   process.env.LAUNCH_RETRY_MS = '5';
   process.env.ADMIN_TOKEN = 'a'.repeat(32);
@@ -85,7 +85,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   check('agent voxel model is served', r.status === 200 && vj.cells.length > 300 && vj.cells[0].length === 5 && Array.isArray(vj.palette) && (await fetch(base + '/api/agent/9/voxels.json')).status === 404);
   check('the old admin launch page is gone', (await fetch(base + '/launch')).status === 404);
   const home = await fetch(base + '/');
-  check('home page is Agent Bay', home.status === 200 && (await home.text()).includes('Agent Bay'));
+  check('home page is Mechpad', home.status === 200 && (await home.text()).includes('Mechpad'));
 
   const a = newWallet(), b = newWallet(), c = newWallet(), d = newWallet(), e = newWallet();
 
@@ -228,7 +228,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const ftok = r.json.token;
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the founder bear shows as held', fs0.founder.state === 'held');
-  r = await meta({ name: 'Agent Bay', symbol: 'DEN', description: 'The Bay coin' }, ftok);
+  r = await meta({ name: 'Mechpad', symbol: 'DEN', description: 'Mechpad coin' }, ftok);
   const fj = await r.json();
   const fdoc = await (await fetch(base + new URL(fj.uri).pathname)).json();
   const fpng = Buffer.from(await (await fetch(base + new URL(fdoc.image).pathname)).arrayBuffer());
@@ -243,20 +243,20 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await reserve(f, 'founder');
   check('the founder bear cannot be launched twice', r.status === 409);
   cj = await (await fetch(base + '/api/coin/' + fmint)).json();
-  check('the founder coin page data is marked as the founder', cj.bear === 'F' && cj.founder === true && cj.name === 'Agent Bay');
+  check('the founder coin page data is marked as the founder', cj.bear === 'F' && cj.founder === true && cj.name === 'Mechpad');
   r = await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the owner can free the founder bear', r.status === 200 && fs0.founder.state === 'reserved');
   // attaching a coin that is already on the chain (when the automatic lock failed)
   const amint = b58encode(crypto.randomBytes(32)), asig = sigOf(); txs[asig] = launchTx(f.address, amint);
-  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Agent Bay', symbol: 'DEN' }, 'wrong');
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Mechpad', symbol: 'DEN' }, 'wrong');
   check('attaching needs the admin password', r.status === 401);
-  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: sigOf(), name: 'Agent Bay', symbol: 'DEN' }, 'a'.repeat(32));
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: sigOf(), name: 'Mechpad', symbol: 'DEN' }, 'a'.repeat(32));
   check('attaching checks the launch on the chain', r.status === 422);
-  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Agent Bay', symbol: 'DEN' }, 'a'.repeat(32));
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Mechpad', symbol: 'DEN' }, 'a'.repeat(32));
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the owner can attach an existing coin to a bear', r.status === 200 && fs0.founder.state === 'launched' && fs0.founder.mint === amint, r.status);
-  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Agent Bay', symbol: 'DEN' }, 'a'.repeat(32));
+  r = await post('/api/admin/attach', { slot: 'founder', mint: amint, signature: asig, name: 'Mechpad', symbol: 'DEN' }, 'a'.repeat(32));
   check('a bear that already has a coin cannot be attached twice', r.status === 409);
   await post('/api/admin/release', { slot: 'founder' }, 'a'.repeat(32));
 

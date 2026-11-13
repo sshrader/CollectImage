@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Agent Bay</title>
+<title>Mechpad</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
 padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-/* the dim agent bay behind the page */
+/* the dim mechpad behind the page */
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;image-rendering:pixelated;opacity:.8;pointer-events:none}
 .veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(14,10,8,.55) 0%,rgba(14,10,8,.25) 45%,rgba(14,10,8,.05) 100%)}
 .wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding-block:28px 160px}
@@ -100,11 +100,11 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 <canvas id="bg" aria-hidden="true"></canvas>
 <div class="veil" aria-hidden="true"></div>
 
-<div id="splash" role="dialog" aria-label="Agent Bay intro">
+<div id="splash" role="dialog" aria-label="Mechpad intro">
   <canvas id="sc" aria-hidden="true"></canvas>
   <div class="slog" id="slog" aria-hidden="true"></div>
   <div class="cap">
-    <h2>Agent Bay</h2>
+    <h2>Mechpad</h2>
     <p>Mainframe online. The agents are running the chain.</p>
     <button id="enter" type="button">Proceed ›</button>
   </div>
@@ -112,12 +112,12 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 
 <div class="wrap">
 <header>
-  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>Agent Bay<span class="net" id="net">devnet</span></div>
+  <div class="logo"><span id="logoicon" style="display:inline-flex;width:28px;height:28px"></span>Mechpad<span class="net" id="net">devnet</span></div>
   <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
 </header>
 
 <h1>Launch a coin. <span>Claim an agent.</span></h1>
-<p class="lede">Every coin launched here claims one of the Bay's 3D voxel agents as its logo, and that agent is locked to the coin for good. Its agent reports the coin’s public numbers on the coin page: curve progress, holders, dev share and anything worth flagging. Connect your wallet, pick an agent or let the Bay choose, name your coin, and launch on pump.fun.</p>
+<p class="lede">Every coin launched here claims one of Mechpad's 3D voxel agents as its logo, and that agent is locked to the coin for good. Its agent reports the coin’s public numbers on the coin page: curve progress, holders, dev share and anything worth flagging. Connect your wallet, pick an agent or let Mechpad choose, name your coin, and launch on pump.fun.</p>
 
 <div id="recent" hidden><h2>Recent launches</h2><div class="recent" id="recentlist"></div></div>
 
@@ -151,13 +151,13 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 
 <h2>Creator fees</h2>
 <div class="panel">
-  <div class="note">Every trade on your coin earns creator fees. Connect the wallet you launched from to see what is waiting. Coins with the Bay fee split are paid out to you and the Bay together; the payout asks for your approval and you pay its small network fee.</div>
+  <div class="note">Every trade on your coin earns creator fees. Connect the wallet you launched from to see what is waiting. Coins with Mechpad fee split are paid out to you and Mechpad together; the payout asks for your approval and you pay its small network fee.</div>
   <div class="row"><button class="btn" id="feechk" type="button">Check my fees</button></div>
   <div class="log" id="feelog"></div>
   <div id="feelist" style="display:grid;gap:8px"></div>
 </div>
 
-<p class="fine">Launching creates a real coin on Solana's <span id="fnet">devnet</span>. You sign every transaction in your own wallet and pay its fees; the Bay never holds your SOL. Your first buy goes in the same transaction as the launch, so nobody can buy before you. A coin can lose all of its value, and its agent has no promised value. Agent Bay does not vouch for any coin launched here. Nothing here is financial advice.</p>
+<p class="fine">Launching creates a real coin on Solana's <span id="fnet">devnet</span>. You sign every transaction in your own wallet and pay its fees; Mechpad never holds your SOL. Your first buy goes in the same transaction as the launch, so nobody can buy before you. A coin can lose all of its value, and its agent has no promised value. Mechpad does not vouch for any coin launched here. Nothing here is financial advice.</p>
 <footer>Pixel agents drawn by code. <button type="button" id="replay">Replay the intro</button></footer>
 </div>
 
@@ -199,7 +199,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     });
   }
   var introTok=0,logT=0;
-  var LOGS=['> boot agent bay','> sync pump.fun ledger ... ok','> validator.01 online','> agent.01 verify holders ... ok','> block #4821 mined 0x9f3a..c21e','> agent.03 sign tx ... ok','> chain height 4822','> all agents online'];
+  var LOGS=['> boot mechpad','> sync pump.fun ledger ... ok','> validator.01 online','> agent.01 verify holders ... ok','> block #4821 mined 0x9f3a..c21e','> agent.03 sign tx ... ok','> chain height 4822','> all agents online'];
   function freshCanvas(){var c=document.createElement('canvas');c.id='sc';c.setAttribute('aria-hidden','true');var o=$('sc');o.parentNode.replaceChild(c,o);return c}
   function begun(withLog){
     clearTimeout(startIntro.t);
@@ -261,11 +261,11 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     var d=document.createElement('div'),tg=document.createElement('div'),h=document.createElement('h3'),p=document.createElement('p');
     tg.className='tag';tg.textContent='Flagship · one of one';d.appendChild(tg);
     if(f.state==='launched'){
-      h.textContent=(f.name||'PRIME coin')+' · $'+f.symbol;p.textContent='PRIME is locked to the Bay’s own coin.';d.appendChild(h);d.appendChild(p);
+      h.textContent=(f.name||'PRIME coin')+' · $'+f.symbol;p.textContent='PRIME is locked to Mechpad’s own coin.';d.appendChild(h);d.appendChild(p);
       if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(f.mint||'')){var a=document.createElement('a');a.className='btn go';a.href='/coin/'+f.mint;a.textContent='Open the coin page';d.appendChild(a)}
     }else{
       h.textContent='PRIME';
-      p.textContent=f.state==='held'?'The flagship coin is being launched right now.':'A graphite flagship agent with a gold crown and an amber visor. Not in the numbered set, and reserved for the Bay’s founder wallet ('+f.short+').';
+      p.textContent=f.state==='held'?'The flagship coin is being launched right now.':'A graphite flagship agent with a gold crown and an amber visor. Not in the numbered set, and reserved for Mechpad’s founder wallet ('+f.short+').';
       d.appendChild(h);d.appendChild(p);
       if(f.state==='reserved'&&pubkey&&short(pubkey)===f.short){var b=document.createElement('button');b.type='button';b.className='btn go';b.textContent=pickSlot==='founder'?'PRIME selected':'Launch the PRIME coin';
         b.addEventListener('click',function(){pickSlot='founder';drawBears();drawFounder();showPick();say('PRIME selected. Fill in the coin details below and launch.','ok');$('nm').scrollIntoView({behavior:'smooth',block:'center'})});d.appendChild(b)}
@@ -292,7 +292,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       $('fnet').textContent=j.cluster==='mainnet'?'mainnet, with real SOL':'devnet, which is free test money';
       $('buyhint').textContent='0 to '+j.maxBuy;$('air').hidden=j.cluster==='mainnet';
       $('feenote').textContent='';
-      if(j.platform){var pct=j.platform.bps/100;var nb=document.createElement('b');nb.textContent=(100-pct)+'% to you';$('feenote').appendChild(document.createTextNode('Creator fees from trading: '));$('feenote').appendChild(nb);$('feenote').appendChild(document.createTextNode(' and '+pct+'% to the Bay. You approve the split in your wallet right after the launch.'))}
+      if(j.platform){var pct=j.platform.bps/100;var nb=document.createElement('b');nb.textContent=(100-pct)+'% to you';$('feenote').appendChild(document.createTextNode('Creator fees from trading: '));$('feenote').appendChild(nb);$('feenote').appendChild(document.createTextNode(' and '+pct+'% to Mechpad. You approve the split in your wallet right after the launch.'))}
       else $('feenote').textContent='Creator fees from trading all go to your wallet.';
       feeNoteBase=$('feenote').textContent;showPick();
       if(!$('logoicon').firstChild)$('logoicon').appendChild(bearIcon(j.silhouette||[],'#4ff3ff'));
@@ -307,7 +307,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on');drawFounder()}).catch(function(){say('The connection request was declined.','err')});
   }
   $('wbtn').addEventListener('click',connect);
-  $('rand').addEventListener('click',function(){pickSlot=null;drawBears();showPick();say('The Bay will choose a random open agent when you launch.','ok')});
+  $('rand').addEventListener('click',function(){pickSlot=null;drawBears();showPick();say('Mechpad will choose a random open agent when you launch.','ok')});
 
   function drawLog(){
     var l=$('log');l.textContent='';
@@ -434,13 +434,13 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       var a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener';a.textContent=st.cluster==='mainnet'?'Open on pump.fun':'Open on Solana Explorer (devnet)';a.style.cssText='margin-left:12px;color:#4ff3ff';box.appendChild(a);
       var n=document.createElement('div');n.style.marginTop='10px';
       var parts=[];
-      if(sh)parts.push(out.splitError?'The fee split did NOT go through ('+out.splitError+'), so creator fees currently go only to you. The Bay expects its 5%, so please set the split from pump.fun.':'Creator fee split confirmed: '+(100-st.platform.bps)+'% you, '+(st.platform.bps/100)+'% the Den.');
+      if(sh)parts.push(out.splitError?'The fee split did NOT go through ('+out.splitError+'), so creator fees currently go only to you. Mechpad expects its 5%, so please set the split from pump.fun.':'Creator fee split confirmed: '+(100-st.platform.bps)+'% you, '+(st.platform.bps/100)+'% the Den.');
       if(+bv>0)parts.push(out.atomic?'Your first buy landed in the same transaction as the launch.':'WARNING: the launch and your buy were separate transactions, so someone could have bought in between.'+(out.buyError?' The buy did not go through, see the log.':''));
       n.textContent=parts.join(' ');box.appendChild(n);
       if(lockFailed){
         var rl=document.createElement('button');rl.type='button';rl.className='btn';rl.style.cssText='margin-top:10px';rl.textContent='Try locking the agent again';
         rl.onclick=async function(){rl.disabled=true;var s4=step('Lock the agent');var rr=await post('/api/launched',{mint:out.mint,signature:out.signature,splitSignature:out.splitSignature||''},token);
-          if(rr.ok){s4('ok','locked');rl.remove();refresh()}else{s4('warn',rr.json.error||'Still could not confirm. Your coin is live; the Bay owner can attach it to its agent.');rl.disabled=false}};
+          if(rr.ok){s4('ok','locked');rl.remove();refresh()}else{s4('warn',rr.json.error||'Still could not confirm. Your coin is live; Mechpad owner can attach it to its agent.');rl.disabled=false}};
         box.appendChild(rl);
       }
       if(isFounder&&st.cluster==='mainnet'){

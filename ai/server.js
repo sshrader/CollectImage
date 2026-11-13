@@ -1,5 +1,5 @@
 'use strict';
-// Agent Bay: anyone can launch a pump.fun coin. Each launch claims one of a small set of voxel mech agents as its logo,
+// Mechpad: anyone can launch a pump.fun coin. Each launch claims one of a small set of voxel mech agents as its logo,
 // and that agent is then locked to the coin. The launcher signs everything from their own wallet.
 const http = require('http');
 const fs = require('fs');
@@ -77,7 +77,7 @@ function verifySignature(wallet, message, sigB64) {
 
 const challenges = new Map();
 function challengeMessage(wallet, nonce, expires) {
-  return 'Agent Bay Launch\nSign to prove you own this wallet. This sends no transaction and costs nothing.\nWallet: ' + wallet + '\nNonce: ' + nonce + '\nExpires: ' + new Date(expires).toISOString();
+  return 'Mechpad Launch\nSign to prove you own this wallet. This sends no transaction and costs nothing.\nWallet: ' + wallet + '\nNonce: ' + nonce + '\nExpires: ' + new Date(expires).toISOString();
 }
 
 const hits = new Map();
@@ -161,7 +161,7 @@ function loadBears(c) {
 function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', JSON.stringify(d)); fs.renameSync(f + '.tmp', f); }
 const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
 const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
-const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. Reserved for the Bay’s founder wallet.' };
+const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. Reserved for Mechpad’s founder wallet.' };
 // The 3D views fetch an agent's voxels. They only depend on the image secret, so they are cached and gzipped.
 const voxCache = new Map();
 function sendVoxels(req, res, slot) {
@@ -218,7 +218,7 @@ async function reserve(req, res) {
   let slot;
   if (body.slot === 'founder') {
     // The Founder bear is not in the numbered set. Only FOUNDER_WALLET can take it, and only once per network.
-    if (!c.founderWallet || wallet !== c.founderWallet) { saveBears(c, d); return send(res, 403, { error: 'That agent is reserved for the Bay founder.' }); }
+    if (!c.founderWallet || wallet !== c.founderWallet) { saveBears(c, d); return send(res, 403, { error: 'That agent is reserved for Mechpad founder.' }); }
     if (d.launched.F) { saveBears(c, d); return send(res, 409, { error: 'The founder coin has already been launched.' }); }
     if (d.holds.F) { saveBears(c, d); return send(res, 409, { error: 'The PRIME agent is being launched right now.' }); }
     slot = 'F';
@@ -326,7 +326,7 @@ async function coinInfo(res, mint) {
   const c = cfg();
   if (!B58_RE.test(mint)) return send(res, 404, { error: 'No such coin.' });
   const f = findLaunched(c, mint);
-  if (!f) return send(res, 404, { error: 'That coin was not launched from Agent Bay.' });
+  if (!f) return send(res, 404, { error: 'That coin was not launched from Mechpad.' });
   const key = c.cluster + ':' + mint, hit = coinCache.get(key);
   let onchain;
   if (hit && Date.now() - hit.at < 45000) onchain = hit.data;
@@ -542,5 +542,5 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (require.main === module) server.listen(PORT, '0.0.0.0', () => console.log('Agent Bay listening on ' + PORT + ', data in ' + DATA_DIR));
+if (require.main === module) server.listen(PORT, '0.0.0.0', () => console.log('Mechpad listening on ' + PORT + ', data in ' + DATA_DIR));
 module.exports = server;

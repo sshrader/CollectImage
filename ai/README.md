@@ -1,10 +1,10 @@
-# Agent Bay
+# Mechpad
 
 A pump.fun launchpad where every coin claims a pixel AI agent as its logo. Anyone can launch from their own wallet. The agent they get is locked to their coin for good, and reports the coin's public numbers on its coin page.
 
 This folder is a sibling of the Bear Den app at the repo root. It is a separate service: its own data volume, env vars and domain. On Railway, set this service's **Root Directory** to `ai`.
 
-- **`/`** is the whole app: a short mainframe intro (about 4.5 seconds, skippable), then the launchpad over a dim agent-bay background. The intro is a 3D scene (`intro3d.js`, plain WebGL2): voxel agents carry data packets down a lit highway through scanning gates, under falling code, with a terminal log typing in the corner. The agents' voxels come from `/api/agent/<n>/voxels.json`. Browsers without WebGL2, or too slow to run it, get a 2D version of the same idea instead. The background waits until the intro is done.
+- **`/`** is the whole app: a short mainframe intro (about 4.5 seconds, skippable), then the launchpad over a dim mechpad background. The intro is a 3D scene (`intro3d.js`, plain WebGL2): voxel agents carry data packets down a lit highway through scanning gates, under falling code, with a terminal log typing in the corner. The agents' voxels come from `/api/agent/<n>/voxels.json`. Browsers without WebGL2, or too slow to run it, get a 2D version of the same idea instead. The background waits until the intro is done.
 - A launcher connects Phantom, picks an open agent (or asks for a random one), names the coin, and launches. The launch uses the official `@pump-fun/pump-sdk`, with the launcher's first buy in the same transaction.
 - **Agents:** 3D voxel mechs built by code (`mech.js`): bipeds, heavies, quadrupeds and spiders in rust, mustard, crimson, slate and other schemes, with glow lights, rendered to PNG logos (`isorender.js`) and as live voxel models (`/api/agent/N/voxels.json`), plus a name and a role. No two agents in a set match. There are 4 to start (`SLOTS`); raising it adds agents and never changes the existing ones.
 - **Roles** (`SCOUT`, `ANALYST`, `SENTRY`, `COURIER`, `ARCHIVIST`, `NAVIGATOR`, `MECHANIC`, `SCRIBE`) decide what an agent's report leads with. They change the order of the report, not what it can do.
@@ -51,7 +51,7 @@ Needs Node 20 or newer. The server itself uses no packages; only the browser lau
 
 ## Limits to know
 
-- Anyone can launch, so names and tickers go through a basic word filter only. Agent Bay does not vouch for any coin.
+- Anyone can launch, so names and tickers go through a basic word filter only. Mechpad does not vouch for any coin.
 - The agents report; they do not act. A coin's agent has no promised value and says nothing about where the price is going.
 - The 5% fee split depends on the launcher signing it.
 - A hold lasts 15 minutes. If a launch lands but the page closes before the agent is locked, it frees up when the hold expires (or you can attach it from `/admin`).

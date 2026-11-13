@@ -1,5 +1,5 @@
 {
-  "name": "agentbay",
+  "name": "mechpad",
   "version": "0.1.0",
   "private": true,
   "description": "Launch a coin on the pump.fun bonding curve and claim a pixel AI agent as its locked logo. Each agent reports its coin's public numbers.",
