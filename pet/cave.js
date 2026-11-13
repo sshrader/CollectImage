@@ -96,72 +96,48 @@
     this.resize=function(){size()};
   }
 
-  /* ---------- the intro: a mainframe. Code rain, a terminal typing its tasks, agents hauling packets along a block chain ---------- */
-  var GL={A:'010101111101101',B:'110101110101110',C:'011100100100011',D:'110101101101110',E:'111100110100111',F:'111100110100100',G:'011100101101011',H:'101101111101101',I:'111010010010111',J:'001001001101010',K:'101101110101101',L:'100100100100111',M:'101111111101101',N:'110101101101101',O:'010101101101010',P:'110101110100100',Q:'010101101111011',R:'110101110101101',S:'011100010001110',T:'111010010010010',U:'101101101101111',V:'101101101101010',W:'101101111111101',X:'101101010101101',Y:'101101010010010',Z:'111001010100111','0':'111101101101111','1':'010110010010111','2':'110001010100111','3':'110001010001110','4':'101101111001001','5':'111100110001110','6':'011100111101111','7':'111001010010010','8':'111101111101111','9':'111101111001110','>':'100010001010100','.':'000000000000010',':':'000010000010000','_':'000000000000111','-':'000000111000000','/':'001001010100100','#':'101111101111101','=':'000111000111000','[':'110100100100110',']':'011001001001011'};
-  var LOG=['> BOOT PETPAD','> LINK PUMP.FUN ... OK','> SCAN CURVE ........ OK','> READ HOLDERS ...... OK','> CHECK DEV SHARE ... OK','> ROUTE BLOCK #4821','> CLAIM AGENT ....... OK','> ALL AGENTS ONLINE'];
+  /* ---------- the 2D intro for slow devices: a pixel park where a dog and a cat chase each other ---------- */
   function Matrix(canvas,opts){
-    var w=0,h=0,ctx=canvas.getContext('2d'),rain=null,rc=null,cols=[],t0=0,raf=0,last=0,self=this,rd=rng(5),fr=0;
-    function glyph(c,ch,x,y,col){var g=GL[ch];if(!g)return;c.fillStyle=col;for(var i=0;i<15;i++)if(g.charAt(i)==='1')c.fillRect(x+i%3,y+(i/3|0),1,1)}
-    function text(c,str,x,y,col,n){for(var i=0;i<str.length&&i<n;i++)glyph(c,str.charAt(i),x+i*4,y,col)}
+    var w=0,h=0,ctx=canvas.getContext('2d'),t0=0,raf=0,last=0,self=this,rd=rng(5),fl=[],tr=[];
     function size(){
       var vw=canvas.clientWidth||window.innerWidth,vh=canvas.clientHeight||window.innerHeight,scale=vw>900?4:3;
       w=Math.max(80,Math.ceil(vw/scale));h=Math.max(80,Math.ceil(vh/scale));canvas.width=w;canvas.height=h;
-      rain=document.createElement('canvas');rain.width=w;rain.height=h;rc=rain.getContext('2d');rc.fillStyle='#000';rc.fillRect(0,0,w,h);
-      cols=[];for(var x=0;x<w;x+=4)cols.push({x:x,y:-rd()*h*1.2,v:.5+rd()*1.3});
+      fl=[];for(var i=0;i<Math.round(w/5);i++)fl.push({x:rd()*w,y:.5+rd()*.5,c:['#ff6f91','#ffd166','#fff','#c9a0ff'][i%4]});
+      tr=[];for(var k=0;k<Math.ceil(w/46)+1;k++)tr.push({x:k*46+rd()*18,s:.8+rd()*.5})}
+    // one pet, facing dir (1 = right). Body, head, ears, tail and four legs that swap as it runs.
+    function pet(c,x,gy,dir,cat,col,dk,lt,step,t){
+      var f=function(rx,ry,rw,rh,cl){c.fillStyle=cl;c.fillRect(Math.round(x+dir*rx-(dir<0?rw-1:0)),gy+ry,rw,rh)};
+      var lg=step?1:0;
+      f(-4,-3,2,3,dk);f(3,-3,2,3,dk);f(-2+lg,-3,2,3,col);f(1-lg,-3,2,3,col);        // legs
+      f(-5,-8,11,5,col);f(-5,-4,11,1,lt);                                        // body and belly
+      f(5,-11,6,6,col);f(10,-8,2,3,lt);f(10,-9,1,1,'#222');f(8,-10,1,1,'#222');   // head, muzzle, nose, eye
+      if(cat){f(5,-14,2,3,col);f(9,-14,2,3,col);f(6,-13,1,1,'#f6a8b8');             // pointed ears
+        var tw=Math.round(Math.sin(t*9));f(-8,-14+tw,2,7,col);f(-7,-15+tw,1,1,dk)}  // tail up
+      else{f(5,-12,2,3,dk);f(9,-12,2,2,dk);var tw2=Math.round(Math.sin(t*16)*2);f(-8,-10+tw2,3,2,col)} // floppy ears and a wagging tail
     }
-    var KEYS=Object.keys(GL);
-    function rainStep(){
-      rc.fillStyle='rgba(0,6,3,.14)';rc.fillRect(0,0,w,h);
-      for(var i=0;i<cols.length;i++){var c=cols[i];c.y+=c.v;
-        if(c.y>h+8){c.y=-Math.random()*h*.5;c.v=.5+Math.random()*1.3}
-        var ch=KEYS[(Math.random()*KEYS.length)|0];
-        glyph(rc,ch,c.x,Math.round(c.y)-6,'#18a85a');glyph(rc,ch,c.x,Math.round(c.y),'#d8ffe8')}
-    }
-    function agent(c,i,t,fy,L,R){
-      var u=UNITS[i],sp=.16+i*.035,ph=(t*sp+i*.23)%1,fwd=ph<.5,k=fwd?ph*2:(1-ph)*2,e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
-      var x=Math.round(L+(R-L)*e),dir=fwd?1:-1,moving=k>.03&&k<.97,step=moving&&((t*7+i)%1)<.5?1:0,ol='#021008';
-      var bw=10,bh=7,hh=6,gy=fy;
-      c.fillStyle=ol;c.fillRect(x-bw/2-1,gy-bh-hh-1,bw+2,hh+2);c.fillRect(x-bw/2-1,gy-bh-1,bw+2,bh+2);
-      c.fillStyle=u.d;c.fillRect(x-4,gy-1+step,3,2);c.fillRect(x+1,gy-1+(1-step),3,2);
-      c.fillStyle=u.b;c.fillRect(x-bw/2,gy-bh,bw,bh);c.fillStyle=u.l;c.fillRect(x-bw/2,gy-bh,bw,1);
-      c.fillStyle=u.b;c.fillRect(x-bw/2,gy-bh-hh,bw,hh);c.fillStyle=u.l;c.fillRect(x-bw/2,gy-bh-hh,bw,1);
-      c.fillStyle='#04140c';c.fillRect(x-bw/2+1,gy-bh-hh+1,bw-2,hh-3);
-      c.fillStyle='#7dffb4';c.fillRect(x-3+dir,gy-bh-hh+2,2,1);c.fillRect(x+1+dir,gy-bh-hh+2,2,1);
-      c.fillStyle=u.d;c.fillRect(x,gy-bh-hh-2,1,2);c.fillStyle='#7dffb4';c.fillRect(x,gy-bh-hh-3,1,1);
-      // the packet it carries: out to the right node full, back empty
-      if(fwd){var bob=step?0:1;c.fillStyle=ol;c.fillRect(x+dir*6-2,gy-bh-2+bob,5,5);c.fillStyle='#3dff9a';c.fillRect(x+dir*6-1,gy-bh-1+bob,3,3);c.fillStyle='#d8ffe8';c.fillRect(x+dir*6-1,gy-bh-1+bob,1,1)}
-    }
+    function tree(c,x,gy,s){c.fillStyle='#6b4a2b';c.fillRect(x-2,gy-Math.round(16*s),4,Math.round(16*s));
+      c.fillStyle='#2f8a3e';c.fillRect(x-Math.round(10*s),gy-Math.round(30*s),Math.round(20*s),Math.round(12*s));c.fillStyle='#3fae52';c.fillRect(x-Math.round(7*s),gy-Math.round(38*s),Math.round(14*s),Math.round(10*s));c.fillStyle='#57c96b';c.fillRect(x-Math.round(4*s),gy-Math.round(42*s),Math.round(8*s),Math.round(5*s))}
     function frame(ts){
-      if(!ctx)return;var t=(ts-t0)/1000;fr++;rainStep();
-      ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);ctx.globalAlpha=.6;ctx.drawImage(rain,0,0);ctx.globalAlpha=1;
-      // terminal panel
-      var pw=Math.round(w*.6),ph=Math.round(h*.36),px=Math.round((w-pw)/2),py=Math.round(h*.3);
-      ctx.fillStyle='rgba(1,10,6,.9)';ctx.fillRect(px,py,pw,ph);
-      ctx.fillStyle='#1fbf6a';ctx.fillRect(px,py,pw,1);ctx.fillRect(px,py+ph-1,pw,1);ctx.fillRect(px,py,1,ph);ctx.fillRect(px+pw-1,py,1,ph);
-      ctx.fillStyle='#0b3a22';ctx.fillRect(px+1,py+1,pw-2,7);
-      ctx.fillStyle='#3dff9a';ctx.fillRect(px+3,py+3,2,2);ctx.fillStyle='#18a85a';ctx.fillRect(px+7,py+3,2,2);ctx.fillRect(px+11,py+3,2,2);
-      var maxc=Math.floor((pw-8)/4);text(ctx,'MAINFRAME',px+pw-4-Math.min(9,maxc)*4,py+2,'#3dff9a',9);
-      var typed=Math.floor(t*58),shown=0,lines=Math.floor((ph-12)/7),first=0,total=0;
-      for(var i=0;i<LOG.length;i++){if(typed>=total)first=i;total+=LOG[i].length+4}
-      var start=Math.max(0,Math.min(first,LOG.length)-lines+1),used=0,rowN=0;
-      for(var j=0;j<LOG.length;j++){var len=LOG[j].length+4,n=Math.max(0,Math.min(LOG[j].length,typed-used));used+=len;if(n<=0&&typed<used-len)break;
-        if(j<start)continue;var y=py+11+rowN*7,col=LOG[j].indexOf('OK')>0||j===LOG.length-1?'#7dffb4':'#3dff9a';
-        text(ctx,LOG[j],px+4,y,col,Math.min(n,maxc));
-        if(n<LOG[j].length&&Math.sin(t*14)>0){ctx.fillStyle='#d8ffe8';ctx.fillRect(px+4+Math.min(n,maxc)*4,y,3,5)}rowN++;if(rowN>=lines)break}
-      // floor, nodes, agents, block chain
-      var fy=Math.round(h*.84),L=Math.round(w*.14),R=Math.round(w*.86);
-      ctx.fillStyle='#0b3a22';ctx.fillRect(0,fy+1,w,1);
-      [L-10,R+4].forEach(function(nx,q){ctx.fillStyle='#021008';ctx.fillRect(nx-1,fy-17,8,18);ctx.fillStyle='#0f2a1c';ctx.fillRect(nx,fy-16,6,16);for(var r=0;r<4;r++){ctx.fillStyle=Math.sin(t*5+r+q)>0?'#3dff9a':'#0b3a22';ctx.fillRect(nx+1,fy-14+r*4,2,1)}});
-      for(var a=0;a<4;a++)agent(ctx,a,t,fy,L,R);
-      var off=(t*16)%18,cy=fy+8;
-      for(var b=-1;b*18-off<w;b++){var bx=Math.round(b*18-off),idx=b+Math.floor(t*16/18)+4800;
-        ctx.fillStyle='#0b3a22';ctx.fillRect(bx+9,cy+2,9,1);
-        ctx.fillStyle='#021008';ctx.fillRect(bx,cy,10,7);ctx.fillStyle='#1fbf6a';ctx.fillRect(bx,cy,10,1);ctx.fillRect(bx,cy+6,10,1);ctx.fillRect(bx,cy,1,7);ctx.fillRect(bx+9,cy,1,7);
-        for(var d=0;d<4;d++){ctx.fillStyle=((idx*7+d*13)%5)<2?'#3dff9a':'#0b3a22';ctx.fillRect(bx+2+(d%2)*3,cy+2+((d/2)|0)*2,2,1)}}
+      if(!ctx)return;var t=(ts-t0)/1000;
+      ctx.fillStyle='#8fd0ff';ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#bfe6ff';ctx.fillRect(0,Math.round(h*.4),w,Math.round(h*.12));
+      for(var c=0;c<4;c++){var cx=Math.round(((t*(3+c)+c*w*.3)%(w+60))-30),cy=Math.round(h*(.12+c*.07));ctx.fillStyle='#fff';ctx.fillRect(cx,cy,26,5);ctx.fillRect(cx+5,cy-3,14,4)}
+      var hy=Math.round(h*.58);ctx.fillStyle='#4fb35f';ctx.fillRect(0,hy,w,h-hy);
+      for(var s=0;s<w;s+=16){ctx.fillStyle=(s/16|0)%2?'#58c06a':'#4fb35f';ctx.fillRect(s,hy,8,h-hy)}
+      tr.forEach(function(q){tree(ctx,Math.round(q.x),hy+2,q.s)});
+      ctx.fillStyle='#d7bf8f';ctx.fillRect(0,Math.round(h*.8),w,Math.round(h*.06));
+      fl.forEach(function(q){var y=Math.round(hy+6+q.y*(h-hy-10));ctx.fillStyle='#2f8a3e';ctx.fillRect(Math.round(q.x),y+1,1,2);ctx.fillStyle=q.c;ctx.fillRect(Math.round(q.x)-1,y-1+Math.round(Math.sin(t*2+q.x)),3,2)});
+      // two chases on two lanes. They run out to the right, turn, and the chaser and the chased swap.
+      [[.8,.09,0],[.9,.075,.37]].forEach(function(ln,i){
+        var gy=Math.round(h*ln[0]),ph=(t*ln[1]+ln[2])%1,fwd=ph<.5,k=fwd?ph*2:(1-ph)*2,e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+        var L=14,R=w-32,lead=Math.round(Math.min(w*.18,26)),x1=L+(R-L)*e,dir=fwd?1:-1,step=((t*10+i)%1)<.5;
+        var x2=x1-dir*lead,a=i%2?x1:x2,b=i%2?x2:x1; // a: the dog, b: the cat
+        pet(ctx,Math.round(a),gy,dir,false,i%2?'#e8913a':'#c98a4b','#7a4a1c','#f5e6cc',step,t);
+        pet(ctx,Math.round(b),gy,dir,true,i%2?'#9a7cff':'#8f959d','#4a3a8c','#e8e8ee',!step,t)})
     }
     function loop(ts){raf=requestAnimationFrame(loop);if(ts-last<(opts&&opts.fps?1000/opts.fps:33))return;last=ts;frame(ts)}
     this.start=function(){size();t0=performance.now();
-      if(reduce){for(var i=0;i<70;i++)rainStep();frame(t0+3500);return}
+      if(reduce){frame(t0+3500);return}
       window.addEventListener('resize',self.resize);raf=requestAnimationFrame(loop)};
     this.stop=function(){cancelAnimationFrame(raf);raf=0;window.removeEventListener('resize',self.resize)};
     this.resize=function(){size()};

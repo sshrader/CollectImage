@@ -208,6 +208,12 @@ function buildPet(t, r) {
   else if (acc === 'cap') { v.mb(16, ht + 1, hz0, 16 + hhw - 1, ht + 1, hz1, 'acc', 0); v.mb(16, ht + 2, hz0 + 1, 16 + hhw - 2, ht + 2, hz1 - 1, 'acc', 0); v.mb(16, ht + 1, hz1 + 1, 16 + hhw - 1, ht + 1, hz1 + 2, 'acc', 0); }
   else if (acc === 'bowtie') { v.mb(15, hb - 1, hz1 - 1, 17, hb - 1, hz1 - 1, 'acc', 0); v.box(15, hb - 1, hz1 - 1, 16, hb - 1, hz1 - 1, 'glow', 1); }
   if (t.crown) { v.mb(16, ht + 1, hz0, 16 + hhw - 1, ht + 1, hz1, 'gold', 0); for (const x of [16, 18]) for (const z of [hz0, hz0 + 2, hz1]) { v.set(x, ht + 2, z, 'gold', 0); v.set(31 - x, ht + 2, z, 'gold', 0); } v.set(16, ht + 3, hz1, 'gem', 1); v.set(15, ht + 3, hz1, 'gem', 1); }
+  if (t.hat) { // a black top hat with a gold band: brim, crown, band
+    v.box(15 - hhw, ht + 1, hz0 - 1, 16 + hhw, ht + 1, hz1 + 1, 'hat', 0);
+    v.box(17 - hhw, ht + 2, hz0, 14 + hhw, ht + 7, hz1, 'hat', 0);
+    v.box(17 - hhw, ht + 2, hz0, 14 + hhw, ht + 3, hz1, 'gold', 0);
+    v.box(17 - hhw, ht + 8, hz0, 14 + hhw, ht + 8, hz1, 'hat', 0);
+  }
   v.layout = { L, yTop, z0, z1, hb, ht };
   return v;
 }
@@ -231,6 +237,7 @@ function paintAll(v, t) {
     else if (p === 'pack') c = '#2f3541';
     else if (p === 'glow') c = glow;
     else if (p === 'gold') c = '#ffc84a';
+    else if (p === 'hat') c = '#1b1b22';
     else if (p === 'gem') c = '#ff3b3b';
     else if (body.has(p)) {
       const isHead = p === 'head' || p === 'headTop';
@@ -281,18 +288,16 @@ function agentVoxels(slot, secret) {
   return m;
 }
 
-// ---- PRIME: the flagship. A big black cat with a gold crown, a gold collar and amber eyes. ----
+// ---- PRIME: the flagship. A big golden Labrador in a black top hat with a gold band and a gold collar. ----
 let primeCache = null;
 function founderVoxels() {
   if (primeCache) return primeCache;
-  const t = { species: 'cat', breed: 'coon', coat: 'blackC', acc: 'none', glow: 2, collar: 3, accColor: 3, big: true, crown: true };
+  const t = { species: 'dog', breed: 'lab', coat: 'labG', acc: 'none', glow: 2, collar: 3, accColor: 3, big: true, hat: true };
   const v = buildPet(t, () => 0.5);
   paintAll(v, t);
-  for (const q of v.m.values()) { if (q.c === C_EYE_BLACK) q.c = '#ffb347'; }
   primeCache = finish(v); primeCache.scheme = '#2e2418'; primeCache.glow = '#ffb347';
   return primeCache;
 }
-const C_EYE_BLACK = COATS.blackC.eye;
 
 // ---- flat pictures for logos and tiles, cached because drawing one takes a moment ----
 const iso = require('./isorender');

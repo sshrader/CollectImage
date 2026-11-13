@@ -15,7 +15,7 @@
    +'vec3 p=q-uOrg+pos;gl_Position=uVP*(uModel*vec4(p,1.0));vN=uRot*nrm;vCol=aCol;vE=e;vW=gl_Position.w;}';
   var FS='#version 300 es\nprecision mediump float;in vec3 vCol;in vec3 vN;in float vE;in float vW;uniform vec3 uCol;uniform float uOver;uniform float uEmit;uniform float uBoost;uniform vec3 uTint;uniform vec3 uFog;uniform vec2 uFogR;out vec4 o;\n'
    +'void main(){vec3 base=uOver>.5?uCol:vCol;vec3 n=normalize(vN);float d=max(dot(n,normalize(vec3(-.35,.7,.6))),0.0);float rim=pow(1.0-max(n.z,0.0),2.0)*.12;'
-   +'vec3 c=base*(.4+.8*d)+rim*vec3(.4,1.0,.7);if(vE>.5||uEmit>.5)c=base*(1.0+.5*uBoost)+.05*uBoost;c*=uTint;'
+   +'vec3 c=base*(.4+.8*d)+rim*vec3(.9,.9,1.0);if(vE>.5||uEmit>.5)c=base*(1.0+.5*uBoost)+.05*uBoost;c*=uTint;'
    +'float f=clamp((vW-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);o=vec4(mix(c,uFog,f),1.0);}';
   var CUBE=(function(){var f=[[0,0,1,[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],[0,0,-1,[1,-1,-1],[-1,-1,-1],[-1,1,-1],[1,1,-1]],[1,0,0,[1,-1,1],[1,-1,-1],[1,1,-1],[1,1,1]],[-1,0,0,[-1,-1,-1],[-1,-1,1],[-1,1,1],[-1,1,-1]],[0,1,0,[-1,1,1],[1,1,1],[1,1,-1],[-1,1,-1]],[0,-1,0,[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]]],v=[],ix=[];
     f.forEach(function(q,i){for(var k=3;k<7;k++)v.push(q[k][0]*.5,q[k][1]*.5,q[k][2]*.5,q[0],q[1],q[2]);var b=i*4;ix.push(b,b+1,b+2,b,b+2,b+3)});return{v:new Float32Array(v),i:new Uint16Array(ix)}})();
@@ -45,7 +45,7 @@
     var vb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vb);gl.bufferData(gl.ARRAY_BUFFER,CUBE.v,gl.STATIC_DRAW);
     var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,CUBE.i,gl.STATIC_DRAW);
     var uArmA=U('uArmA'),uArmM=U('uArmM'),uLevel=U('uLevel'),uHand=U('uHand'),uLean=U('uLean'),uPz=U('uPz'),uTail=U('uTail'),uOrg=U('uOrg'),uPivot=U('uPivot'),uSwing=U('uSwing'),uVP=U('uVP'),uModel=U('uModel'),uRot=U('uRot'),uCol=U('uCol'),uOver=U('uOver'),uEmit=U('uEmit'),uBoost=U('uBoost');
-    gl.uniform3f(U('uTint'),1,.96,.9);gl.uniform3f(U('uFog'),.02,.012,.01);gl.uniform2f(U('uFogR'),70,190);
+    gl.uniform3f(U('uTint'),1,1,1);gl.uniform3f(U('uFog'),.55,.75,.9);gl.uniform2f(U('uFogR'),70,190);
     // an object is a set of instances (cells) in its own vertex array
     function obj(data,max,dynamic){
       var vao=gl.createVertexArray();gl.bindVertexArray(vao);
@@ -64,87 +64,95 @@
     function bx(x,y,z,sx,sy,sz,col,boost){draw(box,trs(x,y,z,0,0,sx,sy,sz),{col:col,emit:true,boost:boost||0})}
 
     var agents=opts.agents.slice(0,4).map(function(d){return voxObj(d)});
-    var S=.135,AX=17,AZ=9.5; // arena half-sizes
-    // work stations the agents run between; each one pulses while an agent is on it
-    var PADS=[[-12,-5.5],[-1,-7],[11,-5],[-9,5],[3,4.5],[13,5.5],[-1,-0.5]];
-    var st=[],pads=[],pk=[],pulses=[],bolts=[],chainT=-9,time=0,raf=0,last=0,rr=rnd(11);
-    function pickPad(a){var best=-1,tries=0;while(tries++<20){var k=Math.floor(rr()*PADS.length);if(k===a.pad)continue;if(st.some(function(o){return o!==a&&o.pad===k}))continue;best=k;break}return best<0?(a.pad+1)%PADS.length:best}
-    function reset(){rr=rnd(11);pads=PADS.map(function(){return 0});
-      st=agents.map(function(o,i){var p=PADS[(i*2)%PADS.length];return{o:o,x:p[0]+(i%2?2:-2),z:p[1]+3,yaw:i*1.7,v:0,pad:(i*2)%PADS.length,wait:.2+i*.35,ok:false,gait:i*1.3,ph:i*1.7,top:3.4+(i%3)*.35,pose:null,kick:0,fireT:.2+rr()*.3,run:0,rate:.8+rr()*.45}});
-      st.forEach(function(a){a.pad=pickPad(a);a.wait=0});
-      var r=rnd(3);pulses=[];bolts=[];chainT=-9;pk=[];for(var i=0;i<30;i++)pk.push({ax:r()<.5?0:1,line:Math.floor(r()*5),p:(r()-.5)*40,v:(6+r()*7)*(r()<.5?-1:1),c:r()<.5?0:1,s:.3+r()*.22});
+    var S=.135,AX=17,AZ=9.5; // park half-sizes
+    var st=[],puffs=[],flies=[],time=0,raf=0,last=0,rr=rnd(11);
+    var OBS=[[-11,3.5,4.4],[10,-4.5,1.7],[-3,-6.3,1.5]]; // pond and two trees: [x,z,radius] the pets run around
+    var FL=(function(){var r=rnd(5),o=[];for(var i=0;i<46;i++){var x=(r()-.5)*(AX*2+14),z=(r()-.5)*(AZ*2+10);if(Math.hypot(x+11,z-3.5)<6)continue;o.push({x:x,z:z,c:[[1,.45,.57],[1,.82,.4],[1,1,1],[.78,.63,1]][i%4],p:r()*6})}return o})();
+    function reset(){rr=rnd(11);puffs=[];flies=[];var n=agents.length;
+      st=agents.map(function(o,i){var ang=i/n*Math.PI*2;return{o:o,x:Math.cos(ang)*8,z:Math.sin(ang)*4.5,yaw:ang+Math.PI/2,v:0,pause:0,boost:0,gait:i*1.3,ph:i*1.7,pose:null,run:0,rate:.92+rr()*.16,wob:rr()*6,cat:i%2===1,it:i%2===0}});
+      for(var i=0;i<7;i++)flies.push({x:(rr()-.5)*30,z:(rr()-.5)*16,a:rr()*6,s:.5+rr()*.6,c:i%3});
       time=0}
     reset();
     function norm(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a}
     function step(dt){
-      time+=dt;
-      st.forEach(function(a){
-        var T=PADS[a.pad],dx=T[0]-a.x,dz=T[1]-a.z,d=Math.hypot(dx,dz);
-        if(a.wait>0){a.wait-=dt;a.v=Math.max(0,a.v-dt*14);pads[a.pad]=1;if(a.wait<=0){a.ok=!a.ok;pulses.push({x:a.x,z:a.z,t:time});a.pad=pickPad(a)}}
+      time+=dt;var n=st.length;
+      // pets run in pairs, a dog and a cat: one chases the other, and when it is caught up they swap
+      st.forEach(function(a,i){
+        var pr=st[i^1]||st[(i+1)%n],dx=pr.x-a.x,dz=pr.z-a.z,d=Math.hypot(dx,dz)||1,hx=(i>>1)?8:-4,hz=(i>>1)?.5:-1,sx,sz;
+        if(a.it){sx=dx/d*1.2;sz=dz/d*1.2}
+        else{var k=Math.max(0,Math.min(1,(9-d)/9))*1.3;sx=-dx/d*k;sz=-dz/d*k;var cr=Math.hypot(a.x-hx,(a.z-hz)*1.5)||1;sx+=(a.z-hz)/cr*.9;sz-=(a.x-hx)/cr*.9}
+        var hd=Math.hypot(a.x-hx,a.z-hz);if(hd>7){sx-=(a.x-hx)/hd*(hd-7)*.35;sz-=(a.z-hz)/hd*(hd-7)*.35}
+        OBS.forEach(function(o){var ox=a.x-o[0],oz=a.z-o[1],od=Math.hypot(ox,oz)||1,r=o[2]+2.4;if(od<r){var k=(r-od)/r*3.2;sx+=ox/od*k;sz+=oz/od*k}});
+        if(a.x>AX-4)sx-=(a.x-AX+4)*.8;if(a.x<-AX+4)sx+=(-AX+4-a.x)*.8;if(a.z>AZ-3)sz-=(a.z-AZ+3)*1.1;if(a.z<-AZ+3)sz+=(-AZ+3-a.z)*1.1;
+        var cr=Math.hypot(a.x/1.6,a.z)||1;sx+=a.z/cr*.7;sz-=a.x/1.6/cr*.7; // everyone circles the park, so the chase spreads out
+        sx+=Math.sin(time*.9+a.wob)*.25;sz+=Math.cos(time*.7+a.wob*1.3)*.25;
+        if(a.pause>0){a.pause-=dt;a.v=Math.max(0,a.v-dt*16)}
         else{
-          var want=Math.atan2(dx,dz),da=norm(want-a.yaw);a.yaw+=Math.max(-3.2*dt,Math.min(3.2*dt,da));
-          var sp=a.rate*Math.min(6,1.2+d*1.5)*Math.max(.15,1-Math.abs(da)/1.6);a.v+=(sp-a.v)*Math.min(1,dt*5);
-          if(d<.6){a.wait=.7+rr()*2.4}
-        }
-        // keep clear of the others
-        st.forEach(function(o){if(o===a)return;var ox=a.x-o.x,oz=a.z-o.z,od=Math.hypot(ox,oz);if(od<4.6&&od>.01){var k=(4.6-od)*dt*2.2;a.x+=ox/od*k;a.z+=oz/od*k}});
+          var want=Math.atan2(sx,sz),da=norm(want-a.yaw);a.yaw+=Math.max(-4.2*dt,Math.min(4.2*dt,da));
+          var sp=a.rate*5.4*(1+.16*Math.sin(time*.9+a.wob))*(1+a.boost*.5)*Math.max(.35,1-Math.abs(da)/2.2);a.v+=(sp-a.v)*Math.min(1,dt*5);
+          // caught up: a tag. The chaser stops for a play bow, then the two swap roles
+          if(a.it&&d<2.6&&pr.pause<=0){a.pause=1+rr()*.8;pr.pause=.5;pr.boost=1;a.it=false;pr.it=true;puffs.push({x:(a.x+pr.x)/2,z:(a.z+pr.z)/2,t:time,c:a.cat?[.78,.63,1]:[1,.7,.3]})}}
+        a.boost=Math.max(0,a.boost-dt*.9);
+        st.forEach(function(o){if(o===a)return;var ox=a.x-o.x,oz=a.z-o.z,od=Math.hypot(ox,oz);if(od<3.6&&od>.01){var k=(3.6-od)*dt*3;a.x+=ox/od*k;a.z+=oz/od*k}});
         a.x+=Math.sin(a.yaw)*a.v*dt;a.z+=Math.cos(a.yaw)*a.v*dt;
-        a.x=Math.max(-AX+2,Math.min(AX-2,a.x));a.z=Math.max(-AZ+1.5,Math.min(AZ-1.5,a.z));
+        a.x=Math.max(-AX+1.5,Math.min(AX-1.5,a.x));a.z=Math.max(-AZ+1.2,Math.min(AZ-1.2,a.z));
         a.gait+=a.v*dt*1.9;
-        // what the legs and arms are doing: running between stations, aiming and firing once there
-        var aiming=a.wait>0,stt=aiming?'aim':(a.v>1.2?'run':'walk'),dat=a.o.data;
-        var tg=MechPose.target(dat,stt,time+a.ph,a.kick);a.pose=a.pose?MechPose.blend(a.pose,tg,Math.min(1,dt*7)):tg;a.run+=((stt==='run'?1:0)-a.run)*Math.min(1,dt*6);
-        a.kick*=Math.exp(-dt*10);
-        if(aiming){a.fireT-=dt;if(a.fireT<=0){a.fireT=.18+rr()*.3;var mz=MechPose.muzzles(dat).slice(0,4),cy=Math.cos(a.yaw),sy=Math.sin(a.yaw);
-          mz.forEach(function(m){var lx=(m.x-15.5)*S,ly=m.y*S+.5*S,lz=(m.z-16)*S,l=Math.hypot(m.dx,m.dy,m.dz)||1,ddx=m.dx/l,ddy=m.dy/l,ddz=m.dz/l;
-            bolts.push({x:a.x+lx*cy+lz*sy,y:ly+.05,z:a.z-lx*sy+lz*cy,dx:ddx*cy+ddz*sy,dy:ddy,dz:-ddx*sy+ddz*cy,age:0,c:a.o.gcol})});
-          if(mz.length)a.kick=1}}else a.fireT=.2;
+        var play=a.pause>0,stt=play?'aim':(a.v>2.6?'run':'walk'),dat=a.o.data;
+        var tp=MechPose.target(dat,stt,time+a.ph,0);a.pose=a.pose?MechPose.blend(a.pose,tp,Math.min(1,dt*7)):tp;a.run+=((stt==='run'?1:0)-a.run)*Math.min(1,dt*6);
       });
-      bolts=bolts.filter(function(b){b.age+=dt;return b.age<.5});
-      pulses=pulses.filter(function(q){if(time-q.t>1.2){chainT=time;return false}return true});
-      for(var i=0;i<pads.length;i++)pads[i]=Math.max(0,pads[i]-dt*1.4);
-      st.forEach(function(a){if(a.wait>0)pads[a.pad]=1});
-      pk.forEach(function(p){p.p+=p.v*dt;var m=p.ax?AZ:AX;if(p.p>m+2)p.p=-m-2;if(p.p<-m-2)p.p=m+2});
+      puffs=puffs.filter(function(q){return time-q.t<.9});
+      flies.forEach(function(f){f.a+=dt*(1.5+Math.sin(time+f.s)*1.2);f.x+=Math.cos(f.a)*f.s*dt*3;f.z+=Math.sin(f.a*.8)*f.s*dt*2.2;if(f.x>AX+3)f.x=-AX-3;if(f.x<-AX-3)f.x=AX+3;if(f.z>AZ+2)f.z=-AZ-2;if(f.z<-AZ-2)f.z=AZ+2});
     }
+    function tree(x,z,s,t,k){var sw=Math.sin(t*.8+k)*.05*s;
+      bx(x,.02,z,5.2*s,.03,5.2*s,[.14,.38,.17]);
+      bx(x,1.2*s,z,.9*s,2.4*s,.9*s,[.42,.28,.16]);
+      bx(x+sw,3.3*s,z,4.6*s,1.7*s,4.6*s,[.17,.52,.24]);bx(x+sw*1.5,4.7*s,z,3.6*s,1.5*s,3.6*s,[.24,.64,.31]);bx(x+sw*2,5.8*s,z,2.3*s,1.2*s,2.3*s,[.34,.76,.4]);
+      if(k%2===0){bx(x+1.3*s,4.2*s,z+1.9*s,.4,.4,.4,[1,.4,.4]);bx(x-1.5*s,3.5*s,z+2.1*s,.4,.4,.4,[1,.4,.4])}}
     function frame(){
       var w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height,dpr=Math.min(window.devicePixelRatio||1,2),cw=Math.max(2,Math.round(w*dpr)),ch=Math.max(2,Math.round(h*dpr));
       if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}
-      gl.viewport(0,0,cw,ch);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(.02,.012,.01,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      gl.viewport(0,0,cw,ch);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(.2,.46,.24,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       var t=time,asp=cw/ch,narrow=asp<.9;
       // high camera looking steeply down, drifting slowly
       var cx=Math.sin(t*.22)*3,eye=[cx,(narrow?60:36),(narrow?29:20)+Math.cos(t*.17)*1.2],tgt=[cx,0,-1.5];
       gl.uniformMatrix4fv(uVP,false,mul(persp(narrow?48:40,asp,.5,260),look(eye,tgt)));
-      var G=[.12,.75,.42],G2=[.24,1,.6];
-      // floor, border and a circuit grid
-      bx(0,-.2,0,AX*2+30,.2,AZ*2+22,[.012,.045,.03]);
-      bx(0,.04,-AZ,AX*2,.08,.25,G);bx(0,.04,AZ,AX*2,.08,.25,G);bx(-AX,.04,0,.25,.08,AZ*2,G);bx(AX,.04,0,.25,.08,AZ*2,G);
-      for(var gx=-16;gx<=16;gx+=4)bx(gx,.02,0,.07,.04,AZ*2,[.04,.22,.13]);
-      for(var gz=-8;gz<=8;gz+=4)bx(0,.02,gz,AX*2,.04,.07,[.04,.22,.13]);
-      // data packets streaming along the grid lines
-      pk.forEach(function(p){var ln=-8+p.line*4,c=p.c?[.3,1,.95]:G2,sgn=p.v<0?-1:1;
-        if(p.ax===0){var z=Math.max(-AZ,Math.min(AZ,ln));bx(p.p,.2,z,p.s*2,p.s,p.s,c);bx(p.p-sgn*p.s*3,.18,z,p.s*1.1,p.s*.5,p.s*.5,[c[0]*.5,c[1]*.5,c[2]*.5])}
-        else{var x=-16+p.line*8;bx(x,.2,p.p,p.s,p.s,p.s*2,c);bx(x,.18,p.p-sgn*p.s*3,p.s*.5,p.s*.5,p.s*1.1,[c[0]*.5,c[1]*.5,c[2]*.5])}});
-      // the ledger: a chain of linked blocks along the far and near edges; each finished task flies up as a transaction and a new block is minted
-      var cs=smooth((t-chainT)/.7);
-      [-AZ-3.6,AZ+3.6].forEach(function(cz,ci){for(var k=0;k<13;k++){var x=AX-2-k*3.8+(1-cs)*3.8;if(x<-AX-4||x>AX+4)continue;var nw=k===0?1-cs:0,y=1.5+Math.sin(t*1.2+k+ci)*.12,rot=Math.sin(t*.5+k)*.25+.3;
-        bx(x+1.9,y,cz,1.9,.18,.18,[.1,.55,.4],0);
-        draw(box,trs(x,y,cz,rot,0,2.2,2.2,2.2),{col:[.06+.4*nw,.55+.4*nw,.38+.3*nw],emit:true,boost:.25+nw});
-        draw(box,trs(x,y+1.2,cz,-rot*1.3,0,1.05,1.05,1.05),{col:[.3,1,.7],emit:true,boost:.4+nw});
-        if(k===0&&nw>.02)for(var m=0;m<4;m++)bx(x,y+.5+nw*(2+m),cz,.2,.5,.2,[.3,1,.8],nw)}});
-      pulses.forEach(function(q){var u=(t-q.t)/1.2,ex=AX-2+(1-cs)*0,ez=-AZ-3.6;if(u<0||u>1)return;var uu=smooth(u),x=q.x+(AX-2-q.x)*uu,z=q.z+(ez-q.z)*uu,y=.8+Math.sin(Math.PI*u)*6;
-        draw(box,trs(x,y,z,t*4,t*3,.7,.7,.7),{col:[.9,1,.6],emit:true,boost:.8})});
-      // work stations: a pad with a ring and rising beams that light while an agent works there
-      PADS.forEach(function(p,i){var f=pads[i],c=[.08+.2*f,.6+.4*f,.32+.25*f],R=2.6;
-        bx(p[0],.03,p[1],R*2,.06,R*2,[.02,.09,.05]);
-        bx(p[0],.08,p[1]-R,R*2,.1,.16,c,f);bx(p[0],.08,p[1]+R,R*2,.1,.16,c,f);bx(p[0]-R,.08,p[1],.16,.1,R*2,c,f);bx(p[0]+R,.08,p[1],.16,.1,R*2,c,f);
-        if(f>.05){var h=1.5+f*7;for(var k=0;k<4;k++){var ax=k%2?R:-R,az=k<2?R:-R;bx(p[0]+ax,h/2,p[1]+az,.16,h,.16,[.2,1,.6],f)}bx(p[0],.14,p[1],R*1.5,.04,R*1.5,[.1+.3*f,.5+.5*f,.3+.3*f],f)}});
-      bolts.forEach(function(b){var d=b.age*24,yw=Math.atan2(b.dx,b.dz);draw(box,trs(b.x+b.dx*d,b.y+b.dy*d,b.z+b.dz*d,yw,0,.22,.22,1.5),{col:b.c,emit:true,boost:1})});
-      // agents; each carries a packet that flips colour every time it finishes a task
+      var WOOD=[.55,.38,.22],RAIL=[.93,.88,.78];
+      // lawn with mown stripes, a gravel path, then the cloud shadows drifting over
+      bx(0,-.2,0,AX*2+34,.2,AZ*2+26,[.2,.5,.22]);
+      for(var gx=-20;gx<=20;gx+=4)bx(gx,-.02,0,2,.04,AZ*2+22,[.25,.6,.27]);
+      bx(0,.03,0.5,AX*2+10,.05,3.6,[.8,.7,.52]);bx(7,.035,0,3.6,.05,AZ*2+20,[.8,.7,.52]);
+      for(var c=0;c<2;c++){var cxs=((t*(.9+c*.5)+c*22)%(AX*2+30))-AX-15;bx(cxs,.06,-3+c*8,9,.02,4.5,[.17,.43,.2])}
+      // pond with a duck, lily pads and shimmer
+      bx(-11,.02,3.5,9.4,.04,8,[.5,.4,.26]);bx(-11,.05,3.5,8.2,.04,6.8,[.25,.56,.86]);bx(-11,.05,3.5,6.4,.04,5.2,[.3,.62,.9]);
+      for(var k=0;k<3;k++)bx(-11+Math.sin(t*.8+k*2)*2.6,.09,3.5+Math.cos(t*.6+k*3)*2,1,.03,.5,[.75,.92,1]);
+      bx(-13.4,.09,5,1.1,.04,1.1,[.2,.66,.3]);bx(-9,.09,1.6,1,.04,1,[.2,.66,.3]);bx(-9,.12,1.6,.3,.06,.3,[1,.6,.8]);
+      var dkx=-11+Math.sin(t*.35)*2.4,dkz=3.5+Math.cos(t*.35)*1.6,dd=Math.cos(t*.35)>0?-1:1;
+      bx(dkx,.4,dkz,1,.6,.8,[1,.9,.9]);bx(dkx+dd*.5,.8,dkz,.5,.5,.5,[.2,.5,.3]);bx(dkx+dd*.85,.78,dkz,.35,.15,.25,[1,.6,.15]);
+      // flowers swaying in the grass
+      FL.forEach(function(f){var sw=Math.sin(t*1.6+f.p)*.08;bx(f.x,.22,f.z,.08,.44,.08,[.2,.5,.2]);bx(f.x+sw,.5,f.z,.42,.26,.42,f.c)});
+      // picket fence, trees and bushes round the edge
+      for(var x=-AX-1;x<=AX+1;x+=2.6){bx(x,.55,-AZ-1.4,.3,1.1,.3,WOOD);bx(x,.55,AZ+1.4,.3,.9,.3,WOOD)}
+      for(var z=-AZ-1;z<=AZ+1;z+=2.6){bx(-AX-1.4,.55,z,.3,1.1,.3,WOOD);bx(AX+1.4,.55,z,.3,1.1,.3,WOOD)}
+      bx(0,.8,-AZ-1.4,AX*2+3,.14,.12,RAIL);bx(0,.4,-AZ-1.4,AX*2+3,.14,.12,RAIL);bx(-AX-1.4,.8,0,.12,.14,AZ*2+3,RAIL);bx(AX+1.4,.8,0,.12,.14,AZ*2+3,RAIL);bx(0,.6,AZ+1.4,AX*2+3,.14,.12,RAIL);
+      [[-15,-AZ-4.5,1.5],[-8,-AZ-5,1.25],[1,-AZ-4.6,1.6],[9,-AZ-5,1.3],[16,-AZ-4.4,1.5],[-AX-4.5,-2,1.3],[-AX-5,6,1.5],[AX+4.5,-1,1.5],[AX+5,7,1.25]].forEach(function(q,i){tree(q[0],q[1],q[2],t,i)});
+      tree(OBS[1][0],OBS[1][1],1.15,t,0);tree(OBS[2][0],OBS[2][1],.95,t,2);
+      [[-6,AZ+3.4],[12,AZ+3.2],[-16,AZ+3.5]].forEach(function(q,i){bx(q[0],.8,q[1],2.6,1.6,2.2,[.2,.56,.28]);bx(q[0]+.5,1.7,q[1],1.6,.9,1.4,[.3,.7,.36]);bx(q[0]-.7,1.1,q[1]+1.12,.4,.4,.3,[1,.5,.6])});
+      // a bench, a tennis ball bouncing about and a bone on the grass
+      bx(3,.7,AZ-.4,4.2,.25,1.1,WOOD);bx(3,1.35,AZ-.95,4.2,1,.2,WOOD);bx(1.2,.35,AZ-.4,.3,.7,1,[.3,.3,.35]);bx(4.8,.35,AZ-.4,.3,.7,1,[.3,.3,.35]);
+      var bxp=Math.sin(t*.5)*11,bzp=Math.cos(t*.37)*4.5+1,byp=Math.abs(Math.sin(t*4))*1.3+.35;bx(bxp,.04,bzp,.9,.03,.9,[.12,.34,.15]);bx(bxp,byp,bzp,.6,.6,.6,[.85,1,.3]);
+      bx(-5,.15,7,1.4,.25,.4,[.98,.95,.88]);bx(-5.8,.15,6.8,.4,.25,.4,[.98,.95,.88]);bx(-5.8,.15,7.3,.4,.25,.4,[.98,.95,.88]);bx(-4.2,.15,6.8,.4,.25,.4,[.98,.95,.88]);bx(-4.2,.15,7.3,.4,.25,.4,[.98,.95,.88]);
+      // butterflies
+      flies.forEach(function(f){var fl=Math.abs(Math.sin(t*14+f.a*3)),c=f.c?(f.c===1?[1,.8,.3]:[.7,.8,1]):[1,.6,.8],y=2.2+Math.sin(t*2+f.a)*.5;bx(f.x,y,f.z,.1,.1,.4,[.2,.15,.1]);bx(f.x-.28*fl,y+.05,f.z,.46*fl+.05,.05,.4,c);bx(f.x+.28*fl,y+.05,f.z,.46*fl+.05,.05,.4,c)});
+      // tag bursts: little stars and hearts when one pet catches another
+      puffs.forEach(function(q){var u=(t-q.t)/.9,r=u*2.8,y=1.4+Math.sin(Math.PI*u)*2;for(var k=0;k<7;k++){var an=k/7*Math.PI*2+u*2;draw(box,trs(q.x+Math.cos(an)*r,y+(k%2)*.5,q.z+Math.sin(an)*r,t*5+k,0,.45*(1-u*.6),.45*(1-u*.6),.45*(1-u*.6)),{col:k%2?[1,.85,.3]:q.c,emit:true,boost:.7})}});
+      // the pets: each wears a little marker, orange for the dogs and violet for the cats
       st.forEach(function(a,i){
-        var bob=Math.abs(Math.sin(a.gait))*(.15+.3*a.run)*Math.min(1,a.v*.4),roll=Math.sin(t*7+a.ph)*.03*Math.min(1,a.v*.4);
-        var sp=a.o.data&&a.o.data.pet?S*1.45:S;draw(a.o,trs(a.x,.5*sp+bob+.02,a.z,a.yaw,roll,sp,sp,sp),{pose:a.pose,ph:a.gait});
-        var pc=a.ok?[.2,1,.55]:[1,.7,.25],sp=Math.sin(t*3+i);
-        draw(box,trs(a.x,7.7+bob+sp*.12,a.z,t*2+i,0,.8,.8,.8),{col:pc,emit:true,boost:.6+.4*sp});
+        var bob=Math.abs(Math.sin(a.gait))*(.1+.25*a.run)*Math.min(1,a.v*.4),roll=Math.sin(t*7+a.ph)*.02*Math.min(1,a.v*.4);
+        var sp=a.o.data&&a.o.data.pet?S*1.45:S;
+        bx(a.x,.05,a.z,3.2,.03,2.2,[.12,.34,.15]);
+        draw(a.o,trs(a.x,.5*sp+bob+.02,a.z,a.yaw,roll,sp,sp,sp),{pose:a.pose,ph:a.gait});
+        var mc=a.cat?[.62,.45,1]:[1,.62,.22],sy=Math.sin(t*3+i);
+        draw(box,trs(a.x,6.1+bob+sy*.15,a.z,t*2+i,0,.7,.7,.7),{col:mc,emit:true,boost:.5+.3*sy});
       });
     }
     function start(){var t0=performance.now();last=t0;

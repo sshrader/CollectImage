@@ -161,7 +161,7 @@ function loadBears(c) {
 function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', JSON.stringify(d)); fs.renameSync(f + '.tmp', f); }
 const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
 const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
-const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. A big black cat in a gold crown. Reserved for PetPad’s founder wallet.', ability: art.ABILITIES.FLAGSHIP };
+const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. A big golden Labrador in a black top hat. Reserved for PetPad’s founder wallet.', ability: art.ABILITIES.FLAGSHIP };
 // The 3D views fetch an agent's voxels. They only depend on the image secret, so they are cached and gzipped.
 const voxCache = new Map();
 function sendVoxels(req, res, slot) {
