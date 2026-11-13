@@ -451,6 +451,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
         var ga=document.createElement('a');ga.href=gu;ga.target='_blank';ga.rel='noopener';ga.textContent=opened?'GMGN (opened in a new tab)':'Open on GMGN';ga.style.cssText='margin-left:12px;color:#4ff3ff';box.appendChild(ga);
         gm=null;
       }
+      var oc=document.createElement('div');oc.style.cssText='margin-top:16px';
+      var ob=document.createElement('a');ob.className='btn go';ob.href='/coin/'+M;ob.textContent='Open coin page ›';ob.style.cssText='display:inline-block;text-decoration:none;font-size:17px;padding:14px 30px;border-color:#4ff3ff;background:#0b2a2e;color:#fff';oc.appendChild(ob);box.appendChild(oc);
       box.classList.add('on');pickSlot=null;showPick();refresh();
     }catch(e){console.error(e)}
     finally{
