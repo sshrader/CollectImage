@@ -448,7 +448,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
           if(rr.ok){s4('ok','locked');rl.remove();refresh()}else{s4('warn',rr.json.error||'Still could not confirm. Your coin is live; Mechpad owner can attach it to its agent.');rl.disabled=false}};
         box.appendChild(rl);
       }
-      if(isFounder&&st.cluster==='mainnet'){
+      if((isFounder||isFounderWallet)&&st.cluster==='mainnet'){
         var gu='https://gmgn.ai/sol/token/'+M,opened=false;
         try{if(gm&&!gm.closed){try{gm.opener=null}catch(e7){}gm.location.href=gu;opened=true}}catch(e5){}
         var gw=document.createElement('div');gw.style.cssText='margin-top:14px';
