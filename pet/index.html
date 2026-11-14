@@ -110,7 +110,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   <div class="slog" id="slog" aria-hidden="true"></div>
   <div class="cap">
     <h2>PetPad</h2>
-    <p>The cats and the dogs are on the chain. Pick a side.</p>
+    <p>The cats and the dogs are on the chain. Pick a friend.</p>
     <button id="enter" type="button">Proceed ›</button>
   </div>
 </div>
@@ -121,7 +121,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   <button class="wallet" id="wbtn" type="button"><span id="wlabel">Connect Phantom</span></button>
 </header>
 
-<h1>Cats vs Dogs. <span>Claim a pet.</span></h1>
+<h1>Cats & Dogs. <span>Claim a pet.</span></h1>
 <p class="lede">Every coin launched here claims one of PetPad's voxel cats or dogs as its logo, and that pet is locked to the coin for good. Its pet reports the coin’s public numbers on the coin page: curve progress, holders, dev share and anything worth flagging. Connect your wallet, pick a pet or let PetPad choose, name your coin, and launch on pump.fun.</p>
 
 <div id="recent" hidden><h2>Recent launches</h2><div class="recent" id="recentlist"></div></div>
@@ -129,7 +129,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
 <h2>PRIME</h2>
 <div class="founder" id="founder" hidden></div>
 
-<h2>Cats vs Dogs</h2>
+<h2>Cats & Dogs</h2>
 <div class="board" id="board"></div>
 <h2>The pets</h2>
 <div class="bears" id="bears"></div>
@@ -310,7 +310,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   }
   function drawBoard(t){var b=$('board');if(!b||!t)return;b.textContent='';
     function side(k,name,cls){var d=document.createElement('div');d.className='side'+(cls?' '+cls:'');var n=document.createElement('b');n.textContent=name+' '+t[k].launched;var s=document.createElement('span');s.textContent=t[k].launched+' of '+t[k].total+' claimed · '+t[k].open+' open';d.appendChild(n);d.appendChild(s);return d}
-    b.appendChild(side('DOG','Dogs'));var vs=document.createElement('div');vs.className='vs';vs.textContent='VS';b.appendChild(vs);b.appendChild(side('CAT','Cats','r'));
+    b.appendChild(side('DOG','Dogs'));var vs=document.createElement('div');vs.className='vs';vs.textContent='&';b.appendChild(vs);b.appendChild(side('CAT','Cats','r'));
     var tot=t.DOG.launched+t.CAT.launched,bar=document.createElement('div');bar.className='bar';var a=document.createElement('i'),c=document.createElement('i');a.style.background='#e8913a';c.style.background='#9a7cff';var pa=tot?t.DOG.launched/tot*100:50;a.style.width=pa+'%';c.style.width=(100-pa)+'%';bar.appendChild(a);bar.appendChild(c);b.appendChild(bar)}
   refresh();setInterval(function(){if(!running)refresh()},20000);
 
