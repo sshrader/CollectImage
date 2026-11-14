@@ -150,7 +150,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   </div>
   <div class="two">
     <div><label for="buy">Your first buy in SOL <span class="rv" id="buyhint">0 to 5</span></label><input type="text" id="buy" value="0.1" inputmode="decimal"></div>
-    <div><label>Logo</label><div class="note" id="pick">Random pet, chosen when you launch.</div></div>
+    <div><label>Logo</label><div class="note" id="pick">Random pet, chosen when you launch.</div><div id="customlogo" hidden style="margin-top:10px"><label for="logofile">Custom logo <span class="rv">founder only, optional</span></label><input type="file" id="logofile" accept="image/png,image/jpeg,image/webp"><div class="note">Leave empty to use the pet’s picture. It is squared to 512 px.</div></div></div>
   </div>
   <div class="note" id="feenote"></div>
   <div class="row"><button class="btn go" id="go" type="button">Launch</button><button class="btn" id="air" type="button" hidden>Get 1 devnet SOL</button><span class="msg" id="msg"></span></div>
@@ -261,6 +261,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   var feeNoteBase='';
   function showPick(){
     $('pick').textContent=pickSlot==='founder'?'PRIME, the flagship agent. One of one.':pickSlot?(bearName(pickSlot)+' is yours if you launch now.'):'Random pet, chosen when you launch.';
+    $('customlogo').hidden=!(st&&st.founder&&(pickSlot==='founder'||(pubkey&&short(pubkey)===st.founder.short)));
     $('feenote').textContent=pickSlot==='founder'?'Founder launch: all creator fees go to your wallet.':feeNoteBase;
   }
   function drawFounder(){
@@ -319,7 +320,7 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
   function connect(){
     var p=phantom();
     if(!p){say('Phantom was not found in this browser.','err');return Promise.resolve()}
-    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on');drawFounder()}).catch(function(){say('The connection request was declined.','err')});
+    return p.connect().then(function(r){pubkey=r.publicKey.toString();$('wlabel').textContent=short(pubkey);$('wbtn').classList.add('on');drawFounder();showPick()}).catch(function(){say('The connection request was declined.','err')});
   }
   $('wbtn').addEventListener('click',connect);
   $('rand').addEventListener('click',function(){pickSlot=null;drawBears();showPick();say('PetPad will choose a random open agent when you launch.','ok')});
@@ -334,6 +335,10 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
     });
   }
   function step(t){var s={t:t,d:'',st:'run'};steps.push(s);drawLog();return function(stt,d,href){s.st=stt;s.d=d||'';s.href=href||'';drawLog()}}
+  // the founder's own logo: drawn square onto a 512 px canvas and sent as a PNG
+  function logoData(){var f=$('logofile')&&$('logofile').files&&$('logofile').files[0];if(!f||$('customlogo').hidden)return Promise.resolve(null);
+    if(f.size>8*1024*1024)return Promise.reject(new Error('That image is too large.'));
+    return new Promise(function(ok,no){var u=URL.createObjectURL(f),im=new Image();im.onload=function(){var c=document.createElement('canvas');c.width=c.height=512;var x=c.getContext('2d'),s=Math.min(im.width,im.height);x.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,512,512);URL.revokeObjectURL(u);ok(c.toDataURL('image/png'))};im.onerror=function(){URL.revokeObjectURL(u);no(new Error('That file is not an image.'))};im.src=u})}
   function post(path,body,token){return fetch(path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},token?{Authorization:'Bearer '+token}:{}),body:JSON.stringify(body||{})}).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok,status:r.status,json:j}})})}
   function b64(u8){var s='';for(var i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s)}
 
@@ -428,7 +433,8 @@ footer button{background:none;border:0;color:var(--gold);font:inherit;cursor:poi
       token=rs.json.token;pickSlot=rs.json.slot;var isFounder=!!rs.json.founder;showPick();
       s1('ok',bearName(rs.json.slot));
       var s2=step('Coin details');
-      var md=await post('/api/metadata',{name:name,symbol:sym,description:$('ds').value.trim(),twitter:$('tw').value.trim(),website:$('ws').value.trim()},token);
+      var logo=null;try{logo=await logoData()}catch(le){s2('err',le.message||'Could not read that logo.');return}
+      var md=await post('/api/metadata',{logo:logo,name:name,symbol:sym,description:$('ds').value.trim(),twitter:$('tw').value.trim(),website:$('ws').value.trim()},token);
       if(!md.ok){s2('err',md.json.error||'server replied '+md.status);return}
       s2('ok','logo and metadata saved');
       var hint=null;

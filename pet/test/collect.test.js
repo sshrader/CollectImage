@@ -119,6 +119,8 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const meta = (body, tok) => post('/api/metadata', body, tok);
   r = await meta({ name: 'Honey', symbol: 'HONEY' }, 'nope'.repeat(10));
   check('coin details need a live bear hold', r.status === 401);
+  r = await meta({ name: 'Honey', symbol: 'HONEY', logo: 'data:image/png;base64,AAAA' }, xa2.json.token);
+  check('only the founder can bring a custom logo', r.status === 403);
   r = await meta({ name: 'Honey', symbol: 'HONEY', description: 'grr', twitter: '@Honey_Coin', website: 'honey.xyz' }, xa2.json.token);
   const jm = await r.json();
   const dm = jm.uri ? await (await fetch(base + new URL(jm.uri).pathname)).json() : {};
@@ -228,6 +230,12 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const ftok = r.json.token;
   fs0 = await (await fetch(base + '/api/bears')).json();
   check('the founder bear shows as held', fs0.founder.state === 'held');
+  r = await meta({ name: 'PetPad', symbol: 'DEN', logo: 'data:image/png;base64,AAAA' }, ftok);
+  check('a bad custom logo is refused', r.status === 400);
+  { const mine = require('../isorender.js').encodePng(Buffer.alloc(64 * 64 * 3, 200), 64, 64);
+    r = await meta({ name: 'PetPad', symbol: 'DEN', logo: 'data:image/png;base64,' + mine.toString('base64') }, ftok);
+    const mj = r.status === 201 ? await r.json() : null, got = mj ? Buffer.from(await (await fetch(base + new URL(mj.image).pathname)).arrayBuffer()) : null;
+    check('the founder can use their own logo', !!got && got.equals(mine)); }
   r = await meta({ name: 'PetPad', symbol: 'DEN', description: 'PetPad coin' }, ftok);
   const fj = await r.json();
   const fdoc = await (await fetch(base + new URL(fj.uri).pathname)).json();

@@ -255,7 +255,15 @@ function authHold(req, res) {
 async function createMetadata(req, res) {
   const a = authHold(req, res); if (!a) return;
   if (limited('md:' + a.hold.wallet, 12)) return send(res, 429, { error: 'Too many tries. Try again later.' });
-  const input = await jsonBody(req, res, 8 * 1024); if (!input) return;
+  const c0 = cfg(), isF = a.slot === 'F' || (!!c0.founderWallet && a.hold.wallet === c0.founderWallet); // the founder may bring their own logo
+  const input = await jsonBody(req, res, isF ? 1.8 * 1024 * 1024 : 8 * 1024); if (!input) return;
+  let logo = null;
+  if (input.logo != null) {
+    if (!isF) return send(res, 403, { error: 'A custom logo is only for the founder wallet.' });
+    const m = /^data:image\/png;base64,([A-Za-z0-9+\/=]+)$/.exec(String(input.logo));
+    logo = m ? Buffer.from(m[1], 'base64') : null;
+    if (!logo || logo.length < 100 || logo.length > 1.3 * 1024 * 1024 || logo.subarray(0, 4).toString('hex') !== '89504e47') return send(res, 400, { error: 'The logo must be a PNG under 1 MB.' });
+  }
   const name = text(input.name, 32), symbol = text(input.symbol, 10), description = text(input.description, 280);
   if (!name) return send(res, 400, { error: 'Name is required.' });
   if (!/^[A-Za-z0-9$._-]{1,10}$/.test(symbol)) return send(res, 400, { error: 'Ticker must be 1 to 10 letters or digits.' });
@@ -266,7 +274,7 @@ async function createMetadata(req, res) {
   if (website === null) return send(res, 400, { error: 'Website must be a link starting with https://.' });
   const id = crypto.randomBytes(8).toString('hex');
   const base = baseUrl(req);
-  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), a.slot === 'F' ? art.founderPng(512) : art.png(a.slot, imageSecret(), 512));
+  fs.writeFileSync(path.join(IMG_DIR, id + '.png'), logo ? logo : a.slot === 'F' ? art.founderPng(512) : art.png(a.slot, imageSecret(), 512));
   const imageUrl = base + '/images/' + id + '.png';
   const doc = { name, symbol, description, image: imageUrl, external_url: base };
   if (twitter) doc.twitter = twitter;
