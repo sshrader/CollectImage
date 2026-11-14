@@ -161,6 +161,7 @@ function loadBears(c) {
 function saveBears(c, d) { const f = bearsFile(c); fs.writeFileSync(f + '.tmp', JSON.stringify(d)); fs.renameSync(f + '.tmp', f); }
 const holdFor = (d, token) => { for (const k of Object.keys(d.holds)) if (d.holds[k].token === token) return { slot: k === 'F' ? 'F' : Number(k), hold: d.holds[k] }; return null; };
 const bearLabel = (slot) => (slot === 'F' ? 'founder' : slot + 1); // what the pages are told
+const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2a1608"/><g fill="#ffb347"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="14" cy="28" rx="5.5" ry="7.5"/><ellipse cx="25" cy="16" rx="5.5" ry="7.5"/><ellipse cx="39" cy="16" rx="5.5" ry="7.5"/><ellipse cx="50" cy="28" rx="5.5" ry="7.5"/></g></svg>';
 const PRIME = { name: 'PRIME', role: 'FLAGSHIP', blurb: 'The one-of-one flagship agent. A big golden Labrador in a black top hat. Reserved for PetPad’s founder wallet.', ability: art.ABILITIES.FLAGSHIP };
 // The 3D views fetch an agent's voxels. They only depend on the image secret, so they are cached and gzipped.
 const voxCache = new Map();
@@ -554,7 +555,8 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff' });
       return res.end(fs.readFileSync(INDEX));
     }
-    if (p === '/favicon.ico') return send(res, 204, '');
+    if (p === '/favicon.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' }); return res.end(FAVICON); }
+    if (p === '/favicon.ico' || p === '/apple-touch-icon.png') return send(res, 200, art.founderPng(p === '/favicon.ico' ? 64 : 180), { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600' });
     return send(res, 404, 'Not found');
   } catch (e) {
     console.error(e);
