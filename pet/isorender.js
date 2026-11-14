@@ -31,16 +31,16 @@ function renderPng(model, opts) {
   const k = Math.min(S * 0.8 / (maxX - minX), S * 0.8 / (maxY - minY)), ox = S / 2 - (minX + maxX) / 2 * k, oy = S * 0.5 + (minY + maxY) / 2 * k - S * 0.015;
   const sc = (p) => [ox + p[0] * k, oy - p[1] * k];
 
-  const buf = new Float32Array(S * S * 3);
+  const buf = new Float32Array(S * S * 3), cover = opts.raw ? new Uint8Array(S * S) : null;
   // backdrop: a soft glow behind the model on a dark tint of the scheme
   const bg = rgbOf(model.bg || model.scheme || '#1c2a3a'), gl = rgbOf(model.glow || '#4ff3ff');
-  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+  if (!opts.raw) for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
     const dx = (x - S / 2) / S, dy = (y - S * 0.52) / S, d = Math.sqrt(dx * dx + dy * dy * 1.2), f = Math.max(0, 1 - d * 1.5), v = Math.max(0.25, 1 - d * 1.1), o = (y * S + x) * 3;
     buf[o] = bg[0] * v * 0.75 + gl[0] * f * f * 0.08; buf[o + 1] = bg[1] * v * 0.75 + gl[1] * f * f * 0.08; buf[o + 2] = bg[2] * v * 0.75 + gl[2] * f * f * 0.08;
   }
   // floor shadow under the feet
   const fp = sc(proj(0, -.5, 0)), shW = (maxX - minX) * k * 0.42, shH = shW * 0.3;
-  for (let y = Math.max(0, Math.floor(fp[1] - shH)); y < Math.min(S, Math.ceil(fp[1] + shH)); y++) for (let x = Math.max(0, Math.floor(fp[0] - shW)); x < Math.min(S, Math.ceil(fp[0] + shW)); x++) {
+  if (!opts.raw) for (let y = Math.max(0, Math.floor(fp[1] - shH)); y < Math.min(S, Math.ceil(fp[1] + shH)); y++) for (let x = Math.max(0, Math.floor(fp[0] - shW)); x < Math.min(S, Math.ceil(fp[0] + shW)); x++) {
     const dx = (x - fp[0]) / shW, dy = (y - fp[1]) / shH, d = dx * dx + dy * dy; if (d >= 1) continue; const a = (1 - d) * 0.55, o = (y * S + x) * 3; buf[o] *= 1 - a; buf[o + 1] *= 1 - a; buf[o + 2] *= 1 - a;
   }
   function fillPoly(pts, col) {
@@ -55,7 +55,7 @@ function renderPng(model, opts) {
       }
       if (xl > xr) continue;
       const xs = Math.max(0, Math.round(xl)), xe = Math.min(S - 1, Math.round(xr) - 1);
-      for (let x = xs; x <= xe; x++) { const o = (y * S + x) * 3; buf[o] = col[0]; buf[o + 1] = col[1]; buf[o + 2] = col[2]; }
+      for (let x = xs; x <= xe; x++) { const o = (y * S + x) * 3; buf[o] = col[0]; buf[o + 1] = col[1]; buf[o + 2] = col[2]; if (cover) cover[y * S + x] = 1; }
     }
   }
   const order = cells.map((c) => ({ c, d: c.x * cam[0] + c.y * cam[1] + c.z * cam[2] })).sort((a, b) => a.d - b.d);
@@ -74,7 +74,7 @@ function renderPng(model, opts) {
   }
   // light glow around the lit cubes
   const R = k * 1.9;
-  for (const [gx, gy, col] of glows) {
+  for (const [gx, gy, col] of (opts.raw ? [] : glows)) {
     for (let y = Math.max(0, Math.floor(gy - R)); y < Math.min(S, Math.ceil(gy + R)); y++) for (let x = Math.max(0, Math.floor(gx - R)); x < Math.min(S, Math.ceil(gx + R)); x++) {
       const d = Math.hypot(x - gx, y - gy) / R; if (d >= 1) continue; const a = (1 - d) * (1 - d) * 0.12, o = (y * S + x) * 3;
       buf[o] += col[0] * a; buf[o + 1] += col[1] * a; buf[o + 2] += col[2] * a;
@@ -85,6 +85,7 @@ function renderPng(model, opts) {
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     for (let ch = 0; ch < 3; ch++) { let s = 0; for (let j = 0; j < SS; j++) for (let i = 0; i < SS; i++) s += buf[(((y * SS + j) * S) + x * SS + i) * 3 + ch]; out[(y * size + x) * 3 + ch] = clamp(Math.round(s / (SS * SS))); }
   }
+  if (opts.raw) { const al = Buffer.alloc(size * size); for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) { let c = 0; for (let j = 0; j < SS; j++) for (let i = 0; i < SS; i++) c += cover[(y * SS + j) * S + x * SS + i]; al[y * size + x] = Math.round(c / (SS * SS) * 255); } return { size, rgb: out, alpha: al }; }
   return encodePng(out, size, size);
 }
 module.exports = { renderPng, encodePng };
